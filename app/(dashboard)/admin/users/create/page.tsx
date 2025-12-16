@@ -531,7 +531,7 @@ export default function CreateUserPage() {
                       <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Plan</SelectItem>
+                      <SelectItem value="none">No Plan</SelectItem>
                       {subscriptionPlans.map((plan) => (
                         <SelectItem key={plan.id} value={plan.id}>
                           {plan.name} (₦{plan.price.toLocaleString()})
@@ -584,13 +584,17 @@ export default function CreateUserPage() {
                   <label htmlFor="hotelId" className="text-sm font-medium">Assigned Hotel (Optional)</label>
                   <Select
                     value={formData.hotelId}
-                    onValueChange={(value) => handleSelectChange('hotelId', value)}
+                    onValueChange={(value) => {
+                      if (value === 'unassigned') {
+                        return "";
+                      } else {handleSelectChange('hotelId', value)}}
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select hotel" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Not Assigned</SelectItem>
+                      <SelectItem value="unassigned">Not Assigned</SelectItem>
                       {hotels.map((hotel) => (
                         <SelectItem key={hotel.id} value={hotel.id}>{hotel.name}</SelectItem>
                       ))}

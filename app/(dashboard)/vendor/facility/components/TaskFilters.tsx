@@ -74,7 +74,7 @@ export default function TaskFilters({
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
+            <SelectItem value="none">All Statuses</SelectItem>
             <SelectItem value="PENDING">Pending</SelectItem>
             <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
             <SelectItem value="COMPLETED">Completed</SelectItem>
@@ -93,7 +93,7 @@ export default function TaskFilters({
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Priorities</SelectItem>
+            <SelectItem value="none">All Priorities</SelectItem>
             <SelectItem value="LOW">Low</SelectItem>
             <SelectItem value="MEDIUM">Medium</SelectItem>
             <SelectItem value="HIGH">High</SelectItem>
@@ -111,7 +111,7 @@ export default function TaskFilters({
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="none">All Categories</SelectItem>
             <SelectItem value="CLEANING">Cleaning</SelectItem>
             <SelectItem value="REPAIR">Repair</SelectItem>
             <SelectItem value="INSPECTION">Inspection</SelectItem>
@@ -135,7 +135,7 @@ export default function TaskFilters({
             <SelectValue placeholder="Assignee" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Staff</SelectItem>
+            <SelectItem value="none">All Staff</SelectItem>
             <SelectItem value="unassigned">Unassigned</SelectItem>
             {staff.map((staffMember) => (
               <SelectItem key={staffMember.id} value={staffMember.id}>

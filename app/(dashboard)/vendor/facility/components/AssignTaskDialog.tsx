@@ -162,7 +162,7 @@ export default function AssignTaskDialog({
                   <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {staffList.map((staff) => (
                     <SelectItem key={staff.id} value={staff.id}>
                       {staff.user.name} ({staff.position})
