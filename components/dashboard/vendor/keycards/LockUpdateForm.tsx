@@ -187,7 +187,7 @@ export default function LockUpdateForm({
               <SelectValue placeholder="Select a room (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Not assigned to a room</SelectItem>
+              <SelectItem value="none">Not assigned to a room</SelectItem>
               {rooms.map((room) => (
                 <SelectItem key={room.id} value={room.id}>
                   {room.name} ({room.type})

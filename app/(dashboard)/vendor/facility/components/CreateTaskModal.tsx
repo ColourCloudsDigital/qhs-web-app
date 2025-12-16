@@ -320,7 +320,7 @@ export default function CreateTaskModal({
                   <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {staff.map((staffMember) => (
                     <SelectItem key={staffMember.id} value={staffMember.id}>
                       {staffMember.user.name}
@@ -339,7 +339,7 @@ export default function CreateTaskModal({
                   <SelectValue placeholder={isLoadingRooms ? "Loading rooms..." : "Select room"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific room</SelectItem>
+                  <SelectItem value="none">No specific room</SelectItem>
                   {rooms.map((room) => (
                     <SelectItem key={room.id} value={room.id}>
                       {room.name}
