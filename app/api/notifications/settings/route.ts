@@ -35,14 +35,37 @@ export async function GET(req: NextRequest) {
 
     const userPreferences = (preferences as any[])[0];
 
-    // Parse JSON strings
-    const subscribedTypes = userPreferences.subscribedTypes 
-      ? JSON.parse(userPreferences.subscribedTypes) 
-      : Object.values(NotificationType);
-    
-    const unsubscribedTypes = userPreferences.unsubscribedTypes 
-      ? JSON.parse(userPreferences.unsubscribedTypes) 
-      : [];
+    // Parse subscribedTypes (handle JSON or fallback to comma-separated string)
+    let subscribedTypes: string[];
+    if (userPreferences.subscribedTypes) {
+      try {
+        subscribedTypes = JSON.parse(userPreferences.subscribedTypes);
+      } catch {
+        // Fallback: Split comma-separated string
+        subscribedTypes = userPreferences.subscribedTypes
+          .split(',')
+          .map((type: string) => type.trim())
+          .filter(Boolean);
+      }
+    } else {
+      subscribedTypes = Object.values(NotificationType);
+    }
+
+    // Parse unsubscribedTypes (handle JSON or fallback to comma-separated string)
+    let unsubscribedTypes: string[];
+    if (userPreferences.unsubscribedTypes) {
+      try {
+        unsubscribedTypes = JSON.parse(userPreferences.unsubscribedTypes);
+      } catch {
+        // Fallback: Split comma-separated string
+        unsubscribedTypes = userPreferences.unsubscribedTypes
+          .split(',')
+          .map((type: string) => type.trim())
+          .filter(Boolean);
+      }
+    } else {
+      unsubscribedTypes = [];
+    }
 
     return NextResponse.json({
       emailEnabled: userPreferences.emailEnabled === 1,
@@ -82,14 +105,43 @@ export async function PUT(req: NextRequest) {
       }
     );
 
+    // Parse for response (handle JSON or fallback to comma-separated string)
+    let parsedSubscribedTypes: string[];
+    if (preferences.subscribedTypes) {
+      try {
+        parsedSubscribedTypes = JSON.parse(preferences.subscribedTypes);
+      } catch {
+        parsedSubscribedTypes = preferences.subscribedTypes
+          .split(',')
+          .map((type: string) => type.trim())
+          .filter(Boolean);
+      }
+    } else {
+      parsedSubscribedTypes = [];
+    }
+
+    let parsedUnsubscribedTypes: string[];
+    if (preferences.unsubscribedTypes) {
+      try {
+        parsedUnsubscribedTypes = JSON.parse(preferences.unsubscribedTypes);
+      } catch {
+        parsedUnsubscribedTypes = preferences.unsubscribedTypes
+          .split(',')
+          .map((type: string) => type.trim())
+          .filter(Boolean);
+      }
+    } else {
+      parsedUnsubscribedTypes = [];
+    }
+
     return NextResponse.json({
       success: true,
       preferences: {
         emailEnabled: preferences.emailEnabled === 1,
         pushEnabled: preferences.pushEnabled === 1,
         inAppEnabled: preferences.inAppEnabled === 1,
-        subscribedTypes: preferences.subscribedTypes ? JSON.parse(preferences.subscribedTypes) : [],
-        unsubscribedTypes: preferences.unsubscribedTypes ? JSON.parse(preferences.unsubscribedTypes) : []
+        subscribedTypes: parsedSubscribedTypes,
+        unsubscribedTypes: parsedUnsubscribedTypes
       }
     });
   } catch (error: any) {
