@@ -9,7 +9,7 @@ export default function SendNotificationForm() {
   const { data: session } = useSession();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [type, setType] = useState<NotificationType>('ANNOUNCEMENT');
+  const [type, setType] = useState<string>('ANNOUNCEMENT');
   const [recipientType, setRecipientType] = useState<'ALL' | 'VENDOR' | 'CUSTOMER' | 'STAFF' | 'SUPER_ADMIN'>('ALL');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);

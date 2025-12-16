@@ -111,7 +111,7 @@ export default function TaskFilters({
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="CLEANING">Cleaning</SelectItem>
             <SelectItem value="REPAIR">Repair</SelectItem>
             <SelectItem value="INSPECTION">Inspection</SelectItem>

@@ -18,8 +18,11 @@ export async function GET(request: Request) {
     const sortColumn = searchParams.get('sortColumn') || 'created_at';
     const sortDirection = searchParams.get('sortDirection') || 'desc';
     const search = searchParams.get('search') || '';
-    const type = searchParams.get('type') || 'all';
-    const status = searchParams.get('status') || 'all';
+    // Normalize filters: accept any casing from frontend
+    const typeRaw = searchParams.get('type') || 'all';
+    const type = (typeRaw || 'all').toUpperCase(); // SUBSCRIPTION | BOOKING | OTHER | all
+    const statusRaw = searchParams.get('status') || 'all';
+    const status = (statusRaw || 'all').toLowerCase(); // compare status case-insensitively
     const dateFrom = searchParams.get('dateFrom') || '';
     const dateTo = searchParams.get('dateTo') || '';
 
@@ -50,9 +53,10 @@ export async function GET(request: Request) {
 
     // Add vendor fields only if vendors table exists
     if (vendors_exists) {
+      // Some schemas use `companyName` for vendors; use that column as vendorName
       query += `
         p.vendor_id as vendorId,
-        v.name as vendorName,
+        v.companyName as vendorName,
       `;
     } else {
       query += `
@@ -100,10 +104,10 @@ export async function GET(request: Request) {
     // Add search filter - adapt based on which fields are available
     if (search) {
       if (vendors_exists && plans_exists) {
-        query += " AND (p.transaction_reference LIKE ? OR v.name LIKE ? OR sp.name LIKE ?)";
+        query += " AND (p.transaction_reference LIKE ? OR v.companyName LIKE ? OR sp.name LIKE ?)";
         queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
       } else if (vendors_exists) {
-        query += " AND (p.transaction_reference LIKE ? OR v.name LIKE ?)";
+        query += " AND (p.transaction_reference LIKE ? OR v.companyName LIKE ?)";
         queryParams.push(`%${search}%`, `%${search}%`);
       } else if (plans_exists) {
         query += " AND (p.transaction_reference LIKE ? OR sp.name LIKE ?)";
@@ -114,8 +118,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // Add type filter
-    if (type !== 'all') {
+    // Add type filter (type is uppercased)
+    if (type !== 'ALL') {
       if (type === 'SUBSCRIPTION') {
         query += " AND p.subscription_plan_id IS NOT NULL";
       } else if (type === 'BOOKING') {
@@ -125,9 +129,9 @@ export async function GET(request: Request) {
       }
     }
 
-    // Add status filter
+    // Add status filter (case-insensitive)
     if (status !== 'all') {
-      query += " AND p.status = ?";
+      query += " AND LOWER(p.status) = ?";
       queryParams.push(status);
     }
 
@@ -149,11 +153,22 @@ export async function GET(request: Request) {
       const total = (countRows as any[])[0].total;
 
       // Add sorting and pagination
+      // Map frontend sort column names to DB columns
       let sortField = sortColumn;
-      
-      // Handle special case for payment_method column which might be different in the DB
-      if (sortField === 'paymentMethod') {
-        sortField = 'payment_method';
+      switch (sortField) {
+        case 'createdAt':
+          sortField = 'created_at';
+          break;
+        case 'paymentMethod':
+          sortField = 'payment_method';
+          break;
+        case 'paymentType':
+          // paymentType is derived in the query, safe to order by the alias
+          sortField = 'paymentType';
+          break;
+        default:
+          // leave as provided; ensure no dangerous characters (basic whitelist)
+          sortField = sortField.replace(/[^a-zA-Z0-9_]/g, '') || 'created_at';
       }
 
       // Make sure the sort column exists in the query

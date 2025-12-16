@@ -330,6 +330,7 @@ export default function PaymentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortColumn, setSortColumn] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  // 'all' or one of 'SUBSCRIPTION' | 'BOOKING' | 'OTHER'
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -359,10 +360,11 @@ export default function PaymentsPage() {
         params.append('search', searchQuery);
       }
       
-      if (filterType !== 'all') {
+      // Append a single `type` parameter when a specific type is selected
+      if (filterType && filterType !== 'all') {
         params.append('type', filterType);
       }
-      
+
       if (filterStatus !== 'all') {
         params.append('status', filterStatus);
       }
@@ -421,11 +423,11 @@ export default function PaymentsPage() {
         export: 'csv',
       });
       
-      if (filterType !== 'all') {
+      if (filterType && filterType !== 'all') {
         params.append('type', filterType);
       }
       
-      if (filterStatus !== 'all') {
+      if (filterStatus && filterStatus !== 'all') {
         params.append('status', filterStatus);
       }
       
