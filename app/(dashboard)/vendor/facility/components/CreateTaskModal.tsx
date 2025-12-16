@@ -69,15 +69,15 @@ export default function CreateTaskModal({
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<TaskCategory>('GENERAL');
-  const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
+  const [category, setCategory] = useState<string>('GENERAL');
+  const [priority, setPriority] = useState<string>('MEDIUM');
   const [assignedToId, setAssignedToId] = useState<string>('');
   const [roomId, setRoomId] = useState<string>('');
   const [dueDate, setDueDate] = useState<Date | undefined>(
     new Date(new Date().setDate(new Date().getDate() + 1))
   );
   const [estimatedHours, setEstimatedHours] = useState<number | undefined>(undefined);
-  const [maintenanceType, setMaintenanceType] = useState<MaintenanceType>('CORRECTIVE');
+  const [maintenanceType, setMaintenanceType] = useState<string>('CORRECTIVE');
   const [isRecurring, setIsRecurring] = useState(false);
   const [costEstimate, setCostEstimate] = useState<number | undefined>(undefined);
   
