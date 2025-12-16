@@ -1,0 +1,136 @@
+{
+    "name": "Qaras Hotels Management System",
+    "short_name": "Qaras Hotels",
+    "theme_color": "#6366f1",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "orientation": "any",
+    "scope": "/",
+    "start_url": "./",
+    "description": "A comprehensive hotel management system with offline capabilities",
+    "categories": ["business", "productivity", "utilities"],
+    "lang": "en-US",
+    "dir": "ltr",
+    "icons": [
+      {
+        "src": "./icon.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any"
+      },
+      {
+        "src": "./logo-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any"
+      },
+      {
+        "src": "./logo-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "maskable"
+      },
+      {
+        "src": "/assets/icons/icon-72x72.png",
+        "sizes": "72x72",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/assets/icons/icon-96x96.png",
+        "sizes": "96x96",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/assets/icons/icon-128x128.png",
+        "sizes": "128x128",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/assets/icons/icon-144x144.png",
+        "sizes": "144x144",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/assets/icons/icon-152x152.png",
+        "sizes": "152x152",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/assets/icons/icon-384x384.png",
+        "sizes": "384x384",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/assets/icons/icon-512x512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+      }
+    ],
+    "gcm_sender_id": "957461476235",
+    "permissions": [
+      "notifications",
+      "background-sync"
+    ],
+    "shortcuts": [
+      {
+        "name": "Dashboard",
+        "url": "/dashboard",
+        "description": "Go to your dashboard",
+        "icons": [
+          {
+            "src": "/assets/icons/dashboard.png",
+            "sizes": "96x96",
+            "type": "image/png"
+          }
+        ]
+      },
+      {
+        "name": "Bookings",
+        "url": "/vendor/bookings",
+        "description": "View your bookings",
+        "icons": [
+          {
+            "src": "/assets/icons/calendar.png",
+            "sizes": "96x96",
+            "type": "image/png"
+          }
+        ]
+      }
+    ],
+    "screenshots": [
+      {
+        "src": "/assets/images/screenshots/booking.png",
+        "sizes": "1280x720",
+        "type": "image/png",
+        "platform": "wide",
+        "label": "Booking Management"
+      },
+      {
+        "src": "/assets/images/screenshots/dashboard.png",
+        "sizes": "1280x720", 
+        "type": "image/png",
+        "platform": "wide",
+        "label": "Dashboard View"
+      }
+    ],
+    "prefer_related_applications": false,
+    "related_applications": [],
+    "iarc_rating_id": "",
+    "background_fetch": {
+      "enable": true,
+      "icons": [
+        {
+          "src": "/logo-512.png",
+          "sizes": "512x512"
+        }
+      ]
+    },
+    "offline_enabled": true
+  }

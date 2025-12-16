@@ -1,0 +1,178 @@
+# Fix for Vendor Dashboard Hotel and Room Management
+
+## Issue
+Vendors are unable to edit all hotels linked to their account without permission errors. Even though there's a context selector for hotels in the dashboard header, it's not applying correctly to the hotel and room management flow.
+
+## Solution
+The main issue is in how the current hotel is being managed and how permissions are checked. Here are the changes needed:
+
+### 1. Update the useCurrentHotel hook (hooks/useCurrentHotel.ts)
+
+```typescript
+// hooks/useCurrentHotel.ts
+import { useEffect } from 'react';
+import { useHotel } from '@/contexts/HotelContext';
+import { useParams } from 'next/navigation';
+import toast from '@/lib/toast';
+
+/**
+ * Hook to get and set the current hotel
+ * This ensures consistency when navigating between hotel pages
+ */
+export function useCurrentHotel() {
+  const { currentHotel, setCurrentHotel, hotels, loading } = useHotel();
+  const params = useParams();
+  
+  // Get hotelId from the URL if available
+  const hotelIdFromUrl = params?.hotelId as string | undefined;
+  
+  // Set the current hotel based on URL parameter
+  useEffect(() => {
+    if (hotelIdFromUrl && (!currentHotel || currentHotel.id !== hotelIdFromUrl)) {
+      // First check if the hotel is in our list of hotels
+      const hotelFromUrl = hotels.find(h => h.id === hotelIdFromUrl);
+      
+      if (hotelFromUrl) {
+        setCurrentHotel(hotelFromUrl);
+      } else if (!loading && hotels.length > 0) {
+        // If hotel not found in list, fetch it directly
+        const fetchHotel = async () => {
+          try {
+            const response = await fetch(`/api/vendor/hotels/${hotelIdFromUrl}`);
+            if (response.ok) {
+              const data = await response.json();
+              setCurrentHotel(data.hotel);
+              
+              // Add this hotel to the context's hotels list if it's not there
+              // This ensures the hotel is available in the dropdown
+              if (!hotels.some(h => h.id === data.hotel.id)) {
+                // This will trigger a re-render of the HotelContext
+                // which will update the hotels list
+                const updatedHotels = [...hotels, data.hotel];
+                // We need to update the hotels list in the context
+                // This is a workaround since we can't directly modify the hotels array
+                localStorage.setItem('vendorHotels', JSON.stringify(updatedHotels));
+                // Force a refetch of hotels to update the context
+                window.dispatchEvent(new CustomEvent('refetch-hotels'));
+              }
+            } else {
+              // If hotel not found, set to the first hotel in list
+              console.error('Hotel not found, using default');
+              setCurrentHotel(hotels[0]);
+              toast.error('Hotel not found or you don\'t have permission to access it');
+            }
+          } catch (error) {
+            console.error('Error fetching hotel:', error);
+          }
+        };
+        
+        fetchHotel();
+      }
+    }
+  }, [hotelIdFromUrl, hotels, currentHotel, setCurrentHotel, loading]);
+  
+  return { currentHotel, setCurrentHotel, loading };
+}
+```
+
+### 2. Update the HotelContext to listen for refetch events (contexts/HotelContext.tsx)
+
+```typescript
+// Add this to the HotelProvider component in contexts/HotelContext.tsx
+// Inside the component, after the existing useEffect hooks
+
+// Listen for refetch events
+useEffect(() => {
+  const handleRefetch = () => {
+    fetchUserHotels();
+  };
+  
+  window.addEventListener('refetch-hotels', handleRefetch);
+  
+  return () => {
+    window.removeEventListener('refetch-hotels', handleRefetch);
+  };
+}, []);
+```
+
+### 3. Modify the vendor hotel API route to ensure proper permission checking (app/api/vendor/hotels/[id]/route.ts)
+
+```typescript
+// In the GET handler of app/api/vendor/hotels/[id]/route.ts
+// Replace the vendor permission check with this improved version:
+
+// For VENDOR role, make sure they own this hotel
+if (userRole === UserRole.VENDOR) {
+  const vendorId = session.user.vendorId;
+  
+  if (!vendorId) {
+    console.error('Vendor session missing vendorId', { 
+      session, 
+      userRole, 
+      vendorId: session.user.vendorId 
+    });
+    return NextResponse.json({ error: 'Invalid vendor session' }, { status: 403 });
+  }
+  
+  // Check if the hotel belongs to this vendor
+  const vendorHotel = await prisma.hotel.findFirst({
+    where: { 
+      id: hotelId,
+      vendorId 
+    }
+  });
+  
+  if (!vendorHotel) {
+    return NextResponse.json({ error: 'You do not have permission to access this hotel' }, { status: 403 });
+  }
+}
+```
+
+### 4. Update the vendor rooms API route for consistent permission checking (app/api/vendor/rooms/[id]/route.ts)
+
+```typescript
+// In the GET handler of app/api/vendor/rooms/[id]/route.ts
+// Replace the vendor permission check with this improved version:
+
+// Check authorization for vendors
+if (session.user.role === UserRole.VENDOR) {
+  const vendorId = session.user.vendorId;
+  
+  if (!vendorId) {
+    console.error('Vendor session missing vendorId', { 
+      session, 
+      userRole: session.user.role, 
+      vendorId: session.user.vendorId 
+    });
+    return NextResponse.json({ error: 'Invalid vendor session' }, { status: 403 });
+  }
+  
+  // Check if the room's hotel belongs to this vendor
+  const vendorHotel = await prisma.hotel.findFirst({
+    where: { 
+      id: roomWithHotel.hotelId,
+      vendorId 
+    }
+  });
+  
+  if (!vendorHotel) {
+    return NextResponse.json({ 
+      error: 'You do not have permission to access this room' 
+    }, { status: 403 });
+  }
+}
+```
+
+### 5. Make similar updates to the PUT and DELETE handlers in both API routes
+
+For each of the PUT and DELETE handlers in both `app/api/vendor/hotels/[id]/route.ts` and `app/api/vendor/rooms/[id]/route.ts`, update the permission checking logic to use the more efficient direct query approach shown above.
+
+## Implementation Notes
+
+1. These changes improve how the current hotel is managed in the context and ensure that all hotels a vendor has access to are properly loaded.
+
+2. The permission checking in the API routes is optimized to directly query for the hotel with the vendor's ID, which is more efficient.
+
+3. The context is updated to listen for refetch events, which allows for dynamically updating the list of hotels when a new one is discovered.
+
+4. No browser preview is needed as requested - these code changes should fix the permission issues without requiring visual verification.
