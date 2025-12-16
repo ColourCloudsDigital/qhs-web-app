@@ -2,6 +2,7 @@
 import { NotificationStatus, NotificationType, NotificationRecipient } from '@/lib/types/enums'
 import pool from '@/lib/db';
 import { emailService } from './email.service';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface NotificationPreferencesInput {
   emailEnabled?: boolean;
@@ -22,6 +23,7 @@ export interface CreateNotificationInput {
 }
 
 export interface SendBulkNotificationInput {
+  id?: string;
   title: string;
   content: string;
   type: NotificationType;
@@ -46,25 +48,29 @@ export interface NotificationServiceInterface {
 class NotificationService implements NotificationServiceInterface {
   async createNotification(data: CreateNotificationInput) {
     const { title, content, type, recipient, userId, senderId, metadata } = data;
-    
-    // Create the notification in the database
-    const [result] = await pool.query(
+
+    // Generate UUID for notification id (table expects id to be provided)
+    const id = uuidv4();
+
+    // Create the notification in the database (explicitly include `id`)
+    await pool.query(
       `INSERT INTO notifications 
-       (title, content, type, recipient, userId, senderId, metadata, status, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+       (id, title, content, type, recipient, userId, senderId, metadata, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
-        title, 
-        content, 
-        type, 
-        recipient, 
-        userId, 
-        senderId || null, 
+        id,
+        title,
+        content,
+        type,
+        recipient,
+        userId,
+        senderId || null,
         metadata ? JSON.stringify(metadata) : null,
-        NotificationStatus.UNREAD
+        NotificationStatus.UNREAD,
       ]
     );
-    
-    const insertId = (result as any).insertId;
+
+    const insertId = id;
     
     // Get user preferences
     const [prefRows] = await pool.query(
@@ -122,7 +128,7 @@ class NotificationService implements NotificationServiceInterface {
   }
 
   async sendBulkNotification(data: SendBulkNotificationInput) {
-    const { title, content, type, recipientType, senderId, metadata } = data;
+    const { id = uuidv4(), title, content, type, recipientType, senderId, metadata } = data;
     
     // Find all users of the specified type
     let userIds: string[] = [];

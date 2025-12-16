@@ -28,14 +28,7 @@ export default function NotificationSettings() {
   const [error, setError] = useState<string | null>(null);
 
   // Get all notification types
-  const allNotificationTypes: NotificationType[] = [
-    'SYSTEM',
-    'BOOKING',
-    'PAYMENT',
-    'SUBSCRIPTION',
-    'MESSAGE',
-    'ANNOUNCEMENT'
-  ];
+  const allNotificationTypes: NotificationType[] = [  ];
 
   // Fetch user preferences
   useEffect(() => {
