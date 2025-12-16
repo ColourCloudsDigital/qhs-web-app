@@ -107,6 +107,7 @@
         "swiper": "^8.4.7",
         "tailwind-merge": "^3.0.2",
         "universal-cookie": "^6.1.1",
+        "uuid": "^13.0.0",
         "web-push": "^3.6.7",
         "yet-another-react-lightbox": "^3.21.7",
         "yup": "^0.32.11",
