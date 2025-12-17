@@ -806,13 +806,17 @@ export default function EditUserPage({ params }: EditUserPageProps) {
                   <label htmlFor="hotelId" className="text-sm font-medium">Assigned Hotel (Optional)</label>
                   <Select
                     value={formData.hotelId}
-                    onValueChange={(value) => handleSelectChange('hotelId', value)}
+                    onValueChange={(value) => {
+                      if (value === 'unassigned') {
+                        return "";
+                      } else {handleSelectChange('hotelId', value)}}
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select hotel" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Not Assigned</SelectItem>
+                      <SelectItem value="unassigned">Not Assigned</SelectItem>
                       {hotels.map((hotel) => (
                         <SelectItem key={hotel.id} value={hotel.id}>{hotel.name}</SelectItem>
                       ))}

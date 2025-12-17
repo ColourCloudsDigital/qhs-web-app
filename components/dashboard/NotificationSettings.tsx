@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, CheckCircle, AlertTriangle, Info, Save } from 'lucide-react';
+import { Bell, CheckCircle, AlertTriangle, Save } from 'lucide-react';
 import { NotificationType } from '@/lib/types/enums';
 
 interface NotificationPreferenceProps {
@@ -27,15 +27,8 @@ export default function NotificationSettings() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get all notification types
-  const allNotificationTypes: NotificationType[] = [
-    'SYSTEM',
-    'BOOKING',
-    'PAYMENT',
-    'SUBSCRIPTION',
-    'MESSAGE',
-    'ANNOUNCEMENT'
-  ];
+  // Get all notification types dynamically from enum
+  const allNotificationTypes: NotificationType[] = Object.values(NotificationType);
 
   // Fetch user preferences
   useEffect(() => {
@@ -45,17 +38,20 @@ export default function NotificationSettings() {
       try {
         setIsLoading(true);
         const response = await fetch('/api/notifications/settings');
+        if (!response.ok) {
+          throw new Error('Failed to fetch preferences');
+        }
         const data = await response.json();
         
         setPreferences({
-          emailEnabled: data.emailEnabled,
-          pushEnabled: data.pushEnabled,
-          inAppEnabled: data.inAppEnabled,
-          subscribedTypes: data.subscribedTypes || [],
-          unsubscribedTypes: data.unsubscribedTypes || []
+          emailEnabled: data.emailEnabled ?? true,
+          pushEnabled: data.pushEnabled ?? true,
+          inAppEnabled: data.inAppEnabled ?? true,
+          subscribedTypes: data.subscribedTypes ?? [],
+          unsubscribedTypes: data.unsubscribedTypes ?? []
         });
-      } catch (error) {
-        console.error('Error fetching notification preferences:', error);
+      } catch (err) {
+        console.error('Error fetching notification preferences:', err);
         setError('Failed to load notification preferences');
       } finally {
         setIsLoading(false);
@@ -67,29 +63,31 @@ export default function NotificationSettings() {
 
   // Toggle subscription for notification type
   const toggleNotificationType = (type: NotificationType) => {
-    if (preferences.subscribedTypes.includes(type)) {
-      // Remove from subscribed, add to unsubscribed
-      setPreferences({
-        ...preferences,
-        subscribedTypes: preferences.subscribedTypes.filter(t => t !== type),
-        unsubscribedTypes: [...preferences.unsubscribedTypes, type]
-      });
-    } else {
-      // Add to subscribed, remove from unsubscribed
-      setPreferences({
-        ...preferences,
-        subscribedTypes: [...preferences.subscribedTypes, type],
-        unsubscribedTypes: preferences.unsubscribedTypes.filter(t => t !== type)
-      });
-    }
+    setPreferences(prev => {
+      if (prev.subscribedTypes.includes(type)) {
+        // Remove from subscribed, add to unsubscribed
+        return {
+          ...prev,
+          subscribedTypes: prev.subscribedTypes.filter(t => t !== type),
+          unsubscribedTypes: [...prev.unsubscribedTypes, type]
+        };
+      } else {
+        // Add to subscribed, remove from unsubscribed
+        return {
+          ...prev,
+          subscribedTypes: [...prev.subscribedTypes, type],
+          unsubscribedTypes: prev.unsubscribedTypes.filter(t => t !== type)
+        };
+      }
+    });
   };
 
   // Toggle channel preference
   const toggleChannel = (channel: 'emailEnabled' | 'pushEnabled' | 'inAppEnabled') => {
-    setPreferences({
-      ...preferences,
-      [channel]: !preferences[channel]
-    });
+    setPreferences(prev => ({
+      ...prev,
+      [channel]: !prev[channel]
+    }));
   };
 
   // Get type name
@@ -152,8 +150,8 @@ export default function NotificationSettings() {
       setTimeout(() => {
         setSuccess(false);
       }, 3000);
-    } catch (error) {
-      console.error('Error saving notification preferences:', error);
+    } catch (err) {
+      console.error('Error saving notification preferences:', err);
       setError('Failed to save preferences. Please try again.');
     } finally {
       setIsSaving(false);
@@ -255,30 +253,34 @@ export default function NotificationSettings() {
       
       <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
         <h2 className="mb-4 text-lg font-medium text-gray-900 dark:text-white">Notification Types</h2>
-        <div className="space-y-4">
-          {allNotificationTypes.map(type => (
-            <div key={type} className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-                  <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+        {allNotificationTypes.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">No notification types available</p>
+        ) : (
+          <div className="space-y-4">
+            {allNotificationTypes.map(type => (
+              <div key={type} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+                    <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">{getTypeName(type)}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{getTypeDescription(type)}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">{getTypeName(type)}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{getTypeDescription(type)}</p>
-                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={preferences.subscribedTypes.includes(type)}
+                    onChange={() => toggleNotificationType(type)}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:border-gray-600 dark:peer-checked:bg-primary-dark"></div>
+                </label>
               </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={preferences.subscribedTypes.includes(type)}
-                  onChange={() => toggleNotificationType(type)}
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:border-gray-600 dark:peer-checked:bg-primary-dark"></div>
-              </label>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
       
       <div className="flex justify-end">

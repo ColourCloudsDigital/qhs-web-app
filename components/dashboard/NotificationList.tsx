@@ -70,13 +70,14 @@ export default function NotificationList() {
     ? parseInt(searchParams.get('page') as string) 
     : 1;
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
+  // Fetch notifications (optionally for a specific page)
+  const fetchNotifications = async (pageParam?: number) => {
     if (!session) return;
     
     setIsLoading(true);
     try {
-      let url = `/api/notifications?page=${currentPage}&limit=${pagination.limit}`;
+      const pageToUse = pageParam ?? currentPage;
+      let url = `/api/notifications?page=${pageToUse}&limit=${pagination.limit}`;
       
       if (selectedStatus !== 'ALL') {
         url += `&status=${selectedStatus}`;
@@ -107,16 +108,30 @@ export default function NotificationList() {
 
   // Handle status filter change
   const handleStatusChange = (status: NotificationStatus | 'ALL') => {
+    // Update UI state, update the URL without triggering a Next.js navigation,
+    // and fetch page 1 of results directly to avoid layout/middleware redirects.
     setSelectedStatus(status);
-    // Reset to page 1 when changing filters
-    router.push(`/dashboard/notifications?status=${status}&type=${selectedType}`);
+    try {
+      const newUrl = `/dashboard/notifications?page=1&status=${status}&type=${selectedType}`;
+      window.history.replaceState(null, '', newUrl);
+    } catch (e) {
+      // ignore history errors in non-browser env (safe-guard)
+    }
+    fetchNotifications(1);
   };
 
   // Handle type filter change
   const handleTypeChange = (type: NotificationType | 'ALL') => {
+    // Update UI state, update the URL without triggering a Next.js navigation,
+    // and fetch page 1 of results directly to avoid layout/middleware redirects.
     setSelectedType(type);
-    // Reset to page 1 when changing filters
-    router.push(`/dashboard/notifications?status=${selectedStatus}&type=${type}`);
+    try {
+      const newUrl = `/dashboard/notifications?page=1&status=${selectedStatus}&type=${type}`;
+      window.history.replaceState(null, '', newUrl);
+    } catch (e) {
+      // ignore history errors in non-browser env (safe-guard)
+    }
+    fetchNotifications(1);
   };
 
   // Handle pagination
@@ -307,7 +322,7 @@ export default function NotificationList() {
         <div className="flex w-full items-center justify-between space-x-2 sm:w-auto sm:justify-end">
           {/* Refresh button */}
           <button
-            onClick={fetchNotifications}
+            onClick={() => fetchNotifications()}
             className="inline-flex items-center rounded-md px-2 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             disabled={isLoading}
           >
