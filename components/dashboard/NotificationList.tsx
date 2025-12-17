@@ -322,7 +322,7 @@ export default function NotificationList() {
         <div className="flex w-full items-center justify-between space-x-2 sm:w-auto sm:justify-end">
           {/* Refresh button */}
           <button
-            onClick={fetchNotifications}
+            onClick={() => fetchNotifications()}
             className="inline-flex items-center rounded-md px-2 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             disabled={isLoading}
           >
