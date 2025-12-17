@@ -147,7 +147,7 @@ export default function EditUserPage({ params }: EditUserPageProps) {
           taxId: user.vendor?.taxId || '',
           subscriptionPlanId: user.vendor?.subscriptionPlanId || 'none',
           // Staff fields
-          position: user.staff?.jobTitle || '',
+          position: user.staff?.position || '',
           hotelId: user.staff?.hotelId || 'none',
           vendorId: user.staff?.vendorId || '',
           permissions: user.staff?.permissions 
@@ -434,7 +434,7 @@ export default function EditUserPage({ params }: EditUserPageProps) {
         };
       } else if (formData.role === UserRole.STAFF) {
         userData.staff = {
-          jobTitle: formData.position,
+          position: formData.position,
           hotelId: formData.hotelId === 'none' ? null : formData.hotelId,
           vendorId: formData.vendorId,
           permissions: JSON.stringify(formData.permissions),
