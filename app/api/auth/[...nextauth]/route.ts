@@ -297,6 +297,18 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // Ensure cookie settings are explicit so middleware can reliably read the session cookie
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);
