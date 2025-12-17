@@ -78,7 +78,7 @@ export async function GET() {
       await pool.query(`
         INSERT INTO analytics_settings (
           id,
-          googleAnalytics,
+          googleAnalyticsEnabled,
           metaTags,
           customTracking,
           isActive
@@ -148,7 +148,7 @@ export async function PUT(request: NextRequest) {
       
       await pool.query(`
         UPDATE analytics_settings SET
-          googleAnalytics = ?,
+          googleAnalyticsEnabled = ?,
           metaTags = ?,
           customTracking = ?,
           updatedAt = NOW()
@@ -158,7 +158,7 @@ export async function PUT(request: NextRequest) {
       await pool.query(`
         INSERT INTO analytics_settings (
           id,
-          googleAnalytics,
+          googleAnalyticsEnabled,
           metaTags,
           customTracking,
           isActive

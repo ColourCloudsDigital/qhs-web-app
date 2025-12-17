@@ -278,27 +278,40 @@ export async function POST(req: NextRequest) {
       );
 
       // Insert plan_features entries if features were provided
-      if (features && typeof features === 'object') {
-        // Get all valid modules from the database
-        const [modulesRows] = await connection.query(
-          `SELECT id FROM modules`
-        ) as [MySQLRow[], any];
-        
-        const moduleIds = modulesRows.map(m => m.id);
-        
-        // Insert features for each module if it exists
-        for (const [moduleId, isIncluded] of Object.entries(features)) {
-          if (!moduleIds.includes(moduleId)) {
-            continue; // Skip if module doesn't exist in our database
-          }
-          
-          await connection.query(
-            `INSERT INTO plan_features (planId, moduleId, isIncluded)
-             VALUES (?, ?, ?)`,
-            [planId, moduleId, isIncluded ? 1 : 0]
-          );
-        }
-      }
+if (features && typeof features === 'object') {
+  // Get all valid modules from the database
+  const [modulesRows] = await connection.query(
+    `SELECT id FROM modules`
+  ) as [MySQLRow[], any];
+  
+  const moduleIds = modulesRows.map((m: any) => m.id);
+  
+  // Insert features for each module if it exists
+  for (const [moduleId, value] of Object.entries(features)) {
+    if (!moduleIds.includes(moduleId)) {
+      continue; // Skip if module doesn't exist in our database
+    }
+
+    // Handle both boolean and object (for limits) cases
+    const isIncluded = typeof value === 'object' ? (value as any).included : !!value;
+    const limits = typeof value === 'object' && value !== null ? (value as any).limits : null;
+
+    const featureId = uuidv4(); // ← Generate UUID for plan_features.id
+
+    await connection.query(
+      `INSERT INTO plan_features 
+       (id, planId, moduleId, isIncluded, limits)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        featureId,     // ← New: provide the generated UUID
+        planId,
+        moduleId,
+        isIncluded ? 1 : 0,
+        limits ? JSON.stringify(limits) : null
+      ]
+    );
+  }
+}
       
       await connection.commit();
       
