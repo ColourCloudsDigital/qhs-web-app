@@ -96,6 +96,41 @@ export async function middleware(request: NextRequest) {
   // Original middleware logic
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   let userRole = token?.role as string;
+
+  // If getToken didn't return a token (edge cases), try reading known cookie names
+  // and verify the JWT manually as a fallback. This helps when cookie naming
+  // differs between secure vs non-secure contexts (e.g. '__Secure-next-auth.session-token').
+  if (!token) {
+    try {
+      const cookieNames = [
+        '__Secure-next-auth.session-token',
+        'next-auth.session-token',
+      ];
+
+      for (const name of cookieNames) {
+        const cookieValue = request.cookies.get(name)?.value;
+        if (!cookieValue) continue;
+
+        try {
+          const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || '');
+          const { payload } = await jwtVerify(cookieValue, secret);
+          // Attach the payload as token so downstream logic can read role, id, etc.
+          // `payload` may contain standard JWT fields used by NextAuth callbacks.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (globalThis as any).__nextAuthMiddlewareToken = payload;
+          // map to local token variable
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (token as any) = payload as any;
+          break;
+        } catch (e) {
+          // try next cookie name
+          continue;
+        }
+      }
+    } catch (err) {
+      console.error('Error verifying session cookie in middleware:', err);
+    }
+  }
   
   // Override the role if impersonating
   if (isImpersonating && impersonatedRole && token?.role === 'SUPER_ADMIN') {
