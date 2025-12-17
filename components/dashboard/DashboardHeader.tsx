@@ -64,6 +64,17 @@ const DashboardHeader = ({
     setCurrentHotel(selectedHotel);
   };
 
+  const rolePath = (() => {
+  switch (userRole) {
+    case 'SUPER_ADMIN': return 'admin';
+    case 'VENDOR': return 'vendor';
+    case 'CUSTOMER': return 'customer';
+    case 'STAFF': return 'staff';
+    default: return 'dashboard';
+  }
+})();
+
+
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
@@ -187,7 +198,7 @@ const DashboardHeader = ({
                 <Menu.Item>
                   {({ active }) => (
                     <Link
-                      href={`/${userRole?.toLowerCase()}/settings`}
+                      href={`/${rolePath}/settings`}
                       className={`flex items-center px-4 py-2.5 text-sm transition-colors duration-150 ${
                         active
                           ? 'bg-gray-50 text-primary dark:bg-gray-700 dark:text-primary-light'

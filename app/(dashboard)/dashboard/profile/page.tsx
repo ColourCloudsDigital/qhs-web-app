@@ -28,6 +28,8 @@ import { getUserAvatar } from '@/lib/dashboard-utils';
 import { UserRole } from '@/lib/types/enums';
 import { useToast } from "@/components/ui/use-toast";
 
+import { useRouter } from 'next/navigation';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 interface ProfileData {
   id: string;
   name: string;
@@ -70,6 +72,7 @@ export default function UnifiedProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editableProfile, setEditableProfile] = useState<Partial<ProfileData>>({});
+  const router = useRouter();
 
   const targetUserId = impersonation.isImpersonating && impersonation.userId 
     ? impersonation.userId 
@@ -213,6 +216,9 @@ export default function UnifiedProfilePage() {
 
   return (
     <div className="container mx-auto max-w-5xl py-8 px-4 sm:px-6 lg:px-8">
+  <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+    <ArrowLeftIcon className="h-4 w-4 mr-2" /> Back
+  </Button>
       <Card className="overflow-hidden shadow-lg dark:bg-gray-800">
         <CardHeader className="bg-gradient-to-r from-primary/80 to-primary/90 dark:from-primary/70 dark:to-primary/80 p-6 sm:p-8 border-b border-primary/50 dark:border-primary/40">
           <div className="flex flex-col sm:flex-row items-center sm:space-x-6">
