@@ -69,15 +69,15 @@ export default function CreateTaskModal({
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<TaskCategory>('GENERAL');
-  const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
+  const [category, setCategory] = useState<string>('GENERAL');
+  const [priority, setPriority] = useState<string>('MEDIUM');
   const [assignedToId, setAssignedToId] = useState<string>('');
   const [roomId, setRoomId] = useState<string>('');
   const [dueDate, setDueDate] = useState<Date | undefined>(
     new Date(new Date().setDate(new Date().getDate() + 1))
   );
   const [estimatedHours, setEstimatedHours] = useState<number | undefined>(undefined);
-  const [maintenanceType, setMaintenanceType] = useState<MaintenanceType>('CORRECTIVE');
+  const [maintenanceType, setMaintenanceType] = useState<string>('CORRECTIVE');
   const [isRecurring, setIsRecurring] = useState(false);
   const [costEstimate, setCostEstimate] = useState<number | undefined>(undefined);
   
@@ -320,7 +320,7 @@ export default function CreateTaskModal({
                   <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {staff.map((staffMember) => (
                     <SelectItem key={staffMember.id} value={staffMember.id}>
                       {staffMember.user.name}
@@ -339,7 +339,7 @@ export default function CreateTaskModal({
                   <SelectValue placeholder={isLoadingRooms ? "Loading rooms..." : "Select room"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific room</SelectItem>
+                  <SelectItem value="none">No specific room</SelectItem>
                   {rooms.map((room) => (
                     <SelectItem key={room.id} value={room.id}>
                       {room.name}
