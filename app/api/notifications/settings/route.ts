@@ -104,36 +104,73 @@ export async function PUT(req: NextRequest) {
         unsubscribedTypes
       }
     );
+// Parse subscribedTypes (handle JSON string, comma-separated string, or array; fallback to empty)
+      let parsedSubscribedTypes: string[] = [];
 
-    // Parse for response (handle JSON or fallback to comma-separated string)
-    let parsedSubscribedTypes: string[];
-    if (preferences.subscribedTypes) {
-      try {
-        parsedSubscribedTypes = JSON.parse(preferences.subscribedTypes);
-      } catch {
-        parsedSubscribedTypes = preferences.subscribedTypes
-          .split(',')
-          .map((type: string) => type.trim())
-          .filter(Boolean);
+      // const subscribedTypes = preferences.subscribedTypes;  // Alias for readability
+
+      if (Array.isArray(subscribedTypes)) {
+        // Already an array: Assume it's string[] and filter/trim for safety
+        parsedSubscribedTypes = subscribedTypes
+          .map(type => String(type).trim())  // Coerce to string and trim
+          .filter(Boolean);  // Remove empties
+      } else if (typeof subscribedTypes === 'string') {
+        try {
+          // Try JSON.parse first (e.g., '["type1","type2"]' -> array)
+          parsedSubscribedTypes = JSON.parse(subscribedTypes);
+          if (!Array.isArray(parsedSubscribedTypes)) {
+            throw new Error('Parsed JSON is not an array');  // Safety check
+          }
+          // Optional: Trim/filter if needed
+          parsedSubscribedTypes = parsedSubscribedTypes
+            .map(type => String(type).trim())
+            .filter(Boolean);
+        } catch {
+          // Fallback to comma-split (e.g., 'type1,type2' -> array)
+          parsedSubscribedTypes = subscribedTypes
+            .split(',')
+            .map(type => type.trim())
+            .filter(Boolean);
+        }
+      } else {
+        // Invalid type: Log and throw (or fallback to empty if you prefer non-throwing)
+        console.error('Invalid subscribedTypes type:', typeof subscribedTypes, subscribedTypes);
+        throw new Error('subscribedTypes must be a string or array');
       }
-    } else {
-      parsedSubscribedTypes = [];
-    }
 
-    let parsedUnsubscribedTypes: string[];
-    if (preferences.unsubscribedTypes) {
-      try {
-        parsedUnsubscribedTypes = JSON.parse(preferences.unsubscribedTypes);
-      } catch {
-        parsedUnsubscribedTypes = preferences.unsubscribedTypes
-          .split(',')
-          .map((type: string) => type.trim())
-          .filter(Boolean);
-      }
-    } else {
-      parsedUnsubscribedTypes = [];
-    }
+    // Parse unsubscribedTypes (handle JSON string, comma-separated string, or array; fallback to empty)
+let parsedUnsubscribedTypes: string[] = [];
 
+// const unsubscribedTypes = preferences.unsubscribedTypes;  // Alias for readability
+
+if (Array.isArray(unsubscribedTypes)) {
+  // Already an array: Assume it's string[] and filter/trim for safety
+  parsedUnsubscribedTypes = unsubscribedTypes
+    .map(type => String(type).trim())  // Coerce to string and trim
+    .filter(Boolean);  // Remove empties
+} else if (typeof unsubscribedTypes === 'string') {
+  try {
+    // Try JSON.parse first (e.g., '["type1","type2"]' -> array)
+    parsedUnsubscribedTypes = JSON.parse(unsubscribedTypes);
+    if (!Array.isArray(parsedUnsubscribedTypes)) {
+      throw new Error('Parsed JSON is not an array');  // Safety check
+    }
+    // Optional: Trim/filter if needed
+    parsedUnsubscribedTypes = parsedUnsubscribedTypes
+      .map(type => String(type).trim())
+      .filter(Boolean);
+  } catch {
+    // Fallback to comma-split (e.g., 'type1,type2' -> array)
+    parsedUnsubscribedTypes = unsubscribedTypes
+      .split(',')
+      .map(type => type.trim())
+      .filter(Boolean);
+  }
+} else {
+  // Invalid type: Log and throw (or fallback to empty if you prefer non-throwing)
+  console.error('Invalid unsubscribedTypes type:', typeof unsubscribedTypes, unsubscribedTypes);
+  throw new Error('unsubscribedTypes must be a string or array');
+}
     return NextResponse.json({
       success: true,
       preferences: {
