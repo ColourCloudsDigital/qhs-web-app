@@ -310,7 +310,7 @@ export class UserService {
           }
           
           await connection.query(
-            `INSERT INTO staff (id, userId, jobTitle, vendorId) 
+            `INSERT INTO staff (id, userId, position, vendorId) 
              VALUES (UUID(), ?, ?, ?)`,
             [
               userId,
@@ -343,7 +343,8 @@ export class UserService {
 
   // Update an existing user
   static async updateUser(userId: string, data: UserUpdateInput): Promise<any> {
-    // Check if user exists
+    // Check if user exists and fetch role-specific profiles so
+    // subsequent code can safely access `vendor`/`staff` properties.
     const existingUser = await pool.query(
       'SELECT * FROM users WHERE id = ?',
       [userId]
@@ -352,6 +353,39 @@ export class UserService {
     if (existingUser[0].length === 0) {
       throw new Error('User not found');
     }
+
+    // Attach role-specific profiles to the user record to avoid
+    // reading properties of undefined later on.
+    const [vendorRows] = await pool.query(
+      'SELECT * FROM vendors WHERE userId = ?',
+      [userId]
+    ) as [RowDataPacket[], any];
+
+    const [customerRows] = await pool.query(
+      'SELECT * FROM customers WHERE userId = ?',
+      [userId]
+    ) as [RowDataPacket[], any];
+
+    const [staffRows] = await pool.query(
+      `SELECT s.*, v.companyName as vendorName 
+       FROM staff s 
+       LEFT JOIN vendors v ON s.vendorId = v.id 
+       WHERE s.userId = ?`,
+      [userId]
+    ) as [RowDataPacket[], any];
+
+    const [adminRows] = await pool.query(
+      'SELECT * FROM super_admins WHERE userId = ?',
+      [userId]
+    ) as [RowDataPacket[], any];
+
+    const userRecord = existingUser[0][0];
+    userRecord.vendor = vendorRows.length > 0 ? vendorRows[0] : null;
+    userRecord.customer = customerRows.length > 0 ? customerRows[0] : null;
+    userRecord.staff = staffRows.length > 0 ? staffRows[0] : null;
+    userRecord.superAdmin = adminRows.length > 0 ? adminRows[0] : null;
+
+    console.log('Existing User:', userRecord.role);
 
     // Check email uniqueness if being changed
     if (data.email && data.email !== existingUser[0][0].email) {
@@ -487,7 +521,7 @@ export class UserService {
             
             if (staffExists.length === 0) {
               await connection.query(
-                `INSERT INTO staff (id, userId, jobTitle, vendorId) 
+                `INSERT INTO staff (id, userId, position, vendorId) 
                  VALUES (UUID(), ?, ?, ?)`,
                 [
                   userId,
@@ -561,7 +595,8 @@ export class UserService {
         }
         
         // If changing vendor, verify the new vendor exists
-        if (data.staff.vendorId && data.staff.vendorId !== existingUser[0][0].staff.vendorId) {
+        const existingStaffVendorId = existingUser[0][0].staff ? existingUser[0][0].staff.vendorId : null;
+        if (data.staff.vendorId && data.staff.vendorId !== existingStaffVendorId) {
           const [vendorRows] = await connection.query(
             'SELECT * FROM vendors WHERE id = ?',
             [data.staff.vendorId]
@@ -573,7 +608,7 @@ export class UserService {
         }
         
         await connection.query(
-          `UPDATE staff SET jobTitle = ?, vendorId = ? 
+          `UPDATE staff SET position = ?, vendorId = ? 
            WHERE userId = ?`,
           [
             data.staff.position || 'Staff Member',
