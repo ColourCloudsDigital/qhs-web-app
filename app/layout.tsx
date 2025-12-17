@@ -1,7 +1,7 @@
 import AuthProvider from '@/components/providers/auth-provider';
 import { Nunito } from 'next/font/google';
 import 'react-perfect-scrollbar/dist/css/styles.css';
-import '../styles/tailwind.css';
+import '@/styles/tailwind.css';
 import { ToastProvider } from '@/components/providers/toast-provider';
 import CookieConsentProvider from '@/components/providers/CookieConsentProvider';
 import ThemeProvider from '@/components/providers/theme-provider';
