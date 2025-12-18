@@ -6,6 +6,7 @@ import { canAccessModule } from '@/lib/services/module-access.service';
 import { ModuleType } from '@/lib/types/enums';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
+import { RowDataPacket } from 'mysql2';
 
 const taskSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -148,113 +149,56 @@ export async function GET(request: Request) {
     const hotelId = searchParams.get('hotelId');
     const status = searchParams.get('status');
     const priority = searchParams.get('priority');
-    const category = searchParams.get('category');
-    const assignedToId = searchParams.get('assignedToId');
-    const roomId = searchParams.get('roomId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
-    // Build filter based on role and query params
-    let filter: any = {};
-    
-    // Role-based filters
-    const userRole = session.user.role;
-    
-    if (userRole === 'VENDOR') {
-      // Vendor can see tasks for their hotels
-      const vendor = await prisma.vendor.findUnique({
-        where: { userId: session.user.id },
-        select: { id: true },
-      });
-      
-      if (!vendor) {
-        return NextResponse.json({ error: 'Vendor profile not found' }, { status: 404 });
-      }
-      
-      const vendorHotels = await prisma.hotel.findMany({
-        where: { vendorId: vendor.id },
-        select: { id: true },
-      });
-      
-      filter.hotelId = { in: vendorHotels.map(hotel => hotel.id) };
-      
-      // If specific hotel is requested, verify it belongs to vendor
-      if (hotelId) {
-        const hasHotel = vendorHotels.some(hotel => hotel.id === hotelId);
-        if (!hasHotel) {
-          return NextResponse.json({ error: 'Hotel not found' }, { status: 404 });
-        }
-        filter.hotelId = hotelId;
-      }
-    } else if (userRole === 'STAFF') {
-      // Staff can see tasks assigned to them or all tasks in their hotel
-      const staff = await prisma.staff.findUnique({
-        where: { userId: session.user.id },
-        select: { id: true, hotelId: true },
-      });
-      
-      if (!staff) {
-        return NextResponse.json({ error: 'Staff profile not found' }, { status: 404 });
-      }
-      
-      // If hotel ID is provided, make sure staff has access to it
-      if (hotelId && hotelId !== staff.hotelId) {
-        return NextResponse.json({ error: 'Access denied to this hotel' }, { status: 403 });
-      }
-      
-      filter.hotelId = staff.hotelId;
-      
-      // By default, staff sees tasks assigned to them
-      // If assignedToId is explicitly provided, check permission to view all tasks
-      if (!assignedToId) {
-        filter.assignedToId = staff.id;
-      }
+    if (!hotelId) {
+      return NextResponse.json({ error: 'Hotel ID is required' }, { status: 400 });
     }
-    
-    // Apply query filters
-    if (assignedToId) filter.assignedToId = assignedToId;
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
-    if (category) filter.category = category;
-    if (roomId) filter.roomId = roomId;
+
+    // Build query
+    let whereClause = 'WHERE ft.hotelId = ?';
+    const params: any[] = [hotelId];
+
+    if (status) {
+      whereClause += ' AND ft.status = ?';
+      params.push(status);
+    }
+
+    if (priority) {
+      whereClause += ' AND ft.priority = ?';
+      params.push(priority);
+    }
+
+    // Get total count
+    const [countResult] = await pool.query(
+      `SELECT COUNT(*) as total FROM facility_tasks ft ${whereClause}`,
+      params
+    ) as [RowDataPacket[], any];
+
+    const totalCount = countResult[0]?.total || 0;
 
     // Get tasks with pagination
-    const [tasks, totalCount] = await Promise.all([
-      prisma.facilityTask.findMany({
-        where: filter,
-        orderBy: [
-          { priority: 'desc' },
-          { dueDate: 'asc' },
-        ],
-        include: {
-          assignedTo: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          room: true,
-          checklist: {
-            orderBy: { order: 'asc' },
-          },
-        },
-        skip,
-        take: limit,
-      }),
-      prisma.facilityTask.count({ where: filter }),
-    ]);
+    const [tasks] = await pool.query(
+      `SELECT ft.taskId, ft.hotelId, ft.title, ft.description, ft.category, 
+              ft.priority, ft.due_date, ft.staffId, ft.vendorId, ft.roomUnitId, 
+              ft.maintenance_type, ft.estimated_hours, ft.cost_estimate, 
+              ft.is_recurring, ft.status, ft.created_at, ft.updated_at,
+              u.name as staffName, u.email as staffEmail
+       FROM facility_tasks ft
+       LEFT JOIN staff s ON ft.staffId = s.id
+       LEFT JOIN users u ON s.userId = u.id
+       ${whereClause}
+       ORDER BY ft.priority DESC, ft.due_date ASC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    ) as [RowDataPacket[], any];
 
-    // Calculate pagination metadata
     const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
-      tasks,
+      tasks: tasks || [],
       pagination: {
         currentPage: page,
         totalPages,

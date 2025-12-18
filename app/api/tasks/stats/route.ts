@@ -3,8 +3,8 @@ import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { canAccessModule } from '@/lib/services/module-access.service';
 import { ModuleType } from '@/lib/types/enums';
-import TaskService from '@/lib/services/task.service';
 import { getServerSession } from 'next-auth';
+import { RowDataPacket } from 'mysql2';
 
 export async function GET(request: Request) {
   try {
@@ -33,46 +33,44 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Hotel ID is required' }, { status: 400 });
     }
 
-    // Verify hotel access based on user role
-    const userRole = session.user.role;
-    
-    if (userRole === 'VENDOR') {
-      const vendor = await prisma.vendor.findUnique({
-        where: { userId: session.user.id },
-        include: {
-          hotels: {
-            select: { id: true },
-          },
-        },
-      });
-      
-      if (!vendor) {
-        return NextResponse.json({ error: 'Vendor profile not found' }, { status: 404 });
-      }
-      
-      const hasHotelAccess = vendor.hotels.some(hotel => hotel.id === hotelId);
-      if (!hasHotelAccess) {
-        return NextResponse.json({ error: 'Access denied to this hotel' }, { status: 403 });
-      }
-    } else if (userRole === 'STAFF') {
-      const staff = await prisma.staff.findUnique({
-        where: { userId: session.user.id },
-        select: { hotelId: true },
-      });
-      
-      if (!staff) {
-        return NextResponse.json({ error: 'Staff profile not found' }, { status: 404 });
-      }
-      
-      if (staff.hotelId !== hotelId) {
-        return NextResponse.json({ error: 'Access denied to this hotel' }, { status: 403 });
-      }
-    }
+    // Get task stats using direct queries
+    const [statusCounts] = await pool.query(
+      `SELECT status, COUNT(*) as count 
+       FROM facility_tasks 
+       WHERE hotelId = ? 
+       GROUP BY status`,
+      [hotelId]
+    ) as [RowDataPacket[], any];
 
-    // Get task stats using the task service
-    const taskStats = await TaskService.getTaskStats(hotelId);
+    const [priorityCounts] = await pool.query(
+      `SELECT priority, COUNT(*) as count 
+       FROM facility_tasks 
+       WHERE hotelId = ? 
+       GROUP BY priority`,
+      [hotelId]
+    ) as [RowDataPacket[], any];
 
-    return NextResponse.json(taskStats);
+    const today = new Date();
+    const [overdueTasks] = await pool.query(
+      `SELECT COUNT(*) as count 
+       FROM facility_tasks 
+       WHERE hotelId = ? AND due_date < ? AND status NOT IN ('COMPLETED', 'CANCELLED')`,
+      [hotelId, today]
+    ) as [RowDataPacket[], any];
+
+    const [totalTasks] = await pool.query(
+      `SELECT COUNT(*) as count 
+       FROM facility_tasks 
+       WHERE hotelId = ?`,
+      [hotelId]
+    ) as [RowDataPacket[], any];
+
+    return NextResponse.json({
+      statusCounts: statusCounts || [],
+      priorityCounts: priorityCounts || [],
+      overdueTasks: overdueTasks[0]?.count || 0,
+      totalTasks: totalTasks[0]?.count || 0,
+    });
   } catch (error) {
     console.error('Error fetching task stats:', error);
     return NextResponse.json(
