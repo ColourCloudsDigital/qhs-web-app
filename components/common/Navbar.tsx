@@ -65,7 +65,7 @@ export default function Navbar() {
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
-    await signOut({ redirect: true, callbackUrl: '/' });
+    await signOut({ redirect: true, callbackUrl: '/login' });
   };
 
   // Only show auth-dependent UI elements after client-side hydration
