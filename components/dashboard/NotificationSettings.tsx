@@ -14,7 +14,7 @@ interface NotificationPreferenceProps {
 }
 
 export default function NotificationSettings() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [preferences, setPreferences] = useState<NotificationPreferenceProps>({
     emailEnabled: true,
     pushEnabled: true,
@@ -28,38 +28,78 @@ export default function NotificationSettings() {
   const [error, setError] = useState<string | null>(null);
 
   // Get all notification types dynamically from enum
-  const allNotificationTypes: NotificationType[] = Object.values(NotificationType);
+  const allNotificationTypes: NotificationType[] = Object.values(NotificationType) as NotificationType[];
 
-  // Fetch user preferences
+  // Fetch user preferences when authenticated
   useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    const controller = new AbortController();
+
     async function fetchPreferences() {
-      if (!session) return;
-      
       try {
         setIsLoading(true);
-        const response = await fetch('/api/notifications/settings');
-        if (!response.ok) {
-          throw new Error('Failed to fetch preferences');
+
+        const response = await fetch('/api/notifications/settings', {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        });
+
+        if (response.status === 401) {
+          setError('Unauthorized - please sign in');
+          setIsLoading(false);
+          return;
         }
+
+        if (!response.ok) {
+          const text = await response.text();
+          console.error('Failed to fetch preferences:', response.status, text);
+          setError('Failed to load notification preferences');
+          setIsLoading(false);
+          return;
+        }
+
         const data = await response.json();
-        
+
+        const normalizeTypes = (val: any): NotificationType[] => {
+          if (!val) return [];
+          if (Array.isArray(val)) return val.map(String) as NotificationType[];
+          if (typeof val === 'string') {
+            try {
+              const parsed = JSON.parse(val);
+              if (Array.isArray(parsed)) return parsed.map(String) as NotificationType[];
+            } catch {
+              return val.split(',').map((s: string) => s.trim()) as NotificationType[];
+            }
+          }
+          return [];
+        };
+
+        const subscribed = normalizeTypes(data.subscribedTypes);
+        const unsubscribed = normalizeTypes(data.unsubscribedTypes);
+
         setPreferences({
           emailEnabled: data.emailEnabled ?? true,
           pushEnabled: data.pushEnabled ?? true,
           inAppEnabled: data.inAppEnabled ?? true,
-          subscribedTypes: data.subscribedTypes ?? [],
-          unsubscribedTypes: data.unsubscribedTypes ?? []
+          subscribedTypes: subscribed,
+          unsubscribedTypes: unsubscribed,
         });
-      } catch (err) {
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
         console.error('Error fetching notification preferences:', err);
         setError('Failed to load notification preferences');
       } finally {
         setIsLoading(false);
       }
     }
-    
+
     fetchPreferences();
-  }, [session]);
+
+    return () => controller.abort();
+  }, [status]);
 
   // Toggle subscription for notification type
   const toggleNotificationType = (type: NotificationType) => {
@@ -125,7 +165,7 @@ export default function NotificationSettings() {
 
   // Save preferences
   const savePreferences = async () => {
-    if (!session) return;
+    if (status !== 'authenticated') return;
     
     try {
       setIsSaving(true);
@@ -134,13 +174,23 @@ export default function NotificationSettings() {
       
       const response = await fetch('/api/notifications/settings', {
         method: 'PUT',
+        credentials: 'same-origin',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
         },
-        body: JSON.stringify(preferences)
+        body: JSON.stringify({
+          emailEnabled: preferences.emailEnabled,
+          pushEnabled: preferences.pushEnabled,
+          inAppEnabled: preferences.inAppEnabled,
+          subscribedTypes: preferences.subscribedTypes.map(String),
+          unsubscribedTypes: preferences.unsubscribedTypes.map(String),
+        })
       });
-      
+
       if (!response.ok) {
+        const text = await response.text();
+        console.error('Failed to save preferences:', response.status, text);
         throw new Error('Failed to save preferences');
       }
       
