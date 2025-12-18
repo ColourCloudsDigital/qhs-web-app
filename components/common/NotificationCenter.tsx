@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { NotificationType, NotificationStatus } from '@/lib/types/enums';
+import { UserRole } from '@/lib/types/enums';
 
 interface Notification {
   id: string;
@@ -120,10 +121,10 @@ export default function NotificationCenter() {
         router.push(`/dashboard/subscription`);
       } else {
         // Default action for other types
-        router.push(`/dashboard/notifications`);
+        router.push(`/admin/notifications`);
       }
     } else {
-      router.push(`/dashboard/notifications`);
+      router.push(`/admin/notifications`);
     }
     
     setIsOpen(false);
@@ -285,7 +286,7 @@ export default function NotificationCenter() {
           <div className="border-t border-gray-200 p-2 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <Link
-                href="/dashboard/notifications"
+                href="/admin/notifications"
                 className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                 onClick={() => setIsOpen(false)}
               >
@@ -293,7 +294,7 @@ export default function NotificationCenter() {
                 <ChevronDown className="ml-1 inline h-3 w-3 transform rotate-270" />
               </Link>
               <Link
-                href="/dashboard/notifications/settings"
+                href="/admin/notifications/settings"
                 className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                 onClick={() => setIsOpen(false)}
               >
