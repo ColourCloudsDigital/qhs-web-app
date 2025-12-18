@@ -73,7 +73,13 @@ export default function AnalyticsSettingsPage() {
         }
         
         const data = await response.json();
-        setSettings(data);
+        // Normalize incoming data so nested sections always exist
+        const normalized = {
+          googleAnalytics: { ...defaultSettings.googleAnalytics, ...(data.googleAnalytics || {}) },
+          metaTags: { ...defaultSettings.metaTags, ...(data.metaTags || {}) },
+          customTracking: { ...defaultSettings.customTracking, ...(data.customTracking || {}) },
+        };
+        setSettings(normalized);
       } catch (error: any) {
         console.error('Error fetching analytics settings:', error);
         setError(error.message || 'Failed to load analytics settings');
@@ -123,10 +129,11 @@ export default function AnalyticsSettingsPage() {
     field: string,
     value: string | boolean
   ) => {
+    const currentSection = (settings as any)[section] || {};
     setSettings({
       ...settings,
       [section]: {
-        ...settings[section],
+        ...currentSection,
         [field]: value
       }
     });
