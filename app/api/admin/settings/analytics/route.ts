@@ -4,26 +4,29 @@ import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { z } from 'zod';
 
-// Analytics settings schema validation
+// Analytics settings schema validation (accepts document-shaped payload)
 const analyticsSettingsSchema = z.object({
-  googleAnalytics: z.object({
-    enabled: z.boolean(),
-    measurementId: z.string(),
-    enableDemographics: z.boolean(),
-    enableEnhancedLinkAttribution: z.boolean(),
-    anonymizeIp: z.boolean(),
-  }),
-  metaTags: z.object({
-    googleSiteVerification: z.string(),
-    bingSiteVerification: z.string(),
-    yandexSiteVerification: z.string(),
-  }),
-  customTracking: z.object({
-    enabled: z.boolean(),
-    headScripts: z.string(),
-    bodyStartScripts: z.string(),
-    bodyEndScripts: z.string(),
-  }),
+  googleAnalytics: z
+    .object({
+      enabled: z.boolean().optional(),
+      measurementId: z.string().optional(),
+      enableDemographics: z.boolean().optional(),
+      enableEnhancedLinkAttribution: z.boolean().optional(),
+      anonymizeIp: z.boolean().optional(),
+    })
+    .optional(),
+  googleTagManager: z
+    .object({ enabled: z.boolean().optional(), id: z.string().optional() })
+    .optional(),
+  facebookPixel: z
+    .object({ enabled: z.boolean().optional(), id: z.string().optional() })
+    .optional(),
+  hotjar: z.object({ enabled: z.boolean().optional(), id: z.string().optional() }).optional(),
+  customTracking: z
+    .object({ enabled: z.boolean().optional(), headScripts: z.string().optional(), bodyStartScripts: z.string().optional(), bodyEndScripts: z.string().optional(), customScriptsRaw: z.string().optional() })
+    .optional(),
+  dataRetentionPeriod: z.number().int().optional(),
+  anonymizeIp: z.boolean().optional(),
 });
 
 // Default settings object
@@ -35,17 +38,11 @@ const defaultSettings = {
     enableEnhancedLinkAttribution: true,
     anonymizeIp: true,
   },
-  metaTags: {
-    googleSiteVerification: '',
-    bingSiteVerification: '',
-    yandexSiteVerification: '',
-  },
-  customTracking: {
-    enabled: false,
-    headScripts: '',
-    bodyStartScripts: '',
-    bodyEndScripts: '',
-  },
+  googleTagManager: { enabled: false, id: '' },
+  facebookPixel: { enabled: false, id: '' },
+  hotjar: { enabled: false, id: '' },
+  customTracking: { enabled: false, headScripts: '', bodyStartScripts: '', bodyEndScripts: '', customScriptsRaw: '' },
+  dataRetentionPeriod: 365,
 };
 
 /**
@@ -62,50 +59,118 @@ export async function GET() {
     }
 
     // Get analytics settings from database
-    const [analyticsSettings] = await pool.query(`
+    const [rows] = await pool.query(`
       SELECT * FROM analytics_settings
-      WHERE isActive = TRUE
+      ORDER BY createdAt DESC
       LIMIT 1
     `);
 
-    // Return default settings if none found
-    if (!analyticsSettings || (analyticsSettings as any[]).length === 0) {
-      // Create default settings
-      const googleAnalyticsJSON = JSON.stringify(defaultSettings.googleAnalytics);
-      const metaTagsJSON = JSON.stringify(defaultSettings.metaTags);
-      const customTrackingJSON = JSON.stringify(defaultSettings.customTracking);
-      
-      await pool.query(`
-        INSERT INTO analytics_settings (
+    // If none found, create a default row with columns present in DB
+    if (!rows || (rows as any[]).length === 0) {
+      const googleAnalyticsEnabled = defaultSettings.googleAnalytics.enabled ? 1 : 0;
+      const googleAnalyticsId = defaultSettings.googleAnalytics.measurementId || null;
+      const googleTagManagerEnabled = defaultSettings.googleTagManager.enabled ? 1 : 0;
+      const googleTagManagerId = defaultSettings.googleTagManager.id || null;
+      const facebookPixelEnabled = defaultSettings.facebookPixel.enabled ? 1 : 0;
+      const facebookPixelId = defaultSettings.facebookPixel.id || null;
+      const hotjarEnabled = defaultSettings.hotjar.enabled ? 1 : 0;
+      const hotjarId = defaultSettings.hotjar.id || null;
+      const customScripts = JSON.stringify({
+        ...defaultSettings.customTracking,
+      });
+      const dataRetentionPeriod = defaultSettings.dataRetentionPeriod;
+      const anonymizeIp = defaultSettings.googleAnalytics.anonymizeIp ? 1 : 0;
+
+      await pool.query(
+        `INSERT INTO analytics_settings (
           id,
           googleAnalyticsEnabled,
-          metaTags,
-          customTracking,
-          isActive
+          googleAnalyticsId,
+          googleTagManagerEnabled,
+          googleTagManagerId,
+          facebookPixelEnabled,
+          facebookPixelId,
+          hotjarEnabled,
+          hotjarId,
+          customScripts,
+          dataRetentionPeriod,
+          anonymizeIp,
+          createdAt,
+          updatedAt
         ) VALUES (
-          UUID(),
-          ?,
-          ?,
-          ?,
-          TRUE
-        )
-      `, [googleAnalyticsJSON, metaTagsJSON, customTrackingJSON]);
-      
+          UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+        )`,
+        [
+          googleAnalyticsEnabled,
+          googleAnalyticsId,
+          googleTagManagerEnabled,
+          googleTagManagerId,
+          facebookPixelEnabled,
+          facebookPixelId,
+          hotjarEnabled,
+          hotjarId,
+          customScripts,
+          dataRetentionPeriod,
+          anonymizeIp,
+        ]
+      );
+
       return NextResponse.json(defaultSettings);
     }
 
-    // Transform the data if needed
     try {
-      const settings = (analyticsSettings as any[])[0];
-      const transformedSettings = {
-        googleAnalytics: JSON.parse(settings.googleAnalytics || '{}'),
-        metaTags: JSON.parse(settings.metaTags || '{}'),
-        customTracking: JSON.parse(settings.customTracking || '{}'),
+      const settings = (rows as any[])[0];
+
+      // Parse customScripts if it was stored as JSON; otherwise treat as raw string
+      let parsedCustom = {
+        enabled: false,
+        headScripts: '',
+        bodyStartScripts: '',
+        bodyEndScripts: '',
+        customScriptsRaw: '',
       };
 
-      return NextResponse.json(transformedSettings);
+      if (settings.customScripts) {
+        try {
+          const parsed = JSON.parse(settings.customScripts);
+          if (typeof parsed === 'object') {
+            parsedCustom = { ...parsedCustom, ...parsed };
+          } else if (typeof parsed === 'string') {
+            parsedCustom.customScriptsRaw = parsed;
+          }
+        } catch {
+          // not JSON, save raw
+          parsedCustom.customScriptsRaw = String(settings.customScripts);
+        }
+      }
+
+      const transformed = {
+        googleAnalytics: {
+          enabled: Boolean(settings.googleAnalyticsEnabled),
+          measurementId: settings.googleAnalyticsId || '',
+          enableDemographics: false,
+          enableEnhancedLinkAttribution: true,
+          anonymizeIp: Boolean(settings.anonymizeIp),
+        },
+        googleTagManager: {
+          enabled: Boolean(settings.googleTagManagerEnabled),
+          id: settings.googleTagManagerId || '',
+        },
+        facebookPixel: {
+          enabled: Boolean(settings.facebookPixelEnabled),
+          id: settings.facebookPixelId || '',
+        },
+        hotjar: {
+          enabled: Boolean(settings.hotjarEnabled),
+          id: settings.hotjarId || '',
+        },
+        customTracking: parsedCustom,
+        dataRetentionPeriod: settings.dataRetentionPeriod ?? 365,
+      };
+
+      return NextResponse.json(transformed);
     } catch (parseError) {
-      console.error('Error parsing stored JSON settings:', parseError);
+      console.error('Error transforming analytics settings:', parseError);
       return NextResponse.json(defaultSettings);
     }
   } catch (error) {
@@ -127,71 +192,144 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Parse and validate the request body
+    // Parse and validate the request body (document-shaped allowed)
     const body = await request.json();
     const validatedData = analyticsSettingsSchema.parse(body);
 
+    // Normalize incoming values with defaults
+    const ga = validatedData.googleAnalytics ?? defaultSettings.googleAnalytics;
+    const gtm = validatedData.googleTagManager ?? defaultSettings.googleTagManager;
+    const fb = validatedData.facebookPixel ?? defaultSettings.facebookPixel;
+    const hotjar = validatedData.hotjar ?? defaultSettings.hotjar;
+    const custom = validatedData.customTracking ?? defaultSettings.customTracking;
+    const dataRetentionPeriod = validatedData.dataRetentionPeriod ?? defaultSettings.dataRetentionPeriod;
+    const anonymizeIp = validatedData.anonymizeIp ?? ga.anonymizeIp ?? defaultSettings.googleAnalytics.anonymizeIp;
+
+    // Map to DB columns
+    const googleAnalyticsEnabled = ga.enabled ? 1 : 0;
+    const googleAnalyticsId = ga.measurementId || null;
+    const googleTagManagerEnabled = gtm.enabled ? 1 : 0;
+    const googleTagManagerId = gtm.id || null;
+    const facebookPixelEnabled = fb.enabled ? 1 : 0;
+    const facebookPixelId = fb.id || null;
+    const hotjarEnabled = hotjar.enabled ? 1 : 0;
+    const hotjarId = hotjar.id || null;
+
+    // Store customTracking as JSON in customScripts column for flexibility
+    const customScripts = JSON.stringify({ ...custom });
+
     // Check if analytics settings exist
-    const [existingSettings] = await pool.query(`
+    const [existingRows] = await pool.query(`
       SELECT * FROM analytics_settings
-      WHERE isActive = TRUE
+      ORDER BY createdAt DESC
       LIMIT 1
     `);
-    
-    const googleAnalyticsJSON = JSON.stringify(validatedData.googleAnalytics);
-    const metaTagsJSON = JSON.stringify(validatedData.metaTags);
-    const customTrackingJSON = JSON.stringify(validatedData.customTracking);
-    
-    // Update or create analytics settings
-    if (existingSettings && (existingSettings as any[]).length > 0) {
-      const settingId = (existingSettings as any[])[0].id;
-      
+
+    if (existingRows && (existingRows as any[]).length > 0) {
+      const settingId = (existingRows as any[])[0].id;
       await pool.query(`
         UPDATE analytics_settings SET
           googleAnalyticsEnabled = ?,
-          metaTags = ?,
-          customTracking = ?,
+          googleAnalyticsId = ?,
+          googleTagManagerEnabled = ?,
+          googleTagManagerId = ?,
+          facebookPixelEnabled = ?,
+          facebookPixelId = ?,
+          hotjarEnabled = ?,
+          hotjarId = ?,
+          customScripts = ?,
+          dataRetentionPeriod = ?,
+          anonymizeIp = ?,
           updatedAt = NOW()
         WHERE id = ?
-      `, [googleAnalyticsJSON, metaTagsJSON, customTrackingJSON, settingId]);
+      `, [
+        googleAnalyticsEnabled,
+        googleAnalyticsId,
+        googleTagManagerEnabled,
+        googleTagManagerId,
+        facebookPixelEnabled,
+        facebookPixelId,
+        hotjarEnabled,
+        hotjarId,
+        customScripts,
+        dataRetentionPeriod,
+        anonymizeIp ? 1 : 0,
+        settingId,
+      ]);
     } else {
       await pool.query(`
         INSERT INTO analytics_settings (
           id,
           googleAnalyticsEnabled,
-          metaTags,
-          customTracking,
-          isActive
+          googleAnalyticsId,
+          googleTagManagerEnabled,
+          googleTagManagerId,
+          facebookPixelEnabled,
+          facebookPixelId,
+          hotjarEnabled,
+          hotjarId,
+          customScripts,
+          dataRetentionPeriod,
+          anonymizeIp,
+          createdAt,
+          updatedAt
         ) VALUES (
-          UUID(),
-          ?,
-          ?,
-          ?,
-          TRUE
+          UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
         )
-      `, [googleAnalyticsJSON, metaTagsJSON, customTrackingJSON]);
+      `, [
+        googleAnalyticsEnabled,
+        googleAnalyticsId,
+        googleTagManagerEnabled,
+        googleTagManagerId,
+        facebookPixelEnabled,
+        facebookPixelId,
+        hotjarEnabled,
+        hotjarId,
+        customScripts,
+        dataRetentionPeriod,
+        anonymizeIp ? 1 : 0,
+      ]);
     }
-    
-    // Get the updated settings
-    const [updatedSettings] = await pool.query(`
+
+    // Return the saved settings in document shape
+    const [updatedRows] = await pool.query(`
       SELECT * FROM analytics_settings
-      WHERE isActive = TRUE
+      ORDER BY createdAt DESC
       LIMIT 1
     `);
-    
-    if (updatedSettings && (updatedSettings as any[]).length > 0) {
-      const settings = (updatedSettings as any[])[0];
-      
-      // Transform for response
+
+    if (updatedRows && (updatedRows as any[]).length > 0) {
+      const s = (updatedRows as any[])[0];
+
+      let parsedCustom = { enabled: false, headScripts: '', bodyStartScripts: '', bodyEndScripts: '', customScriptsRaw: '' };
+      if (s.customScripts) {
+        try {
+          const parsed = JSON.parse(s.customScripts);
+          if (typeof parsed === 'object') parsedCustom = { ...parsedCustom, ...parsed };
+          else parsedCustom.customScriptsRaw = String(s.customScripts);
+        } catch {
+          parsedCustom.customScriptsRaw = String(s.customScripts);
+        }
+      }
+
       const responseData = {
-        googleAnalytics: JSON.parse(settings.googleAnalytics || '{}'),
-        metaTags: JSON.parse(settings.metaTags || '{}'),
-        customTracking: JSON.parse(settings.customTracking || '{}'),
+        googleAnalytics: {
+          enabled: Boolean(s.googleAnalyticsEnabled),
+          measurementId: s.googleAnalyticsId || '',
+          enableDemographics: false,
+          enableEnhancedLinkAttribution: true,
+          anonymizeIp: Boolean(s.anonymizeIp),
+        },
+        googleTagManager: { enabled: Boolean(s.googleTagManagerEnabled), id: s.googleTagManagerId || '' },
+        facebookPixel: { enabled: Boolean(s.facebookPixelEnabled), id: s.facebookPixelId || '' },
+        hotjar: { enabled: Boolean(s.hotjarEnabled), id: s.hotjarId || '' },
+        customTracking: parsedCustom,
+        dataRetentionPeriod: s.dataRetentionPeriod ?? 365,
       };
-      
+
       return NextResponse.json({ success: true, data: responseData });
     }
-    
+
     return NextResponse.json({ success: true, data: validatedData });
   } catch (error) {
     console.error('Error updating analytics settings:', error);
