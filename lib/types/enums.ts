@@ -70,7 +70,8 @@ export enum ModuleType {
   MENU = "MENU",
   LOCK = "LOCK",
   MAINTENANCE = "MAINTENANCE",
-  ANALYTICS = "ANALYTICS"
+  ANALYTICS = "ANALYTICS",
+  FACILITY_MANAGEMENT = "FACILITY_MANAGEMENT"
 }
 
 export enum NotificationType {

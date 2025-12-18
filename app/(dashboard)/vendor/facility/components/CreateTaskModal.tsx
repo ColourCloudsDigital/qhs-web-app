@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { TaskStatus, TaskPriority, TaskCategory, MaintenanceType } from '@/lib/types/enums';
 import {
   Dialog,
@@ -58,13 +58,15 @@ export default function CreateTaskModal({
   isOpen,
   onClose,
   hotelId,
-  staff,
+  staff: initialStaff,
   onTaskCreated,
 }: CreateTaskModalProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+  const [staff, setStaff] = useState<Staff[]>(initialStaff);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   
   // Form state
   const [title, setTitle] = useState('');
@@ -82,32 +84,62 @@ export default function CreateTaskModal({
   const [costEstimate, setCostEstimate] = useState<number | undefined>(undefined);
   
   // Load rooms when modal is opened
-  const fetchRooms = useCallback(async () => {
-    setIsLoadingRooms(true);
-    try {
-      const response = await fetch(`/api/hotels/${hotelId}/rooms`);
-      if (response.ok) {
-        const data = await response.json();
-        setRooms(data);
-      } else {
-        throw new Error('Failed to load rooms');
-      }
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load rooms',
-      });
-    } finally {
-      setIsLoadingRooms(false);
-    }
-  }, [hotelId, toast]);
-
   useEffect(() => {
     if (isOpen && hotelId) {
+      const fetchRooms = async () => {
+        setIsLoadingRooms(true);
+        try {
+          const response = await fetch(`/api/hotels/${hotelId}/rooms`);
+          if (response.ok) {
+            const data = await response.json();
+            setRooms(data);
+          } else {
+            throw new Error('Failed to load rooms');
+          }
+        } catch (error) {
+          console.error('Error fetching rooms:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load rooms',
+          });
+        } finally {
+          setIsLoadingRooms(false);
+        }
+      };
+      
       fetchRooms();
     }
-  }, [isOpen, hotelId, fetchRooms]);
+  }, [isOpen, hotelId]); // Remove toast from dependencies
+
+  // Load staff when modal is opened
+  useEffect(() => {
+    if (isOpen && hotelId) {
+      const fetchStaff = async () => {
+        setIsLoadingStaff(true);
+        try {
+          const response = await fetch(`/api/hotels/${hotelId}/staff`);
+          if (response.ok) {
+            const data = await response.json();
+            setStaff(data);
+          } else {
+            throw new Error('Failed to load staff');
+          }
+        } catch (error) {
+          console.error('Error fetching staff:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load staff members',
+          });
+          // Keep initial staff as fallback
+          setStaff(initialStaff);
+        } finally {
+          setIsLoadingStaff(false);
+        }
+      };
+      
+      fetchStaff();
+    }
+  }, [isOpen, hotelId, initialStaff]);
 
   // Reset form when modal is closed
   useEffect(() => {
@@ -163,7 +195,7 @@ export default function CreateTaskModal({
           category,
           priority,
           assignedToId: assignedToId || null,
-          roomId: roomId || null,
+          roomId: roomId && roomId !== 'none' ? roomId : null,
           dueDate: dueDate.toISOString(),
           status: 'PENDING',
           estimatedHours: estimatedHours || null,
@@ -315,15 +347,15 @@ export default function CreateTaskModal({
               <label htmlFor="assignee" className="text-sm font-medium">
                 Assign To
               </label>
-              <Select value={assignedToId} onValueChange={setAssignedToId}>
+              <Select value={assignedToId} onValueChange={setAssignedToId} disabled={isLoadingStaff}>
                 <SelectTrigger id="assignee">
-                  <SelectValue placeholder="Select staff member" />
+                  <SelectValue placeholder={isLoadingStaff ? "Loading staff..." : "Select staff member"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  <SelectItem value="">Unassigned</SelectItem>
                   {staff.map((staffMember) => (
                     <SelectItem key={staffMember.id} value={staffMember.id}>
-                      {staffMember.user.name}
+                      {staffMember.user.name} ({staffMember.position})
                     </SelectItem>
                   ))}
                 </SelectContent>

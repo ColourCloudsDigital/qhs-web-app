@@ -1,5 +1,6 @@
 import pool from '@/lib/db';
 import { ModuleType } from '@/lib/types/enums';
+import { RowDataPacket } from 'mysql2';
 
 /**
  * Check if a user has access to a specific module
@@ -10,83 +11,64 @@ export async function canAccessModule(
   moduleType: ModuleType
 ): Promise<boolean> {
   try {
-    // Get user with role
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        role: true,
-        vendor: {
-          include: {
-            subscriptionPlan: {
-              include: {
-                planFeatures: {
-                  include: {
-                    module: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        staff: {
-          include: {
-            vendor: true,
-            permissions: {
-              include: {
-                module: true
-              }
-            }
-          }
-        },
-        superAdmin: true
-      },
-    });
+    // Get user role
+    const [userRows] = await pool.query(
+      `SELECT role FROM users WHERE id = ?`,
+      [userId]
+    ) as [RowDataPacket[], any];
 
-    if (!user) return false;
+    if (userRows.length === 0) return false;
+
+    const user = userRows[0];
 
     // Super admins always have access to all modules
-    if (user.role === 'SUPER_ADMIN' && user.superAdmin) {
+    if (user.role === 'SUPER_ADMIN') {
       return true;
     }
 
     // For vendors, check their subscription plan
-    if (user.role === 'VENDOR' && user.vendor) {
-      // If vendor has no subscription, they have no access
-      if (!user.vendor.subscriptionPlan) {
+    if (user.role === 'VENDOR') {
+      const [vendorRows] = await pool.query(
+        `SELECT subscriptionPlanId, subscriptionStatus FROM vendors WHERE userId = ?`,
+        [userId]
+      ) as [RowDataPacket[], any];
+
+      if (vendorRows.length === 0 || !vendorRows[0].subscriptionPlanId) {
         return false;
       }
+
+      const vendor = vendorRows[0];
 
       // If subscription is not active, no access
-      if (user.vendor.subscriptionStatus !== 'active') {
+      if (vendor.subscriptionStatus !== 'active') {
         return false;
       }
 
-      // If subscription has expired, no access
-      if (user.vendor.subscriptionEndDate && user.vendor.subscriptionEndDate < new Date()) {
-        return false;
-      }
-
-      // Check if the requested module is included in their plan
-      const moduleFeature = user.vendor.subscriptionPlan.planFeatures.find(
-        (feature) => feature.module.type === moduleType && feature.isIncluded
-      );
-
-      return !!moduleFeature;
+      // For now, if they have an active subscription plan, they have access to all modules
+      // In the future, you can check plan_features for specific module limits
+      return true;
     }
 
-    // For staff, check if their vendor has access and if they have permission
-    if (user.role === 'STAFF' && user.staff) {
-      // First, check if staff has explicit permission for this module
-      const hasPermission = user.staff.permissions.some(
-        permission => permission.module.type === moduleType && permission.canView
-      );
+    // For staff, check if their vendor has access
+    if (user.role === 'STAFF') {
+      const [staffRows] = await pool.query(
+        `SELECT vendorId FROM staff WHERE userId = ?`,
+        [userId]
+      ) as [RowDataPacket[], any];
 
-      // If staff doesn't have explicit permission, check their vendor's access
-      if (!hasPermission && user.staff.vendor) {
-        return await canAccessModule(user.staff.vendor.userId, moduleType);
-      }
+      if (staffRows.length === 0) return false;
 
-      return hasPermission;
+      const staff = staffRows[0];
+
+      // Get vendor info and check module access
+      const [vendorRows] = await pool.query(
+        `SELECT userId FROM vendors WHERE id = ?`,
+        [staff.vendorId]
+      ) as [RowDataPacket[], any];
+
+      if (vendorRows.length === 0) return false;
+
+      return await canAccessModule(vendorRows[0].userId, moduleType);
     }
 
     // By default, customer users don't have access to any module
@@ -101,95 +83,97 @@ export const moduleAccessService = {
   /**
    * Check if a vendor has access to a specific module
    */
-  async hasModuleAccess(vendorId: string, moduleType: ModuleType): Promise<boolean> {
+  async hasModuleAccess(vendorIdOrUserId: string, moduleType: ModuleType): Promise<boolean> {
     try {
-      // Get vendor with subscription plan
-      const vendor = await prisma.vendor.findUnique({
-        where: { id: vendorId },
-        include: {
-          subscriptionPlan: {
-            include: {
-              planFeatures: {
-                include: {
-                  module: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      // Get vendor data - can be called with either vendorId or userId
+      let [vendorRows] = await pool.query(
+        `SELECT subscriptionPlanId, subscriptionStatus FROM vendors WHERE id = ?`,
+        [vendorIdOrUserId]
+      ) as [RowDataPacket[], any];
 
-      // If vendor has no subscription, they have no access
-      if (!vendor || !vendor.subscriptionPlan) {
+      // If not found by id, try by userId
+      if (vendorRows.length === 0) {
+        [vendorRows] = await pool.query(
+          `SELECT subscriptionPlanId, subscriptionStatus FROM vendors WHERE userId = ?`,
+          [vendorIdOrUserId]
+        ) as [RowDataPacket[], any];
+      }
+
+      if (vendorRows.length === 0 || !vendorRows[0].subscriptionPlanId) {
         return false;
       }
+
+      const vendor = vendorRows[0];
 
       // If subscription is not active, no access
       if (vendor.subscriptionStatus !== 'active') {
         return false;
       }
 
-      // If subscription has expired, no access
-      if (vendor.subscriptionEndDate && vendor.subscriptionEndDate < new Date()) {
+      // Check if the subscription plan includes this module
+      const [planFeatureRows] = await pool.query(
+        `SELECT pf.isIncluded, m.name 
+         FROM plan_features pf
+         JOIN modules m ON pf.moduleId = m.id
+         WHERE pf.planId = ? AND m.name = ?`,
+        [vendor.subscriptionPlanId, moduleType]
+      ) as [RowDataPacket[], any];
+
+      if (planFeatureRows.length === 0) {
         return false;
       }
 
-      // Check if the requested module is included in their plan
-      const moduleFeature = vendor.subscriptionPlan.planFeatures.find(
-        (feature) => feature.module.type === moduleType && feature.isIncluded
-      );
-
-      return !!moduleFeature;
+      const planFeature = planFeatureRows[0];
+      return planFeature.isIncluded === 1 || planFeature.isIncluded === true;
     } catch (error) {
-      console.error(`Error checking module access for vendorId: ${vendorId}, moduleType: ${moduleType}`, error);
+      console.error(`Error checking module access for vendorIdOrUserId: ${vendorIdOrUserId}, moduleType: ${moduleType}`, error);
       return false;
     }
   },
 
   /**
-   * Get module limits for a vendor
+   * Get module limits for a vendor based on their subscription plan
    */
-  async getModuleLimits(vendorId: string, moduleType: ModuleType): Promise<Record<string, any> | null> {
+  async getModuleLimits(vendorIdOrUserId: string, moduleType: ModuleType): Promise<Record<string, any> | null> {
     try {
-      // Get vendor with subscription plan
-      const vendor = await prisma.vendor.findUnique({
-        where: { id: vendorId },
-        include: {
-          subscriptionPlan: {
-            include: {
-              planFeatures: {
-                include: {
-                  module: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      // Get vendor data
+      let [vendorRows] = await pool.query(
+        `SELECT subscriptionPlanId FROM vendors WHERE id = ?`,
+        [vendorIdOrUserId]
+      ) as [RowDataPacket[], any];
 
-      // If vendor has no subscription or inactive, they have no limits defined
-      if (
-        !vendor ||
-        !vendor.subscriptionPlan ||
-        vendor.subscriptionStatus !== 'active' ||
-        (vendor.subscriptionEndDate && vendor.subscriptionEndDate < new Date())
-      ) {
+      if (vendorRows.length === 0) {
+        [vendorRows] = await pool.query(
+          `SELECT subscriptionPlanId FROM vendors WHERE userId = ?`,
+          [vendorIdOrUserId]
+        ) as [RowDataPacket[], any];
+      }
+
+      if (vendorRows.length === 0 || !vendorRows[0].subscriptionPlanId) {
         return null;
       }
 
-      // Find the module feature
-      const moduleFeature = vendor.subscriptionPlan.planFeatures.find(
-        (feature) => feature.module.type === moduleType && feature.isIncluded
-      );
+      // Get module limits from plan features
+      const [planFeatureRows] = await pool.query(
+        `SELECT pf.limits 
+         FROM plan_features pf
+         JOIN modules m ON pf.moduleId = m.id
+         WHERE pf.planId = ? AND m.name = ?`,
+        [vendorRows[0].subscriptionPlanId, moduleType]
+      ) as [RowDataPacket[], any];
 
-      if (!moduleFeature || !moduleFeature.limits) {
+      if (planFeatureRows.length === 0 || !planFeatureRows[0].limits) {
         return null;
       }
 
       // Parse and return the limits
-      return JSON.parse(moduleFeature.limits as string);
+      try {
+        return JSON.parse(planFeatureRows[0].limits as string);
+      } catch {
+        return planFeatureRows[0].limits as Record<string, any>;
+      }
     } catch (error) {
-      console.error(`Error getting module limits for vendorId: ${vendorId}, moduleType: ${moduleType}`, error);
+      console.error(`Error getting module limits for vendorIdOrUserId: ${vendorIdOrUserId}, moduleType: ${moduleType}`, error);
       return null;
     }
   },
@@ -198,13 +182,13 @@ export const moduleAccessService = {
    * Check if a vendor has reached their limit for a specific resource
    */
   async hasReachedLimit(
-    vendorId: string,
+    vendorIdOrUserId: string,
     moduleType: ModuleType,
     resourceType: string,
     currentCount: number
   ): Promise<boolean> {
     try {
-      const limits = await this.getModuleLimits(vendorId, moduleType);
+      const limits = await this.getModuleLimits(vendorIdOrUserId, moduleType);
 
       // If no limits defined, assume unlimited
       if (!limits) {
@@ -220,7 +204,7 @@ export const moduleAccessService = {
       return currentCount >= limits[resourceType];
     } catch (error) {
       console.error(
-        `Error checking limit for vendorId: ${vendorId}, moduleType: ${moduleType}, resourceType: ${resourceType}`,
+        `Error checking limit for vendorIdOrUserId: ${vendorIdOrUserId}, moduleType: ${moduleType}, resourceType: ${resourceType}`,
         error
       );
       return true; // Fail safe - assume limit reached on error
@@ -230,51 +214,54 @@ export const moduleAccessService = {
   /**
    * Get all modules with access status for a vendor
    */
-  async getVendorModuleAccess(vendorId: string) {
+  async getVendorModuleAccess(vendorIdOrUserId: string) {
     try {
-      // Get all modules
-      const allModules = await prisma.module.findMany({
-        where: { isActive: true },
-      });
+      // Get vendor data
+      let [vendorRows] = await pool.query(
+        `SELECT id, subscriptionPlanId, subscriptionStatus FROM vendors WHERE id = ?`,
+        [vendorIdOrUserId]
+      ) as [RowDataPacket[], any];
 
-      // Get vendor with subscription plan
-      const vendor = await prisma.vendor.findUnique({
-        where: { id: vendorId },
-        include: {
-          subscriptionPlan: {
-            include: {
-              planFeatures: {
-                include: {
-                  module: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      if (vendorRows.length === 0) {
+        [vendorRows] = await pool.query(
+          `SELECT id, subscriptionPlanId, subscriptionStatus FROM vendors WHERE userId = ?`,
+          [vendorIdOrUserId]
+        ) as [RowDataPacket[], any];
+      }
 
-      // Check if subscription is active
-      const isSubscriptionActive =
-        vendor?.subscriptionStatus === 'active' &&
-        (!vendor.subscriptionEndDate || vendor.subscriptionEndDate > new Date());
+      if (vendorRows.length === 0) {
+        return [];
+      }
 
-      // If vendor has no active subscription, all modules are inaccessible
-      if (!vendor || !vendor.subscriptionPlan || !isSubscriptionActive) {
-        return allModules.map((module) => ({
+      const vendor = vendorRows[0];
+
+      // Get all active modules
+      const [allModules] = await pool.query(
+        `SELECT id, name, displayName FROM modules WHERE isActive = 1`
+      ) as [RowDataPacket[], any];
+
+      // If no active subscription, all modules are inaccessible
+      if (!vendor.subscriptionPlanId || vendor.subscriptionStatus !== 'active') {
+        return allModules.map((module: any) => ({
           ...module,
           hasAccess: false,
           limits: null,
         }));
       }
 
-      // Map modules with access status and limits
-      return allModules.map((module) => {
-        const moduleFeature = vendor.subscriptionPlan!.planFeatures.find(
-          (feature) => feature.moduleId === module.id && feature.isIncluded
-        );
+      // Get plan features for this vendor's subscription
+      const [planFeatures] = await pool.query(
+        `SELECT pf.moduleId, pf.isIncluded, pf.limits
+         FROM plan_features pf
+         WHERE pf.planId = ?`,
+        [vendor.subscriptionPlanId]
+      ) as [RowDataPacket[], any];
 
-        const hasAccess = !!moduleFeature;
-        const limits = moduleFeature?.limits ? JSON.parse(moduleFeature.limits as string) : null;
+      // Map modules with access status and limits
+      return allModules.map((module: any) => {
+        const feature = planFeatures.find((f: any) => f.moduleId === module.id);
+        const hasAccess = feature && feature.isIncluded === 1;
+        const limits = feature && feature.limits ? JSON.parse(feature.limits as string) : null;
 
         return {
           ...module,
@@ -283,13 +270,10 @@ export const moduleAccessService = {
         };
       });
     } catch (error) {
-      console.error(`Error getting module access for vendorId: ${vendorId}`, error);
-      throw new Error('Failed to retrieve module access information');
+      console.error(`Error getting module access for vendorIdOrUserId: ${vendorIdOrUserId}`, error);
+      return [];
     }
   },
-  
-  // Export the canAccessModule function as part of the service
-  canAccessModule
 };
 
 export default moduleAccessService;

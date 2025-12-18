@@ -1,12 +1,12 @@
 import { Metadata } from 'next';
 import { authOptions } from '@/lib/auth';
 import { getServerSession } from 'next-auth/next';
-import { canAccessModule } from '@/lib/services/module-access.service';
-import { ModuleType } from '@/lib/types/enums';
 import TaskDashboardClient from '../components/TaskDashboardClient';
 import { redirect } from 'next/navigation';
 import pool from '@/lib/db';
-import SubscriptionRequired from '@/components/common/SubscriptionRequired'; 
+import SubscriptionRequired from '@/components/common/SubscriptionRequired';
+import { RowDataPacket } from 'mysql2';
+import { ModuleType } from '@/lib/types/enums';
 
 export const metadata: Metadata = {
   title: 'Facility Management | Vendor Dashboard',
@@ -14,57 +14,90 @@ export const metadata: Metadata = {
 };
 
 async function getVendorHotels(userId: string) {
-  const vendor = await prisma.vendor.findUnique({
-    where: { userId },
-    include: {
-      hotels: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  });
+  try {
+    const [hotels] = await pool.query(
+      `SELECT h.id, h.name 
+       FROM hotels h
+       JOIN vendors v ON h.vendorId = v.id
+       WHERE v.userId = ?`,
+      [userId]
+    ) as [RowDataPacket[], any];
 
-  return vendor?.hotels || [];
+    return hotels || [];
+  } catch (error) {
+    console.error('Error fetching vendor hotels:', error);
+    return [];
+  }
 }
 
 async function getTaskStats(hotelId: string) {
-  // Get task counts by status
-  const statusCounts = await prisma.facilityTask.groupBy({
-    by: ['status'],
-    where: { hotelId },
-    _count: true,
-  });
+  try {
+    // Check if facility_tasks table exists first
+    const [tables] = await pool.query(
+      `SELECT TABLE_NAME FROM information_schema.TABLES 
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'facility_tasks'`
+    ) as [RowDataPacket[], any];
 
-  // Get counts by priority
-  const priorityCounts = await prisma.facilityTask.groupBy({
-    by: ['priority'],
-    where: { hotelId },
-    _count: true,
-  });
+    if (!tables || tables.length === 0) {
+      // Table doesn't exist, return empty stats
+      return {
+        statusCounts: [],
+        priorityCounts: [],
+        overdueTasks: 0,
+        totalTasks: 0,
+      };
+    }
 
-  // Get upcoming/overdue tasks
-  const today = new Date();
-  const overdueTasks = await prisma.facilityTask.count({
-    where: {
-      hotelId,
-      dueDate: { lt: today },
-      status: { notIn: ['COMPLETED', 'CANCELLED'] },
-    },
-  });
+    // Get task counts by status
+    const [statusCounts] = await pool.query(
+      `SELECT status, COUNT(*) as count 
+       FROM facility_tasks 
+       WHERE hotelId = ? 
+       GROUP BY status`,
+      [hotelId]
+    ) as [RowDataPacket[], any];
 
-  // Get total tasks
-  const totalTasks = await prisma.facilityTask.count({
-    where: { hotelId },
-  });
+    // Get counts by priority
+    const [priorityCounts] = await pool.query(
+      `SELECT priority, COUNT(*) as count 
+       FROM facility_tasks 
+       WHERE hotelId = ? 
+       GROUP BY priority`,
+      [hotelId]
+    ) as [RowDataPacket[], any];
 
-  return {
-    statusCounts,
-    priorityCounts,
-    overdueTasks,
-    totalTasks,
-  };
+    // Get upcoming/overdue tasks
+    const today = new Date();
+    const [overdueTasks] = await pool.query(
+      `SELECT COUNT(*) as count 
+       FROM facility_tasks 
+       WHERE hotelId = ? AND due_date < ? AND status NOT IN ('COMPLETED', 'CANCELLED')`,
+      [hotelId, today]
+    ) as [RowDataPacket[], any];
+
+    // Get total tasks
+    const [totalTasks] = await pool.query(
+      `SELECT COUNT(*) as count 
+       FROM facility_tasks 
+       WHERE hotelId = ?`,
+      [hotelId]
+    ) as [RowDataPacket[], any];
+
+    return {
+      statusCounts: statusCounts || [],
+      priorityCounts: priorityCounts || [],
+      overdueTasks: overdueTasks[0]?.count || 0,
+      totalTasks: totalTasks[0]?.count || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching task stats:', error);
+    return {
+      statusCounts: [],
+      priorityCounts: [],
+      overdueTasks: 0,
+      totalTasks: 0,
+    };
+  }
 }
 
 export default async function TasksPage() {
@@ -74,14 +107,40 @@ export default async function TasksPage() {
     redirect('/login');
   }
 
-  // Check module access
-  const hasAccess = await canAccessModule(
-    session.user.id,
-    ModuleType.FACILITY_MANAGEMENT
-  );
+  // Check if vendor has active subscription using subscriptionPlanId
+  try {
+    const [vendorResult] = await pool.query(
+      `SELECT subscriptionPlanId, subscriptionStatus FROM vendors WHERE userId = ?`,
+      [session.user.id]
+    ) as [RowDataPacket[], any];
 
-  if (!hasAccess) {
-    return <SubscriptionRequired moduleType={ModuleType.FACILITY_MANAGEMENT} />;
+    if (!vendorResult || vendorResult.length === 0) {
+      return (
+        <div className="p-6">
+          <h1 className="text-2xl font-bold mb-4">Facility Management</h1>
+          <div className="bg-red-50 border border-red-200 p-4 rounded-md">
+            <p>Vendor not found.</p>
+          </div>
+        </div>
+      );
+    }
+
+    const vendor = vendorResult[0];
+    const hasSubscription = vendor.subscriptionPlanId && vendor.subscriptionStatus === 'active';
+
+    if (!hasSubscription) {
+      return <SubscriptionRequired moduleType={ModuleType.FACILITY_MANAGEMENT} />;
+    }
+  } catch (error) {
+    console.error('Error checking subscription:', error);
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Facility Management</h1>
+        <div className="bg-red-50 border border-red-200 p-4 rounded-md">
+          <p>Error checking subscription. Please try again later.</p>
+        </div>
+      </div>
+    );
   }
 
   // Get vendor hotels
@@ -103,26 +162,30 @@ export default async function TasksPage() {
   const taskStats = await getTaskStats(defaultHotelId);
 
   // Get staff for assignment
-  const staff = await prisma.staff.findMany({
-    where: {
-      hotelId: defaultHotelId,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
-  });
+  try {
+    const [staff] = await pool.query(
+      `SELECT s.id, s.userId, s.position, u.name, u.email 
+       FROM staff s
+       JOIN users u ON s.userId = u.id
+       WHERE s.hotelId = ?`,
+      [defaultHotelId]
+    ) as [RowDataPacket[], any];
 
-  return (
-    <TaskDashboardClient 
-      hotels={hotels} 
-      initialStats={taskStats} 
-      staff={staff} 
-    />
-  );
+    return (
+      <TaskDashboardClient 
+        hotels={hotels} 
+        initialStats={taskStats} 
+        staff={staff || []} 
+      />
+    );
+  } catch (error) {
+    console.error('Error fetching staff:', error);
+    return (
+      <TaskDashboardClient 
+        hotels={hotels} 
+        initialStats={taskStats} 
+        staff={[]} 
+      />
+    );
+  }
 }
