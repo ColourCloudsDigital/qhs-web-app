@@ -38,7 +38,7 @@ export default function Footer() {
   useEffect(() => {
     const fetchSiteSettings = async () => {
       try {
-        const response = await fetch('/api/admin/settings/site');
+        const response = await fetch('/api/customers/dashboard');
         if (response.ok) {
           const data = await response.json();
           setSiteSettings(data);
