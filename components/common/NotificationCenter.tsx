@@ -262,9 +262,9 @@ export default function NotificationCenter() {
                     <div className="flex p-4">
                       <div className="mr-3 pt-1">{getNotificationIcon(notification.type)}</div>
                       <div className="flex-1">
-                        <div className="mb-1 flex items-start justify-between text-white">
-                          <h4 className="font-medium text-white">{notification.title}</h4>
-                          <span className="ml-2 shrink-0 text-xs text-white">
+                        <div className="mb-1 flex items-start justify-between text-black dark:text-white">
+                          <h4 className="font-medium text-black dark:text-white">{notification.title}</h4>
+                          <span className="ml-2 shrink-0 text-xs text-black dark:text-white">
                             {formatNotificationTime(notification.createdAt)}
                           </span>
                         </div>

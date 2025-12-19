@@ -91,8 +91,8 @@ export default function VendorDashboardClient({ hotels, vendorId }: VendorDashbo
   // Loading state
   if (loading || dashboardLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center">
+      <div className="flex h-[60vh] items-center justify-center text-center">
+        <div className="flex flex-col items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           <p className="mt-2 text-gray-500 dark:text-gray-400">Loading dashboard...</p>
         </div>
