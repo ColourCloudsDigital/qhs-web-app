@@ -12,13 +12,12 @@ interface BookingConfirmationProps {
 
 interface BookingDetails extends RowDataPacket {
   id: string;
-  bookingRef: string;
   checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
-  totalPrice: number;
-  paymentMethod: string;
-  bookingStatus: string;
+  totalAmount: number;
+  paymentStatus: string;
+  status: string;
   specialRequests: string | null;
   createdAt: string;
   // Customer info
@@ -39,16 +38,18 @@ interface BookingDetails extends RowDataPacket {
 async function getBookingDetails(bookingId: string): Promise<BookingDetails | null> {
   try {
     const [rows] = await pool.query<BookingDetails[]>(
-      `SELECT 
-        b.id, b.bookingRef, b.checkInDate, b.checkOutDate, 
-        b.numberOfGuests, b.totalPrice, b.paymentMethod, 
-        b.bookingStatus, b.specialRequests, b.createdAt,
-        c.firstName, c.lastName, c.email, c.phone,
-        h.name AS hotelName, h.address AS hotelAddress, 
+      `SELECT
+        b.id, b.checkInDate, b.checkOutDate,
+        b.numberOfGuests, b.totalAmount, b.paymentStatus,
+        b.status, b.specialRequests, b.createdAt,
+        c.firstName, c.lastName, c.phone,
+        u.email,
+        h.name AS hotelName, h.address AS hotelAddress,
         h.city AS hotelCity, h.state AS hotelState, h.country AS hotelCountry,
         r.name AS roomName, r.roomType
       FROM bookings b
       JOIN customers c ON b.customerId = c.id
+      JOIN users u ON c.userId = u.id
       JOIN hotels h ON b.hotelId = h.id
       JOIN rooms r ON b.roomId = r.id
       WHERE b.id = ?`,
@@ -86,7 +87,7 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
           </div>
           <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">Booking Confirmed!</h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Your booking reference number is <span className="font-bold text-primary">{booking.bookingRef}</span>
+            Your booking reference number is <span className="font-bold text-primary">{booking.id.slice(0, 8).toUpperCase()}</span>
           </p>
         </div>
 
@@ -151,10 +152,10 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                   <CreditCard className="h-5 w-5 flex-shrink-0" />
-                  <span>{booking.paymentMethod.replace('_', ' ')}</span>
+                  <span>{booking.paymentStatus.replace('_', ' ')}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-primary">{formatCurrency(booking.totalPrice)}</span>
+                  <span className="text-lg font-bold text-primary">{formatCurrency(booking.totalAmount)}</span>
                 </div>
               </div>
             </div>
@@ -176,7 +177,7 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-500 dark:text-green-400" />
                   <span className="font-medium text-green-800 dark:text-green-400">
-                    {booking.bookingStatus}
+                    {booking.status}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
