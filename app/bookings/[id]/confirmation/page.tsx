@@ -3,6 +3,8 @@ import { Check, Calendar, User, MapPin, Phone, CreditCard, FileText } from 'luci
 import pool from '@/lib/db';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { RowDataPacket } from 'mysql2';
+import PrintConfirmationButton from "@/components/PrintConfirmationButton";
+
 
 interface BookingConfirmationProps {
   params: {
@@ -23,7 +25,7 @@ interface BookingDetails extends RowDataPacket {
   // Customer info
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   phone: string;
   // Hotel and Room info
   hotelName: string;
@@ -46,10 +48,10 @@ async function getBookingDetails(bookingId: string): Promise<BookingDetails | nu
         u.email,
         h.name AS hotelName, h.address AS hotelAddress,
         h.city AS hotelCity, h.state AS hotelState, h.country AS hotelCountry,
-        r.name AS roomName, r.roomType
+        r.name AS roomName
       FROM bookings b
       JOIN customers c ON b.customerId = c.id
-      JOIN users u ON c.userId = u.id
+      LEFT JOIN users u ON c.userId = u.id
       JOIN hotels h ON b.hotelId = h.id
       JOIN rooms r ON b.roomId = r.id
       WHERE b.id = ?`,
@@ -189,9 +191,11 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
         </div>
 
         <div className="mt-8 text-center">
-          <p className="mb-4 text-gray-600 dark:text-gray-300">
-            A confirmation email has been sent to {booking.email}
-          </p>
+          {booking.email && (
+            <p className="mb-4 text-gray-600 dark:text-gray-300">
+              A confirmation email has been sent to {booking.email}
+            </p>
+          )}
           <div className="flex justify-center gap-4">
             <a
               href="/"
@@ -199,13 +203,8 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
             >
               Return to Home
             </a>
-            <button
-              onClick={() => window.print()}
-              className="rounded-md bg-primary px-4 py-2 text-white hover:bg-primary-dark"
-            >
-              Print Confirmation
-            </button>
-          </div>
+            <PrintConfirmationButton />
+            </div>
         </div>
       </div>
     </main>
