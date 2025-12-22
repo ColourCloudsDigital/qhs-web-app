@@ -304,7 +304,7 @@ export default function CustomerBookingsList({
                   
                   <div className="flex justify-end">
                     <Link
-                      href={`/bookings/${booking.id}/confirmation`}
+                      href={`/customer/bookings/${booking.id}`}
                       className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
                     >
                       <Eye className="mr-2 h-4 w-4" />

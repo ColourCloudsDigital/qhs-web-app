@@ -157,7 +157,7 @@ export default function CustomerDashboardPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name}</h1>
         <div className="flex space-x-3">
-          <Link href="/hotels" className="btn btn-primary">
+          <Link href="/hotels" className="btn btn-primary shadow-none">
             <IconPlus className="h-5 w-5 ltr:mr-2 rtl:ml-2" />
             Book a Hotel
           </Link>
