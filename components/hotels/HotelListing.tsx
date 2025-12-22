@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Star, MapPin, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 
 interface Hotel {
   id: string;
@@ -246,11 +247,11 @@ function GridHotelCard({ hotel }: { hotel: Hotel }) {
               <div className="mb-3 flex items-baseline">
                 {hotel.discountedPrice ? (
                   <>
-                    <span className="text-xl font-bold text-primary">${hotel.discountedPrice}</span>
-                    <span className="ml-2 text-sm text-gray-500 line-through dark:text-gray-400">${hotel.startingPrice}</span>
+                    <span className="text-xl font-bold text-primary">{formatCurrency(hotel.discountedPrice)}</span>
+                    <span className="ml-2 text-sm text-gray-500 line-through dark:text-gray-400">{formatCurrency(hotel.startingPrice)}</span>
                   </>
                 ) : (
-                  <span className="text-xl font-bold text-primary">${hotel.startingPrice}</span>
+                  <span className="text-xl font-bold text-primary">{formatCurrency(hotel.startingPrice)}</span>
                 )}
                 <span className="ml-1 text-sm text-gray-500 dark:text-gray-400">/night</span>
               </div>
@@ -329,11 +330,11 @@ function ListHotelCard({ hotel }: { hotel: Hotel }) {
                   <div className="flex items-baseline">
                     {hotel.discountedPrice ? (
                       <>
-                        <span className="text-xl font-bold text-primary">${hotel.discountedPrice}</span>
-                        <span className="ml-2 text-sm text-gray-500 line-through dark:text-gray-400">${hotel.startingPrice}</span>
+                        <span className="text-xl font-bold text-primary">{formatCurrency(hotel.discountedPrice)}</span>
+                        <span className="ml-2 text-sm text-gray-500 line-through dark:text-gray-400">{formatCurrency(hotel.startingPrice)}</span>
                       </>
                     ) : (
-                      <span className="text-xl font-bold text-primary">${hotel.startingPrice}</span>
+                      <span className="text-xl font-bold text-primary">{formatCurrency(hotel.startingPrice)}</span>
                     )}
                     <span className="ml-1 text-sm text-gray-500 dark:text-gray-400">/night</span>
                   </div>

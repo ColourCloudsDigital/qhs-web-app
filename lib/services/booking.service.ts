@@ -277,38 +277,36 @@ export const bookingService = {
   async getBookingById(id: string, includeCustomer = false, includeHotel = false, includeRoom = false) {
     // Get booking with all related data
     const [bookingResults] = await pool.query(
-      `SELECT bookings.*,
-              hotels.id as hotelId,
-              hotels.name as hotelName,
-              hotels.address as hotelAddress,
-              hotels.city as hotelCity,
-              hotels.state as hotelState,
-              hotels.country as hotelCountry,
-              hotels.phone as hotelPhone,
-              hotels.email as hotelEmail,
-              hotels.images as hotelImages,
-              hotels.vendorId as hotelVendorId,
-              rooms.id as roomId,
-              rooms.name as roomName,
-              rooms.type as roomType,
-              rooms.capacity as roomCapacity,
-              rooms.pricePerNight as roomPricePerNight,
-              rooms.discountedPrice as roomDiscountedPrice,
-              rooms.images as roomImages,
-              customers.id as customerId,
-              customers.firstName as customerFirstName,
-              customers.lastName as customerLastName,
-              customers.phone as customerPhone,
-              customers.email as customerEmail,
-              users.name as userName,
-              users.email as userEmail,
-              users.phone as userPhone
-       FROM bookings
-       LEFT JOIN hotels ON bookings.hotelId = hotels.id
-       LEFT JOIN rooms ON bookings.roomId = rooms.id
-       LEFT JOIN customers ON bookings.customerId = customers.id
-       LEFT JOIN users ON customers.userId = users.id
-       WHERE bookings.id = ?`,
+            `SELECT bookings.*,
+            hotels.id as hotelId,
+            hotels.name as hotelName,
+            hotels.address as hotelAddress,
+            hotels.city as hotelCity,
+            hotels.state as hotelState,
+            hotels.country as hotelCountry,
+            hotels.phone as hotelPhone,
+            hotels.email as hotelEmail,
+            hotels.images as hotelImages,
+            hotels.vendorId as hotelVendorId,
+            rooms.id as roomId,
+            rooms.name as roomName,
+            rooms.type as roomType,
+            rooms.capacity as roomCapacity,
+            rooms.pricePerNight as roomPricePerNight,
+            rooms.discountedPrice as roomDiscountedPrice,
+            rooms.images as roomImages,
+            customers.id as customerId,
+            customers.firstName as customerFirstName,
+            customers.lastName as customerLastName,
+            customers.phone as customerPhone,
+            users.name as userName,
+            users.email as userEmail
+      FROM bookings
+      LEFT JOIN hotels ON bookings.hotelId = hotels.id
+      LEFT JOIN rooms ON bookings.roomId = rooms.id
+      LEFT JOIN customers ON bookings.customerId = customers.id
+      LEFT JOIN users ON customers.userId = users.id
+      WHERE bookings.id = ?`,
       [id]
     );
 
@@ -321,8 +319,8 @@ export const bookingService = {
     // Get payments for this booking
     const [paymentsResult] = await pool.query(
       `SELECT
-        id, bookingId, customerId, amount, currency, paymentMethod, status,
-        adminCommission, vendorAmount, taxAmount, transactionId,
+        id, bookingId, amount, currency, paymentMethod, status,
+        transactionId,
         createdAt, updatedAt
        FROM payments
        WHERE bookingId = ?`,
@@ -583,7 +581,7 @@ export const bookingService = {
           customers.firstName as customer_firstName,
           customers.lastName as customer_lastName,
           customers.phone as customer_phone,
-          customers.email as customer_email,
+         
           users.name as user_name,
           users.email as user_email,
           rooms.id as room_id,
