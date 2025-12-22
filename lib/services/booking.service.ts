@@ -398,18 +398,28 @@ export const bookingService = {
   },
 
   /**
-   * Get bookings for a customer with pagination
+   * Get bookings for a customer with pagination and optional status filter
    */
-  async getCustomerBookings(customerId: string, { page = 1, limit = 10 }: PaginationParams) {
+  async getCustomerBookings(
+    customerId: string,
+    { page = 1, limit = 10, status }: PaginationParams & { status?: BookingStatus }
+  ) {
     // Calculate offset
     const offset = (page - 1) * limit;
+
+    // Build base where clause
+    const where: any = {
+      customerId,
+    };
+
+    if (status) {
+      where.status = status;
+    }
 
     // Get bookings with count
     const [bookings, total] = await Promise.all([
       prisma.booking.findMany({
-        where: {
-          customerId,
-        },
+        where,
         take: limit,
         skip: offset,
         orderBy: {
@@ -445,9 +455,7 @@ export const bookingService = {
         },
       }),
       prisma.booking.count({
-        where: {
-          customerId,
-        },
+        where,
       }),
     ]);
 
