@@ -96,58 +96,27 @@ export default function CustomerBookingsList({
     router.push(`${pathname}?${params.toString()}`);
   };
   
-  // Sample bookings for development
-  const sampleBookings = [
-    {
-      id: '1',
-      hotel: {
-        id: 'hotel1',
-        name: 'Grand Plaza Hotel',
-        city: 'Lagos',
-        state: 'Lagos',
-        country: 'Nigeria',
-        images: ['/assets/images/hotel1.jpg']
-      },
-      room: {
-        id: 'room1',
-        name: 'Deluxe Room',
-        type: 'deluxe'
-      },
-      checkInDate: '2023-10-15T14:00:00Z',
-      checkOutDate: '2023-10-18T11:00:00Z',
-      numberOfGuests: 2,
-      totalAmount: 135000,
-      status: 'CONFIRMED',
-      paymentStatus: 'PAID',
-      createdAt: '2023-10-01T08:24:00Z'
-    },
-    {
-      id: '2',
-      hotel: {
-        id: 'hotel2',
-        name: 'Ocean View Resort',
-        city: 'Lagos',
-        state: 'Lagos',
-        country: 'Nigeria',
-        images: ['/assets/images/hotel2.jpg']
-      },
-      room: {
-        id: 'room2',
-        name: 'Standard Room',
-        type: 'standard'
-      },
-      checkInDate: '2023-11-05T14:00:00Z',
-      checkOutDate: '2023-11-07T11:00:00Z',
-      numberOfGuests: 1,
-      totalAmount: 50000,
-      status: 'PENDING',
-      paymentStatus: 'PENDING',
-      createdAt: '2023-10-20T13:15:00Z'
+  // Use only real data; when loading, show skeletons; when empty, show empty state
+  const displayBookings = bookings;
+
+  const getStayProgress = (checkInDate: string, checkOutDate: string) => {
+    const now = new Date();
+    const start = new Date(checkInDate);
+    const end = new Date(checkOutDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+      return { percent: 0, label: 'Upcoming' };
     }
-  ];
-  
-  // Use sample data while loading or if API fails
-  const displayBookings = bookings.length > 0 ? bookings : (isLoading ? [] : sampleBookings);
+    if (now <= start) {
+      return { percent: 0, label: 'Upcoming' };
+    }
+    if (now >= end) {
+      return { percent: 100, label: 'Completed' };
+    }
+    const totalMs = end.getTime() - start.getTime();
+    const elapsedMs = now.getTime() - start.getTime();
+    const percent = Math.min(100, Math.max(0, Math.round((elapsedMs / totalMs) * 100)));
+    return { percent, label: 'In progress' };
+  };
   
   return (
     <div>
@@ -240,7 +209,9 @@ export default function CustomerBookingsList({
         </div>
       ) : (
         <div className="space-y-6">
-          {displayBookings.map(booking => (
+          {displayBookings.map(booking => {
+            const { percent, label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
+            return (
             <div 
               key={booking.id}
               className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
@@ -312,6 +283,23 @@ export default function CustomerBookingsList({
                         #{booking.id.slice(0, 8).toUpperCase()}
                       </p>
                     </div>
+
+                    {/* Stay progress */}
+                    <div className="sm:col-span-2">
+                      <p className="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Stay Progress
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                        <span>{label}</span>
+                        <span>{percent}%</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="flex justify-end">
@@ -326,7 +314,8 @@ export default function CustomerBookingsList({
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
       
