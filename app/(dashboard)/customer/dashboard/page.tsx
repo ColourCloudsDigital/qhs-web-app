@@ -96,8 +96,32 @@ export default function CustomerDashboardPage() {
   const selectedHotelObj = hotels.find((h) => h.id === selectedHotel) || null;
   const selectedRoomObj = selectedHotelObj?.rooms?.find((r) => r.id === selectedRoom) || null;
 
-  const totalBookings = bookings.length;
-  const totalSpent = bookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+  const activeBookings = bookings.filter(b => b.status !== 'CANCELLED');
+  const totalBookings = activeBookings.length;
+  const totalSpent = activeBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+
+  // Format date from ISO string to readable format
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
+
+    try {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+
+      let hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+
+      hours = hours % 12;
+      hours = hours ? hours : 12; // Convert 0 to 12
+
+      return `${year}-${month}-${day} ${hours}:${minutes}${ampm}`;
+    } catch (error) {
+      return 'N/A';
+    }
+  };
 
   const handleOpenBooking = (hotelId: string) => {
     setSelectedHotel(hotelId);
@@ -176,7 +200,7 @@ export default function CustomerDashboardPage() {
           </div>
           <div className="mt-5 flex items-center font-semibold">
             <IconCalendar className="h-5 w-5 text-primary ltr:mr-2 rtl:ml-2" />
-            <span className="text-white-dark">Latest booking: {bookings[0]?.checkInDate || 'N/A'}</span>
+            <span className="text-white-dark">Latest booking: {formatDate(activeBookings[0]?.checkInDate)}</span>
           </div>
         </div>
 
@@ -214,7 +238,7 @@ export default function CustomerDashboardPage() {
           </div>
           <div className="mt-5 flex items-center font-semibold">
             <IconClock className="h-5 w-5 text-primary ltr:mr-2 rtl:ml-2" />
-            <span className="text-white-dark">Last booking: {bookings[0]?.checkInDate || 'N/A'}</span>
+            <span className="text-white-dark">Last booking: {formatDate(activeBookings[0]?.checkInDate)}</span>
           </div>
         </div>
       </div>
@@ -239,7 +263,7 @@ export default function CustomerDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {bookings.map((booking) => {
+              {activeBookings.map((booking) => {
                 const hotelName = hotels.find((h) => h.id === booking.hotelId)?.name || booking.hotelId;
                 const roomName =
                   hotels
@@ -261,7 +285,7 @@ export default function CustomerDashboardPage() {
                   </tr>
                 );
               })}
-              {bookings.length === 0 && (
+              {activeBookings.length === 0 && (
                 <tr>
                   <td colSpan={7} className="text-center py-4">No upcoming bookings found.</td>
                 </tr>
