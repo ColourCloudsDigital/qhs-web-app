@@ -9,7 +9,7 @@ import DateRangePicker from '@/components/booking/DateRangePicker';
 import RoomSelector from '@/components/booking/RoomSelector';
 import BookingForm from '@/components/booking/BookingForm';
 import GuestBookingForm from '@/components/booking/GuestBookingForm';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface BookingClientProps {
@@ -198,12 +198,7 @@ export default function BookingClient({
                 Check-in
               </p>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {new Date(checkInDate).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {formatDate(checkInDate)}
               </p>
             </div>
           </div>
@@ -214,12 +209,7 @@ export default function BookingClient({
                 Check-out
               </p>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {new Date(checkOutDate).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {formatDate(checkOutDate)}
               </p>
             </div>
           </div>

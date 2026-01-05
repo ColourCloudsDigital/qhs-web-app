@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Tooltip } from '@/components/ui/tooltip';
 import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Loader2, MoreVertical, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -390,11 +390,7 @@ export default function RoomGrid({ hotelId, onRoomSelect }: RoomGridProps) {
                     {room.status === 'occupied' && room.checkOutDate && (
                       <div className="text-sm">
                         <span className="font-medium">Check-out:</span>{' '}
-                        <span>{new Date(room.checkOutDate).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}</span>
+                        <span>{formatDate(room.checkOutDate)}</span>
                       </div>
                     )}
                     {room.guestName && (

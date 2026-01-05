@@ -13,6 +13,7 @@ import { ChevronLeftIcon } from '@heroicons/react/24/solid';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import toast from '@/lib/toast';
+import { formatDate } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -74,12 +75,7 @@ export default function HistoryPage() {
     }
   }, [session]);
   
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  // use shared formatDate from utils
   
   // Get status badge color
   const getStatusBadge = (status: string) => {

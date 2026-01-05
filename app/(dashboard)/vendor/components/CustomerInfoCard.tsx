@@ -11,6 +11,7 @@ import {
   Clock,
   Edit
 } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -154,8 +155,8 @@ export default function CustomerInfoCard({ customer }: CustomerInfoCardProps) {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Since</p>
-              <p className="text-base font-medium text-gray-900 dark:text-white">
-                {new Date(customer.createdAt).toLocaleDateString()}
+                <p className="text-base font-medium text-gray-900 dark:text-white">
+                {formatDate(customer.createdAt)}
               </p>
             </div>
           </motion.div>

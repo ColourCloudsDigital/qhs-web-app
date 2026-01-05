@@ -13,6 +13,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { DialogFooter } from '@/components/ui/dialog';
 import toast from '@/lib/toast';
+import { formatDate } from '@/lib/utils';
 import { Loader2, Search } from 'lucide-react';
 
 interface Booking {
@@ -210,8 +211,8 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
                     <div className="flex flex-col">
                       <span className="font-medium text-gray-900 dark:text-white">{booking.customerName}</span>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        Room {booking.roomNumber} | {new Date(booking.checkInDate).toLocaleDateString()}
-                        {' → '}{new Date(booking.checkOutDate).toLocaleDateString()}
+                        Room {booking.roomNumber} | {formatDate(booking.checkInDate)}
+                        {' → '}{formatDate(booking.checkOutDate)}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         Booking ID: {booking.id}
@@ -237,8 +238,8 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
                 {selectedBooking.customerName}
               </span>
               <span className="text-sm text-blue-600 dark:text-blue-400">
-                Room {selectedBooking.roomNumber} | {new Date(selectedBooking.checkInDate).toLocaleDateString()}
-                {' → '}{new Date(selectedBooking.checkOutDate).toLocaleDateString()}
+                Room {selectedBooking.roomNumber} | {formatDate(selectedBooking.checkInDate)}
+                {' → '}{formatDate(selectedBooking.checkOutDate)}
               </span>
               <span className="text-xs text-blue-600 dark:text-blue-400">
                 Booking ID: {selectedBooking.id}

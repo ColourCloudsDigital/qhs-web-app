@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import pool from '@/lib/db';
 import { emailService } from '@/lib/services/email.service';
+import { formatDate } from '@/lib/utils';
 import { bookingService } from '@/services/booking.service';
 
 export async function POST(
@@ -185,8 +186,8 @@ Dear ${booking.customer.name},
 Welcome to ${booking.hotel.name}! We're delighted to have you as our guest.
 
 Your booking details:
-- Check-in: ${new Date(booking.checkInDate).toLocaleDateString()}
-- Check-out: ${new Date(booking.checkOutDate).toLocaleDateString()}
+- Check-in: ${formatDate(booking.checkInDate)}
+- Check-out: ${formatDate(booking.checkOutDate)}
 - Room: ${booking.room.name}
 
 For any assistance during your stay, please contact our front desk.
@@ -202,11 +203,11 @@ The ${booking.hotel.name} Team
   <p>Dear ${booking.customer.name},</p>
   <p>We're delighted to have you as our guest.</p>
   
-  <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
     <h3>Your booking details:</h3>
     <ul>
-      <li><strong>Check-in:</strong> ${new Date(booking.checkInDate).toLocaleDateString()}</li>
-      <li><strong>Check-out:</strong> ${new Date(booking.checkOutDate).toLocaleDateString()}</li>
+      <li><strong>Check-in:</strong> ${formatDate(booking.checkInDate)}</li>
+      <li><strong>Check-out:</strong> ${formatDate(booking.checkOutDate)}</li>
       <li><strong>Room:</strong> ${booking.room.name}</li>
     </ul>
   </div>

@@ -26,8 +26,8 @@ export default async function GeneralSettingsPage() {
   return (
     <div className="container mx-auto p-4 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">General Settings</h1>
-        <p className="text-muted-foreground">Configure your account and application preferences</p>
+        <h1 className="text-3xl font-bold text-black dark:text-white">General Settings</h1>
+        <p className="text-black dark:text-white">Configure your account and application preferences</p>
       </div>
       
       <div className="grid gap-6">
@@ -99,7 +99,7 @@ export default async function GeneralSettingsPage() {
                   <Label htmlFor="dateFormat">Date Format</Label>
                   <select 
                     id="dateFormat" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-black dark:text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                     <option value="MM/DD/YYYY">MM/DD/YYYY</option>
@@ -110,7 +110,7 @@ export default async function GeneralSettingsPage() {
                   <Label htmlFor="timeFormat">Time Format</Label>
                   <select 
                     id="timeFormat" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-black dark:text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="12">12-hour (AM/PM)</option>
                     <option value="24">24-hour</option>
@@ -127,7 +127,7 @@ export default async function GeneralSettingsPage() {
                   <Label htmlFor="theme">Color Theme</Label>
                   <select 
                     id="theme" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-black dark:text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="system">System Default</option>
                     <option value="light">Light</option>

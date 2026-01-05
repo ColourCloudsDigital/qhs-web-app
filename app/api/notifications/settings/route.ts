@@ -139,38 +139,38 @@ export async function PUT(req: NextRequest) {
       }
 
     // Parse unsubscribedTypes (handle JSON string, comma-separated string, or array; fallback to empty)
-let parsedUnsubscribedTypes: string[] = [];
+      let parsedUnsubscribedTypes: string[] = [];
 
-// const unsubscribedTypes = preferences.unsubscribedTypes;  // Alias for readability
+      // const unsubscribedTypes = preferences.unsubscribedTypes;  // Alias for readability
 
-if (Array.isArray(unsubscribedTypes)) {
-  // Already an array: Assume it's string[] and filter/trim for safety
-  parsedUnsubscribedTypes = unsubscribedTypes
-    .map(type => String(type).trim())  // Coerce to string and trim
-    .filter(Boolean);  // Remove empties
-} else if (typeof unsubscribedTypes === 'string') {
-  try {
-    // Try JSON.parse first (e.g., '["type1","type2"]' -> array)
-    parsedUnsubscribedTypes = JSON.parse(unsubscribedTypes);
-    if (!Array.isArray(parsedUnsubscribedTypes)) {
-      throw new Error('Parsed JSON is not an array');  // Safety check
-    }
-    // Optional: Trim/filter if needed
-    parsedUnsubscribedTypes = parsedUnsubscribedTypes
-      .map(type => String(type).trim())
-      .filter(Boolean);
-  } catch {
-    // Fallback to comma-split (e.g., 'type1,type2' -> array)
-    parsedUnsubscribedTypes = unsubscribedTypes
-      .split(',')
-      .map(type => type.trim())
-      .filter(Boolean);
-  }
-} else {
-  // Invalid type: Log and throw (or fallback to empty if you prefer non-throwing)
-  console.error('Invalid unsubscribedTypes type:', typeof unsubscribedTypes, unsubscribedTypes);
-  throw new Error('unsubscribedTypes must be a string or array');
-}
+      if (Array.isArray(unsubscribedTypes)) {
+        // Already an array: Assume it's string[] and filter/trim for safety
+        parsedUnsubscribedTypes = unsubscribedTypes
+          .map(type => String(type).trim())  // Coerce to string and trim
+          .filter(Boolean);  // Remove empties
+      } else if (typeof unsubscribedTypes === 'string') {
+        try {
+          // Try JSON.parse first (e.g., '["type1","type2"]' -> array)
+          parsedUnsubscribedTypes = JSON.parse(unsubscribedTypes);
+          if (!Array.isArray(parsedUnsubscribedTypes)) {
+            throw new Error('Parsed JSON is not an array');  // Safety check
+          }
+          // Optional: Trim/filter if needed
+          parsedUnsubscribedTypes = parsedUnsubscribedTypes
+            .map(type => String(type).trim())
+            .filter(Boolean);
+        } catch {
+          // Fallback to comma-split (e.g., 'type1,type2' -> array)
+          parsedUnsubscribedTypes = unsubscribedTypes
+            .split(',')
+            .map(type => type.trim())
+            .filter(Boolean);
+        }
+      } else {
+        // Invalid type: Log and throw (or fallback to empty if you prefer non-throwing)
+        console.error('Invalid unsubscribedTypes type:', typeof unsubscribedTypes, unsubscribedTypes);
+        throw new Error('unsubscribedTypes must be a string or array');
+      }
     return NextResponse.json({
       success: true,
       preferences: {

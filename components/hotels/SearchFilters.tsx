@@ -222,7 +222,7 @@ export default function SearchFilters({ currentFilters, amenities }: SearchFilte
               <div className="space-y-3">
                 <div>
                   <label htmlFor="minPrice" className="mb-1 block text-xs text-gray-500 dark:text-gray-400">
-                    Min Price ($)
+                    Min Price (NGN)
                   </label>
                   <input
                     type="number"
@@ -236,7 +236,7 @@ export default function SearchFilters({ currentFilters, amenities }: SearchFilte
                 </div>
                 <div>
                   <label htmlFor="maxPrice" className="mb-1 block text-xs text-gray-500 dark:text-gray-400">
-                    Max Price ($)
+                    Max Price (NGN)
                   </label>
                   <input
                     type="number"

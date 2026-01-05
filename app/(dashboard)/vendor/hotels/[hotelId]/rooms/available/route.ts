@@ -114,7 +114,7 @@ export async function GET(
       }
     });
     
-    const bookedRoomIdsSet = new Set(bookedRoomIds.map(b => b.roomId));
+    const bookedRoomIdsSet = new Set(bookedRoomIds.map((b: any) => b.roomId));
     
     // Get all rooms in the hotel
     const rooms = await prisma.room.findMany({
@@ -141,7 +141,7 @@ export async function GET(
     });
     
     // Format room data
-    const availableRooms = rooms.map(room => {
+    const availableRooms = rooms.map((room: any) => {
       // Parse and select the first room number 
       let roomNumber = '';
       if (room.roomNumbers) {
@@ -166,7 +166,7 @@ export async function GET(
         discountedPrice: room.discountedPrice,
         images: room.images ? JSON.parse(room.images as string) : [],
         status: room.status,
-        amenities: room.amenities.map(ra => ra.amenity)
+        amenities: room.amenities.map((ra: any) => ra.amenity)
       };
     });
     

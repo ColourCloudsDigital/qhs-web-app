@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { create } from 'zustand';
+import { formatDate } from '@/lib/utils';
 
 // Define document types
 type DocumentType = 'ID_CARD' | 'PAYMENT_RECEIPT' | 'BOOKING_CONFIRMATION' | 'OTHER';
@@ -362,7 +363,7 @@ export default function BookingDocuments({ bookingId }: BookingDocumentsProps) {
                             {document.name}
                           </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(document.createdAt).toLocaleDateString()}
+                            {formatDate(document.createdAt)}
                   </p>
                         </div>
                 </div>

@@ -16,7 +16,7 @@ import {
   CheckCircleIcon, 
   XCircleIcon 
 } from '@heroicons/react/24/solid';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import toast from '@/lib/toast';
 
@@ -152,7 +152,7 @@ export default function SubscriptionPage() {
   
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Your Subscription</h1>
+      <h1 className="text-2xl font-bold text-black dark:text-white">Your Subscription</h1>
       
       {subscriptionPlan && (
         <div className="grid gap-6 lg:grid-cols-2">
@@ -168,7 +168,7 @@ export default function SubscriptionPage() {
                 </Badge>
               </div>
               {subscriptionPlan.subscriptionStatus && (
-                <div className="mt-2">
+                <div className="mt-2 text-black dark:text-white">
                   <Badge variant={subscriptionPlan.isExpired ? "destructive" : "outline"}>
                     {subscriptionPlan.isExpired ? 'Expired' : 
                      subscriptionPlan.subscriptionStatus.charAt(0).toUpperCase() + 
@@ -178,10 +178,10 @@ export default function SubscriptionPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600 dark:text-gray-400">{subscriptionPlan.description}</p>
+              <p className="text-gray-600 dark:text-white">{subscriptionPlan.description}</p>
               
               <div className="mt-6">
-                <h3 className="mb-4 font-semibold">Plan Features</h3>
+                <h3 className="mb-4 font-semibold text-black dark:text-white">Plan Features</h3>
                 <div className="grid gap-3 md:grid-cols-2">
                   {getFeaturesList(subscriptionPlan.features).map((feature, index) => (
                     <div 
@@ -195,8 +195,8 @@ export default function SubscriptionPage() {
                       )}
                       
                       <div>
-                        <div className="font-medium">{feature.name}</div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium text-black dark:text-white">{feature.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-white">
                           {formatFeatureValue(feature.value)}
                         </div>
                       </div>
@@ -234,8 +234,8 @@ export default function SubscriptionPage() {
                     <h4 className="font-medium">Renewal Date</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Your subscription {subscriptionPlan.isExpired ? 'expired on' : 'renews on'}{' '}
-                      <span className="font-medium">
-                        {new Date(subscriptionPlan.subscriptionEndDate).toLocaleDateString()}
+                        <span className="font-medium">
+                        {formatDate(subscriptionPlan.subscriptionEndDate)}
                       </span>
                     </p>
                   </div>
@@ -246,8 +246,8 @@ export default function SubscriptionPage() {
                     <h4 className="font-medium">Subscription Started</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       <span className="font-medium">
-                        {new Date(subscriptionPlan.subscriptionStartDate).toLocaleDateString()}
-                      </span>
+                          {formatDate(subscriptionPlan.subscriptionStartDate)}
+                        </span>
                     </p>
                   </div>
                 )}

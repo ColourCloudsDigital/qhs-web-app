@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { User, ArrowRight, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 
 interface Amenity {
   id: string;
@@ -170,11 +171,11 @@ export default function RoomCard({
               <div className="flex items-baseline">
                 {discountedPrice ? (
                   <>
-                    <span className="text-2xl font-bold text-primary">${discountedPrice}</span>
-                    <span className="ml-2 text-base text-gray-500 line-through dark:text-gray-400">${pricePerNight}</span>
+                    <span className="text-2xl font-bold text-primary">{formatCurrency(discountedPrice)}</span>
+                    <span className="ml-2 text-base text-gray-500 line-through dark:text-gray-400">{formatCurrency(pricePerNight)}</span>
                   </>
                 ) : (
-                  <span className="text-2xl font-bold text-primary">${pricePerNight}</span>
+                  <span className="text-2xl font-bold text-primary">{formatCurrency(pricePerNight)}</span>
                 )}
                 <span className="ml-1 text-sm text-gray-500 dark:text-gray-400">/night</span>
               </div>

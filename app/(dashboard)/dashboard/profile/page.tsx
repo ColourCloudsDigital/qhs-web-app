@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatDate } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,6 +29,8 @@ import { getUserAvatar } from '@/lib/dashboard-utils';
 import { UserRole } from '@/lib/types/enums';
 import { useToast } from "@/components/ui/use-toast";
 
+import { useRouter } from 'next/navigation';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 interface ProfileData {
   id: string;
   name: string;
@@ -70,6 +73,7 @@ export default function UnifiedProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editableProfile, setEditableProfile] = useState<Partial<ProfileData>>({});
+  const router = useRouter();
 
   const targetUserId = impersonation.isImpersonating && impersonation.userId 
     ? impersonation.userId 
@@ -213,6 +217,9 @@ export default function UnifiedProfilePage() {
 
   return (
     <div className="container mx-auto max-w-5xl py-8 px-4 sm:px-6 lg:px-8">
+  <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+    <ArrowLeftIcon className="h-4 w-4 mr-2" /> Back
+  </Button>
       <Card className="overflow-hidden shadow-lg dark:bg-gray-800">
         <CardHeader className="bg-gradient-to-r from-primary/80 to-primary/90 dark:from-primary/70 dark:to-primary/80 p-6 sm:p-8 border-b border-primary/50 dark:border-primary/40">
           <div className="flex flex-col sm:flex-row items-center sm:space-x-6">
@@ -274,7 +281,7 @@ export default function UnifiedProfilePage() {
                   {renderDetailItem(ShieldCheckIcon, 'Role', profileData.role, true, 'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-100')}
                   {renderDetailItem(IdentificationIcon, 'User ID', profileData.id)}
                   {renderDetailItem(SparklesIcon, 'Account Status', profileData.isActive ? 'Active' : 'Inactive', true, profileData.isActive ? 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100' : 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100')}
-                  {renderDetailItem(AtSymbolIcon, 'Email Verified', profileData.emailVerified ? new Date(profileData.emailVerified).toLocaleDateString() : 'Not Verified')}
+                  {renderDetailItem(AtSymbolIcon, 'Email Verified', profileData.emailVerified ? formatDate(profileData.emailVerified) : 'Not Verified')}
                 </CardContent>
             </Card>
           </TabsContent>
@@ -333,11 +340,11 @@ export default function UnifiedProfilePage() {
                 <CardHeader><CardTitle className="text-xl">Recent Activity</CardTitle></CardHeader>
                 <CardContent>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Joined on: {new Date(profileData.createdAt).toLocaleDateString()}
+                      Joined on: {formatDate(profileData.createdAt)}
                     </p>
                     {profileData.lastLoginAt && (
                         <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                        Last login: {new Date(profileData.lastLoginAt).toLocaleString()}
+                        Last login: {profileData.lastLoginAt ? formatDate(profileData.lastLoginAt) : 'Never'}
                         </p>
                     )}
                     <p className="mt-4 italic text-gray-500 dark:text-gray-400">Further activity details will be shown here.</p>
