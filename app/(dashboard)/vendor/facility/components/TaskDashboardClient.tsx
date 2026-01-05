@@ -91,7 +91,7 @@ export default function TaskDashboardClient({
     if (selectedHotelId) {
       fetchTaskStats();
       // Update URL
-      const params = new URLSearchParams(searchParams);
+      const params = new URLSearchParams(searchParams.toString());
       params.set('hotelId', selectedHotelId);
       router.push(`/vendor/facility/tasks?${params.toString()}`);
       
