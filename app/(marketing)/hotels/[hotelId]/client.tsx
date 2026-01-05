@@ -278,13 +278,13 @@ export default function HotelDetailClient({
               <div className="space-y-4">
                 <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
                       <Calendar className="h-5 w-5 text-red-600 dark:text-red-400" />
                     </div>
                     <div>
                       <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">Cancellation Policy</h3>
                       <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        Free cancellation up to 48 hours before check-in. Cancellations made within 48 hours of check-in are subject to a charge equal to one night&apos;s stay.
+                        Free cancellation up to 48 hours before check-in. Cancellations made within 48 hours of check-in are subject to a charge equal to one night's stay.
                       </p>
                     </div>
                   </div>
@@ -292,7 +292,7 @@ export default function HotelDetailClient({
 
                 <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
                       <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
@@ -308,7 +308,7 @@ export default function HotelDetailClient({
               <div className="space-y-4">
                 <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
                       <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
@@ -322,7 +322,7 @@ export default function HotelDetailClient({
 
                 <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/20">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/20">
                       <MapPin className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>

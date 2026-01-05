@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import toast from '@/lib/services/toast.service';
+import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -200,9 +201,7 @@ export default function KeycardAssignForm({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
+  // use shared formatDate from utils
 
   return (
     <form onSubmit={handleSubmit}>

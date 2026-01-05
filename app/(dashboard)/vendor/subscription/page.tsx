@@ -16,7 +16,7 @@ import {
   CheckCircleIcon, 
   XCircleIcon 
 } from '@heroicons/react/24/solid';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import toast from '@/lib/toast';
 
@@ -234,8 +234,8 @@ export default function SubscriptionPage() {
                     <h4 className="font-medium">Renewal Date</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Your subscription {subscriptionPlan.isExpired ? 'expired on' : 'renews on'}{' '}
-                      <span className="font-medium">
-                        {new Date(subscriptionPlan.subscriptionEndDate).toLocaleDateString()}
+                        <span className="font-medium">
+                        {formatDate(subscriptionPlan.subscriptionEndDate)}
                       </span>
                     </p>
                   </div>
@@ -246,8 +246,8 @@ export default function SubscriptionPage() {
                     <h4 className="font-medium">Subscription Started</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       <span className="font-medium">
-                        {new Date(subscriptionPlan.subscriptionStartDate).toLocaleDateString()}
-                      </span>
+                          {formatDate(subscriptionPlan.subscriptionStartDate)}
+                        </span>
                     </p>
                   </div>
                 )}

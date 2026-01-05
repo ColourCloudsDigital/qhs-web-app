@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatDate } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -280,7 +281,7 @@ export default function UnifiedProfilePage() {
                   {renderDetailItem(ShieldCheckIcon, 'Role', profileData.role, true, 'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-100')}
                   {renderDetailItem(IdentificationIcon, 'User ID', profileData.id)}
                   {renderDetailItem(SparklesIcon, 'Account Status', profileData.isActive ? 'Active' : 'Inactive', true, profileData.isActive ? 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100' : 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100')}
-                  {renderDetailItem(AtSymbolIcon, 'Email Verified', profileData.emailVerified ? new Date(profileData.emailVerified).toLocaleDateString() : 'Not Verified')}
+                  {renderDetailItem(AtSymbolIcon, 'Email Verified', profileData.emailVerified ? formatDate(profileData.emailVerified) : 'Not Verified')}
                 </CardContent>
             </Card>
           </TabsContent>
@@ -339,11 +340,11 @@ export default function UnifiedProfilePage() {
                 <CardHeader><CardTitle className="text-xl">Recent Activity</CardTitle></CardHeader>
                 <CardContent>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Joined on: {new Date(profileData.createdAt).toLocaleDateString()}
+                      Joined on: {formatDate(profileData.createdAt)}
                     </p>
                     {profileData.lastLoginAt && (
                         <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                        Last login: {new Date(profileData.lastLoginAt).toLocaleString()}
+                        Last login: {profileData.lastLoginAt ? formatDate(profileData.lastLoginAt) : 'Never'}
                         </p>
                     )}
                     <p className="mt-4 italic text-gray-500 dark:text-gray-400">Further activity details will be shown here.</p>

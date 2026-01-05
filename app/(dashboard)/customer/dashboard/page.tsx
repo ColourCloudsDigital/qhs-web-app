@@ -11,6 +11,7 @@ import IconHome from '@/components/icon/icon-home';
 import IconX from '@/components/icon/icon-x';
 import IconCalendar from '@/components/icon/icon-calendar';
 import IconClock from '@/components/icon/icon-clock';
+import { formatDate } from '@/lib/utils';
 
 type Hotel = {
   id: string;
@@ -100,28 +101,7 @@ export default function CustomerDashboardPage() {
   const totalBookings = activeBookings.length;
   const totalSpent = activeBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
 
-  // Format date from ISO string to readable format
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return 'N/A';
-
-    try {
-      const date = new Date(dateString);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-
-      let hours = date.getHours();
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-
-      hours = hours % 12;
-      hours = hours ? hours : 12; // Convert 0 to 12
-
-      return `${year}-${month}-${day} ${hours}:${minutes}${ampm}`;
-    } catch (error) {
-      return 'N/A';
-    }
-  };
+  // using shared formatDate from lib/utils
 
   const handleOpenBooking = (hotelId: string) => {
     setSelectedHotel(hotelId);
@@ -274,8 +254,8 @@ export default function CustomerDashboardPage() {
                     <td>{booking.id}</td>
                     <td>{hotelName}</td>
                     <td>{roomName}</td>
-                    <td>{booking.checkInDate}</td>
-                    <td>{booking.checkOutDate}</td>
+                    <td>{formatDate(booking.checkInDate)}</td>
+                    <td>{formatDate(booking.checkOutDate)}</td>
                     <td>₦{Number(booking.totalAmount || 0).toLocaleString()}</td>
                     <td>
                       <span className={`badge ${booking.status === 'CONFIRMED' ? 'bg-success' : 'bg-warning'}`}>

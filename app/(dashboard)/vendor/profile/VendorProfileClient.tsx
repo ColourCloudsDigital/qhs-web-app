@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { getUserAvatar } from '@/lib/dashboard-utils';
 import { UserRole } from '@/lib/types/enums';
 import { useToast } from '@/components/ui/use-toast';
+import { formatDate } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Shield, ShieldCheck, ShieldOff, Copy, Check } from 'lucide-react';
 
@@ -291,9 +292,7 @@ export default function VendorProfileClient() {
               <p className="text-sm text-muted-foreground">{profile.email || 'email@example.com'}</p>
               <p className="mt-1 text-xs text-muted-foreground">Vendor ID: {profile.id || 'N/A'}</p>
               <p className="text-xs text-muted-foreground">
-                Joined: {profile.userCreatedAt 
-                  ? new Date(profile.userCreatedAt).toLocaleDateString() 
-                  : 'N/A'}
+                Joined: {profile.userCreatedAt ? formatDate(profile.userCreatedAt) : 'N/A'}
               </p>
             </div>
             

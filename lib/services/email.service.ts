@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 // Import only the compile function from handlebars to avoid require.extensions issues
 // We use dynamic import for better Next.js compatibility
 import pool from '@/lib/db';
+import { formatDate } from '@/lib/utils';
 
 /**
  * Interface for SMTP configuration
@@ -336,16 +337,7 @@ class EmailService {
     hotelDetails: any;
     vendorId?: string;
   }) {
-    // Format dates properly
-    const formatDate = (dateString: string) => {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    };
+    // use shared formatDate from utils (returns YYYY-MM-DD hh:mmAM)
 
     // Get currency symbol
     const getCurrencySymbol = (currency: string = 'NGN') => {

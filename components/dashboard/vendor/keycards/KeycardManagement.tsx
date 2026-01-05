@@ -27,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatDate } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -391,7 +392,7 @@ export default function KeycardManagement({
                       </TableCell>
                       <TableCell>
                         {keycard.validTo ? (
-                          new Date(keycard.validTo).toLocaleDateString()
+                          formatDate(keycard.validTo)
                         ) : (
                           'N/A'
                         )}

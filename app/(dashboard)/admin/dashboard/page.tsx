@@ -17,7 +17,7 @@ import Link from 'next/link';
 import StatCard from '@/components/admin/StatCard';
 import PerformanceList from '@/components/admin/PerformanceList';
 import DataTable from '@/components/admin/DataTable';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 
 // Dynamically import ApexCharts with no SSR to prevent window errors
@@ -399,7 +399,7 @@ export default function AdminDashboardPage() {
               key: 'date',
               title: 'Date',
               render: (item) => (
-                <span>{new Date(item.date).toLocaleDateString()}</span>
+                <span>{formatDate(item.date)}</span>
               )
             },
             {
