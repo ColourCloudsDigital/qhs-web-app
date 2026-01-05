@@ -412,7 +412,7 @@ export default function RoomDetailClient({
               <div className="mt-4 flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
                 <Info className="h-4 w-4" />
                 <p>
-                  Don&apos;t miss this room! Prices may increase if you view this room again later.
+                  Don't miss this room! Prices may increase if you view this room again later.
                 </p>
               </div>
             </div>
