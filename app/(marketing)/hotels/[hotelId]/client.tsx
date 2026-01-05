@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Star, MapPin, Clock, Check, Calendar, ArrowLeft } from 'lucide-react';
@@ -71,6 +71,35 @@ export default function HotelDetailClient({
   
   // Check if we have rooms data
   const hasRooms = Array.isArray(sortedRooms) && sortedRooms.length > 0;
+
+  const contactHotel = useCallback(async () => {
+    if (!hotel?.id) {
+      alert('No contact information available for this hotel.');
+      return;
+    }
+
+    const message = `Guest requested contact for hotel ${hotel.name || hotel.id}. Page: ${typeof window !== 'undefined' ? window.location.href : ''}`;
+
+    try {
+      const res = await fetch(`/api/hotels/${hotel.id}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: null, email: null, phone: null, message }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        alert('Message sent — the hotel will contact you shortly.');
+      } else {
+        console.error('Contact API error:', data);
+        alert(data?.error || 'Failed to send message to the hotel.');
+      }
+    } catch (error) {
+      console.error('Contact request failed:', error);
+      alert('Failed to send message. Please try again later.');
+    }
+  }, [hotel]);
   
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">
@@ -360,8 +389,9 @@ export default function HotelDetailClient({
                     To book this hotel, please contact the property directly for pricing and availability.
                   </p>
                   <button
-                    className="w-full rounded-lg bg-primary py-3 text-center font-medium text-white transition-all hover:bg-primary-dark hover:shadow-md"
-                  >
+                    type="button"
+                    onClick={contactHotel}
+                    className="w-full rounded-lg bg-primary py-3 text-center font-medium text-white transition-all hover:bg-primary-dark hover:shadow-md">
                     Contact Hotel
                   </button>
                 </div>
