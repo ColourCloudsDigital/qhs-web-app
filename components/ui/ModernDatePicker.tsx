@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
 
 // Export the DateRange interface as a named export
@@ -32,6 +33,8 @@ export default function ModernDatePicker({
     startDate: initialStartDate,
     endDate: initialEndDate
   });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [align, setAlign] = useState<'left' | 'right' | 'center'>('center');
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [nextMonth, setNextMonth] = useState(new Date(new Date().setMonth(new Date().getMonth() + 1)));
@@ -42,6 +45,29 @@ export default function ModernDatePicker({
       setNextMonth(new Date(new Date(initialStartDate).setMonth(initialStartDate.getMonth() + 1)));
     }
   }, [initialStartDate]);
+  useEffect(() => {
+  if (inline || !containerRef.current) return;
+
+  const rect = containerRef.current.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const padding = 16;
+
+  // Would overflow right → anchor right
+  if (rect.right > viewportWidth - padding) {
+    setAlign('right');
+    return;
+  }
+
+  // Would overflow left → anchor left
+  if (rect.left < padding) {
+    setAlign('left');
+    return;
+  }
+
+  // Default position
+  setAlign('center');
+}, [inline, currentMonth]);
+
 
   const handleDateClick = (date: Date) => {
     if (!tempSelectedRange.startDate || (tempSelectedRange.startDate && tempSelectedRange.endDate)) {
@@ -238,10 +264,28 @@ export default function ModernDatePicker({
   };
 
   return (
-    <div className={`
-      z-50 rounded-lg border border-gray-200 bg-white p-2 md:p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800
-      ${inline ? '' : 'fixed md:absolute inset-x-2 md:inset-x-auto top-16 md:top-auto md:mt-2 md:left-0 md:right-0 min-w-[300px] md:min-w-[42rem] max-w-[calc(100%-1rem)] md:max-w-[42rem]'}
-    `}>
+    <div
+    ref={containerRef}
+    className={`
+      z-50 rounded-lg border border-gray-200 bg-white shadow-lg
+      dark:border-gray-700 dark:bg-gray-800
+      p-2 md:p-4
+
+      ${inline ? '' : 'fixed md:absolute top-16 md:top-auto md:mt-2'}
+
+      min-w-[300px]
+      md:min-w-[42rem]
+      max-w-[42rem]
+
+      ${
+        align === 'left'
+          ? 'left-4 right-auto'
+          : align === 'right'
+          ? 'right-4 left-auto'
+          : 'left-1/2 -translate-x-1/2'
+      }
+    `}
+>
       <div className="mb-2 md:mb-4 flex items-center justify-between">
         <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Select dates</h3>
         <div className="flex items-center gap-2">

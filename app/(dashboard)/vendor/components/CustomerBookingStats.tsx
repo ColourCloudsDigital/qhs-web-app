@@ -44,6 +44,32 @@ export default function CustomerBookingStats({ customerId }: CustomerBookingStat
     }
     
     fetchStats();
+    
+    // Listen for bookings updates via BroadcastChannel and localStorage fallback
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('bookings');
+      bc.addEventListener('message', () => {
+        fetchStats();
+      });
+    } catch (e) {
+      // ignore
+    }
+
+    const onStorage = (ev: StorageEvent) => {
+      if (ev.key === 'bookings-updated') {
+        fetchStats();
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      if (bc) {
+        try { bc.close(); } catch (e) {}
+      }
+      window.removeEventListener('storage', onStorage);
+    };
   }, [customerId]);
   
   // Sample data for development
