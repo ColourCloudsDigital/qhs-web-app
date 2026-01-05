@@ -376,6 +376,7 @@ export default function HotelDetailClient({
                   hotelId={hotel.id}
                   lowestPrice={lowestPrice}
                   discountedPrice={lowestDiscountedPrice}
+                  rooms={sortedRooms}
                 />
               </div>
             ) : (

@@ -33,19 +33,23 @@ export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps)
 
   // This function now matches the expected (roomId: string) => void signature
   const handleReserve = (roomId: string) => {
-    // If we have a hotelId, use the book endpoint
+    // Try to get checkIn, checkOut, guests from window.location.search if present
+    let checkIn = '';
+    let checkOut = '';
+    let guests = '';
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      checkIn = urlParams.get('checkIn') || '';
+      checkOut = urlParams.get('checkOut') || '';
+      guests = urlParams.get('guests') || '';
+    }
+    const params = new URLSearchParams({ roomId });
+    if (checkIn) params.set('checkIn', checkIn);
+    if (checkOut) params.set('checkOut', checkOut);
+    if (guests) params.set('guests', guests);
     if (hotelId) {
-      const params = new URLSearchParams({
-        roomId,
-      });
-      
       router.push(`/hotels/${hotelId}/book?${params.toString()}`);
     } else {
-      // Fallback to generic booking URL
-      const params = new URLSearchParams({
-        roomId,
-      });
-      
       router.push(`/booking?${params.toString()}`);
     }
   };

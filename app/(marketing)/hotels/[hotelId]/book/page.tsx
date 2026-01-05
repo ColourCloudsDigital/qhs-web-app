@@ -13,6 +13,7 @@ interface PageProps {
     checkIn?: string;
     checkOut?: string;
     guests?: string;
+    roomId?: string;
   };
 }
 
@@ -43,25 +44,21 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
     notFound();
   }
   
-  // Get check-in, check-out and guest count from query params
-  const { checkIn, checkOut, guests } = searchParams;
-  
+  // Get check-in, check-out, guest count, and roomId from query params
+  const { checkIn, checkOut, guests, roomId } = searchParams;
   if (!checkIn || !checkOut) {
     // Redirect back to hotel detail page if dates are not provided
     return redirect(`/hotels/${params.hotelId}`);
   }
-  
   // Sort rooms by price (lowest first)
   const sortedRooms = [...hotel.rooms].sort((a, b) => {
     const priceA = a.discountedPrice || a.pricePerNight;
     const priceB = b.discountedPrice || b.pricePerNight;
     return priceA - priceB;
   });
-  
   // Pass session info if available, otherwise pass null
   const customerId = session?.user?.customerId || undefined;
   const isLoggedIn = !!session?.user;
-  
   return (
     <BookingClient 
       hotel={hotel}
@@ -69,6 +66,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
       initialCheckInDate={checkIn}
       initialCheckOutDate={checkOut}
       initialGuests={parseInt(guests || '2')}
+      initialSelectedRoomId={roomId || null}
       customerId={customerId}
       isLoggedIn={isLoggedIn}
     />
