@@ -8,6 +8,7 @@ import { getUserAvatar } from '@/lib/dashboard-utils';
 import { UserRole } from '@/lib/types/enums';
 import pool from '@/lib/db';
 import Image from 'next/image';
+import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Admin Profile | Admin Dashboard',
@@ -74,9 +75,7 @@ export default async function AdminProfilePage() {
               <p className="text-sm text-muted-foreground">{adminProfile?.email || 'email@example.com'}</p>
               <p className="mt-1 text-xs text-muted-foreground">Admin ID: {adminProfile?.superAdminId || 'N/A'}</p>
               <p className="text-xs text-muted-foreground">
-                Joined: {adminProfile?.createdAt 
-                  ? new Date(adminProfile.createdAt).toLocaleDateString() 
-                  : 'N/A'}
+                Joined: {adminProfile?.createdAt ? formatDate(adminProfile.createdAt) : 'N/A'}
               </p>
             </div>
             

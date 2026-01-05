@@ -553,7 +553,7 @@ export default function BookingsList({
                           <div className="flex flex-col">
                             <span>#{booking.id.slice(0, 8).toUpperCase()}</span>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {new Date(booking.createdAt).toLocaleDateString()}
+                              {formatDate(booking.createdAt)}
                             </span>
                           </div>
                         </td>

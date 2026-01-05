@@ -75,6 +75,7 @@ interface RoomData {
 const ROOM_TYPE_NAMES: Record<string, string> = {
   'standard': 'Standard Room',
   'deluxe': 'Deluxe Room',
+  import { formatDate } from '@/lib/utils';
   'suite': 'Suite',
   'executive': 'Executive Room',
   'family': 'Family Room',
@@ -93,9 +94,9 @@ const getAmenityIcon = (amenityName: string) => {
   const name = (amenityName || '').toLowerCase();
   
   // Match WiFi-related amenities
-  if (name.includes('wifi') || name.includes('internet') || name.includes('network')) 
-    return <WifiIcon className="h-4 w-4 text-green-500" />;
-  
+                    <p className="text-sm text-gray-500">
+                      {formatDate(booking.checkIn)} to {formatDate(booking.checkOut)}
+                    </p>
   // Match TV and entertainment amenities
   if (name.includes('tv') || name.includes('television') || name.includes('entertainment')) 
     return <TvIcon className="h-4 w-4 text-green-500" />;
@@ -597,7 +598,7 @@ export default function ViewRoomPage({ params }: ViewRoomPageProps) {
                             {booking.firstName} {booking.lastName}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {new Date(booking.checkIn).toLocaleDateString()} to {new Date(booking.checkOut).toLocaleDateString()}
+                            {formatDate(booking.checkIn)} to {formatDate(booking.checkOut)}
                           </p>
                         </div>
                         <Badge>{booking.status}</Badge>
