@@ -120,8 +120,14 @@ export default function ReservationPanel({
       }
 
       const booking = await res.json();
-      // Redirect to booking confirmation page if available
-      router.push(`/bookings/${booking.id}/confirmation`);
+      // API returns `bookingId` (server) but some callers may expect `id` (client).
+      // Support both shapes and defensive fallback to avoid `undefined` in the URL.
+      const bookingId = (booking && (booking.id || booking.bookingId)) || null;
+      if (!bookingId) {
+        throw new Error('Booking response missing id');
+      }
+      // Redirect to booking confirmation page
+      router.push(`/bookings/${bookingId}/confirmation`);
     } catch (err) {
       console.error('Reservation failed', err);
       alert(err instanceof Error ? err.message : 'Unable to reserve room.');
@@ -280,7 +286,7 @@ export default function ReservationPanel({
       <div className="mt-4 flex items-start">
         <Info className="mr-2 h-5 w-5 flex-shrink-0 text-gray-400" />
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          You won&apos;t be charged yet. Payment will be required upon arrival or according to the hotel&apos;s policies.
+          You won't be charged yet. Payment will be required upon arrival or according to the hotel's policies.
         </p>
       </div>
     </div>
