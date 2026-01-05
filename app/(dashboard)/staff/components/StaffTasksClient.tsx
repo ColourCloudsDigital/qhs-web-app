@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 import { TaskStatus, TaskPriority, TaskCategory } from '@/lib/types/enums';
 import {
   Card,
@@ -211,7 +212,7 @@ export default function StaffTasksClient({
           <TabsList>
             <TabsTrigger value="all">All Tasks</TabsTrigger>
             <TabsTrigger value="overdue" className={stats.overdueTasks > 0 ? "text-red-600" : ""}>
-              Overdue {stats.overdueTasks > 0 && `(${stats.overdueTasks})`}
+                    Due: {formatDate(task.dueDate)}
             </TabsTrigger>
             <TabsTrigger value="inprogress">In Progress</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -279,7 +280,7 @@ export default function StaffTasksClient({
                 <div className="mt-4 space-y-1">
                   <div className="flex items-center text-xs text-gray-500">
                     <Clock className="mr-1 h-3.5 w-3.5" />
-                    Due: {new Date(task.dueDate).toLocaleDateString()}
+                    Due: {formatDate(task.dueDate)}
                     {new Date(task.dueDate) < new Date() && (
                       <Badge variant="outline" className="ml-2 text-xs bg-red-50 text-red-700 border-red-200">
                         Overdue

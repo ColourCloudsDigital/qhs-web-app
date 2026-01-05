@@ -210,7 +210,7 @@ export default function LegalDocumentsPage() {
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                No legal documents found. Click &quot;Create New Document&quot; to add one.
+                No legal documents found. Click "Create New Document" to add one.
               </AlertDescription>
             </Alert>
           ) : (

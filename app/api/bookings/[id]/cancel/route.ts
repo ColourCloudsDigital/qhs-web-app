@@ -37,7 +37,7 @@ export async function POST(
       const booking = await bookingService.getBookingById(bookingId);
       
       // Determine who is cancelling the booking
-      let cancelledBy;
+      let cancelledBy: 'ADMIN' | 'VENDOR' | 'CUSTOMER';
       if (session.user.role === 'CUSTOMER') {
         // Customer can only cancel their own bookings
         if (booking.customerId !== session.user.customerId) {

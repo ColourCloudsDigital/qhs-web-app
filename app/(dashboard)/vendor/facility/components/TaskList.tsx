@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 import TaskStatusBadge from './TaskStatusBadge';
 import TaskPriorityBadge from './TaskPriorityBadge';
 import TaskActionsMenu from './TaskActionsMenu';
@@ -217,7 +218,7 @@ export default function TaskList({
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-1 text-gray-500" />
                     <span className="text-sm">
-                      {new Date(task.dueDate).toLocaleDateString()}
+                      {formatDate(task.dueDate)}
                     </span>
                   </div>
                 </TableCell>

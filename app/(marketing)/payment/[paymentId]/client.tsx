@@ -14,7 +14,7 @@ import {
   CheckCircle, 
   AlertCircle
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 
 interface PaymentClientProps {
   booking: any;
@@ -27,15 +27,7 @@ export default function PaymentClient({ booking }: PaymentClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [successUrl, setSuccessUrl] = useState<string | null>(null);
   
-  // Format dates
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  // using shared formatDate from utils
   
   // Calculate number of nights
   const checkInDate = new Date(booking.checkInDate);

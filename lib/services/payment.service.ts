@@ -72,12 +72,12 @@ export const paymentService = {
   }) {
     // Get booking details
     const [bookingRows] = await pool.query<BookingRow[]>(`
-      SELECT b.*, b.payment_status AS paymentStatus, h.id AS hotelId, h.name AS hotelName, h.vendor_id AS vendorId,
+      SELECT b.*, b.paymentStatus AS paymentStatus, h.id AS hotelId, h.name AS hotelName, h.vendorId AS vendorId,
              c.id AS customerId, u.name AS customerName, u.email AS customerEmail
       FROM bookings b
-      LEFT JOIN hotels h ON b.hotel_id = h.id
-      LEFT JOIN customers c ON b.customer_id = c.id
-      LEFT JOIN users u ON c.user_id = u.id
+      LEFT JOIN hotels h ON b.hotelId = h.id
+      LEFT JOIN customers c ON b.customerId = c.id
+      LEFT JOIN users u ON c.userId = u.id
       WHERE b.id = ?
     `, [bookingId]);
     
@@ -104,9 +104,9 @@ export const paymentService = {
 
     // Get hotel payment settings
     const [hotelPaymentSettings] = await pool.query<RowDataPacket[]>(`
-      SELECT tax_rate AS taxRate, commission_rate AS commissionRate
+      SELECT taxRate AS taxRate, commissionRate AS commissionRate
       FROM hotel_payment_settings
-      WHERE hotel_id = ?
+      WHERE hotelId = ?
     `, [booking.hotelId]);
 
     const settings = hotelPaymentSettings[0];
@@ -118,7 +118,7 @@ export const paymentService = {
     const appSettings = await getAppSettings();
     const [paystackConfigRows] = await pool.query<RowDataPacket[]>(`
       SELECT * FROM paystack_configurations
-      WHERE is_default = TRUE
+      WHERE isDefault = TRUE
       LIMIT 1
     `);
     
@@ -222,18 +222,18 @@ export const paymentService = {
   async verifyPayment(reference: string) {
     // Find the payment record
     const [paymentRows] = await pool.query<PaymentRow[]>(`
-      SELECT p.*, b.id AS bookingId, h.name AS hotelName, h.id AS hotelId, h.address AS hotelAddress, 
-             h.phone AS hotelPhone, h.email AS hotelEmail, 
+      SELECT p.*, b.id AS bookingId, h.name AS hotelName, h.id AS hotelId, h.address AS hotelAddress,
+             h.phone AS hotelPhone, h.email AS hotelEmail,
              u.name AS customerName, u.email AS customerEmail,
-             b.check_in_date AS checkInDate, b.check_out_date AS checkOutDate, 
-             b.room_id AS roomId, r.name AS roomName
+             b.checkInDate AS checkInDate, b.checkOutDate AS checkOutDate,
+             b.roomId AS roomId, r.name AS roomName
       FROM payments p
-      LEFT JOIN bookings b ON p.booking_id = b.id
-      LEFT JOIN hotels h ON b.hotel_id = h.id
-      LEFT JOIN customers c ON b.customer_id = c.id
-      LEFT JOIN users u ON c.user_id = u.id
-      LEFT JOIN rooms r ON b.room_id = r.id
-      WHERE p.transaction_id = ?
+      LEFT JOIN bookings b ON p.bookingId = b.id
+      LEFT JOIN hotels h ON b.hotelId = h.id
+      LEFT JOIN customers c ON b.customerId = c.id
+      LEFT JOIN users u ON c.userId = u.id
+      LEFT JOIN rooms r ON b.roomId = r.id
+      WHERE p.transactionId = ?
     `, [reference]);
     
     if (!paymentRows || paymentRows.length === 0) {
@@ -280,12 +280,12 @@ export const paymentService = {
         // Update booking payment status
         await connection.query(`
           UPDATE bookings
-          SET payment_status = ?, status = ?
+          SET paymentStatus = ?, status = ?
           WHERE id = ?
         `, [
           PaymentStatus.COMPLETED,
           BookingStatus.CONFIRMED,
-          payment.booking_id
+          payment.bookingId
         ]);
 
         await commitTransaction(connection);
@@ -401,13 +401,13 @@ export const paymentService = {
    */
   async getPaymentById(id: string) {
     const [paymentRows] = await pool.query<PaymentRow[]>(`
-      SELECT p.*, b.id AS bookingId, b.check_in_date AS checkInDate, b.check_out_date AS checkOutDate,
-             b.number_of_guests AS numberOfGuests, b.total_amount AS totalAmount, b.status AS paymentStatus,
+      SELECT p.*, b.id AS bookingId, b.checkInDate AS checkInDate, b.checkOutDate AS checkOutDate,
+             b.numberOfGuests AS numberOfGuests, b.totalAmount AS totalAmount, b.status AS paymentStatus,
              h.id AS hotelId, h.name AS hotelName, r.id AS roomId, r.name AS roomName, r.type AS roomType
       FROM payments p
-      LEFT JOIN bookings b ON p.booking_id = b.id
-      LEFT JOIN hotels h ON b.hotel_id = h.id
-      LEFT JOIN rooms r ON b.room_id = r.id
+      LEFT JOIN bookings b ON p.bookingId = b.id
+      LEFT JOIN hotels h ON b.hotelId = h.id
+      LEFT JOIN rooms r ON b.roomId = r.id
       WHERE p.id = ?
     `, [id]);
 
@@ -431,8 +431,8 @@ export const paymentService = {
     const [payments] = await pool.query<PaymentRow[]>(`
       SELECT p.*, h.name AS hotelName
       FROM payments p
-      LEFT JOIN bookings b ON p.booking_id = b.id
-      LEFT JOIN hotels h ON b.hotel_id = h.id
+      LEFT JOIN bookings b ON p.bookingId = b.id
+      LEFT JOIN hotels h ON b.hotelId = h.id
       WHERE b.id = ?
     `, [bookingId]);
 
@@ -460,9 +460,9 @@ export const paymentService = {
   }) {
     // Get booking details
     const [bookingRows] = await pool.query<BookingRow[]>(`
-      SELECT b.*, h.id AS hotelId, h.name AS hotelName, h.vendor_id AS vendorId
+      SELECT b.*, h.id AS hotelId, h.name AS hotelName, h.vendorId AS vendorId
       FROM bookings b
-      LEFT JOIN hotels h ON b.hotel_id = h.id
+      LEFT JOIN hotels h ON b.hotelId = h.id
       WHERE b.id = ?
     `, [bookingId]);
     
@@ -474,9 +474,9 @@ export const paymentService = {
 
     // Get hotel payment settings
     const [settingsRows] = await pool.query<RowDataPacket[]>(`
-      SELECT tax_rate AS taxRate, commission_rate AS commissionRate
+      SELECT taxRate AS taxRate, commissionRate AS commissionRate
       FROM hotel_payment_settings
-      WHERE hotel_id = ?
+      WHERE hotelId = ?
     `, [bookingData.hotelId]);
     
     if (!settingsRows || settingsRows.length === 0) {
@@ -536,7 +536,7 @@ export const paymentService = {
       // Update booking payment status
       await connection.query(`
         UPDATE bookings
-        SET payment_status = ?, status = ?
+        SET paymentStatus = ?, status = ?
         WHERE id = ?
       `, [
         PaymentStatus.COMPLETED,
@@ -578,9 +578,9 @@ export const paymentService = {
   }) {
     // Get booking details
     const [bookingRows] = await pool.query<BookingRow[]>(`
-      SELECT b.*, h.id AS hotelId, h.name AS hotelName, h.vendor_id AS vendorId
+      SELECT b.*, h.id AS hotelId, h.name AS hotelName, h.vendorId AS vendorId
       FROM bookings b
-      LEFT JOIN hotels h ON b.hotel_id = h.id
+      LEFT JOIN hotels h ON b.hotelId = h.id
       WHERE b.id = ?
     `, [bookingId]);
     
@@ -592,9 +592,9 @@ export const paymentService = {
 
     // Get hotel payment settings
     const [settingsRows] = await pool.query<RowDataPacket[]>(`
-      SELECT tax_rate AS taxRate, commission_rate AS commissionRate
+      SELECT taxRate AS taxRate, commissionRate AS commissionRate
       FROM hotel_payment_settings
-      WHERE hotel_id = ?
+      WHERE hotelId = ?
     `, [bookingData.hotelId]);
     
     if (!settingsRows || settingsRows.length === 0) {
@@ -654,7 +654,7 @@ export const paymentService = {
       // Update booking payment status
       await connection.query(`
         UPDATE bookings
-        SET payment_status = ?, status = ?
+        SET paymentStatus = ?, status = ?
         WHERE id = ?
       `, [
         PaymentStatus.COMPLETED,

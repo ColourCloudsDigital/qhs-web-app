@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { Bars3Icon, MoonIcon, SunIcon, BuildingOfficeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { Menu, Transition } from '@headlessui/react';
 import Image from 'next/image';
@@ -63,6 +63,17 @@ const DashboardHeader = ({
     const selectedHotel = hotels.find(hotel => hotel.id === hotelId) || null;
     setCurrentHotel(selectedHotel);
   };
+
+  const rolePath = (() => {
+  switch (userRole) {
+    case 'SUPER_ADMIN': return 'admin';
+    case 'VENDOR': return 'vendor';
+    case 'CUSTOMER': return 'customer';
+    case 'STAFF': return 'staff';
+    default: return 'dashboard';
+  }
+})();
+
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
@@ -187,7 +198,7 @@ const DashboardHeader = ({
                 <Menu.Item>
                   {({ active }) => (
                     <Link
-                      href={`/${userRole?.toLowerCase()}/settings`}
+                      href={`/${rolePath}/settings`}
                       className={`flex items-center px-4 py-2.5 text-sm transition-colors duration-150 ${
                         active
                           ? 'bg-gray-50 text-primary dark:bg-gray-700 dark:text-primary-light'
@@ -204,9 +215,9 @@ const DashboardHeader = ({
                 </Menu.Item>
                 <Menu.Item>
                   {({ active }) => (
-                    <Link
-                      href="/api/auth/signout"
-                      className={`flex items-center px-4 py-2.5 text-sm transition-colors duration-150 ${
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/login' })}
+                      className={`w-full flex items-center px-4 py-2.5 text-sm transition-colors duration-150 ${
                         active
                           ? 'bg-gray-50 text-red-600 dark:bg-gray-700 dark:text-red-400'
                           : 'text-gray-700 dark:text-gray-300'
@@ -216,7 +227,7 @@ const DashboardHeader = ({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                       </svg>
                       Sign out
-                    </Link>
+                    </button>
                   )}
                 </Menu.Item>
               </Menu.Items>

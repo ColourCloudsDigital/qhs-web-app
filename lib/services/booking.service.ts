@@ -4,6 +4,21 @@ import { availabilityService } from './availability.service';
 import { emailService } from './email.service';
 import { PaginationParams } from '@/lib/utils';
 
+// Helper function to safely parse JSON
+function tryParseJSON(jsonString: any, defaultValue: any = null) {
+  if (!jsonString) return defaultValue;
+
+  try {
+    if (typeof jsonString === 'string') {
+      return JSON.parse(jsonString);
+    }
+    return jsonString;
+  } catch (e) {
+    console.error('Error parsing JSON:', e);
+    return defaultValue;
+  }
+}
+
 export const bookingService = {
   /**
    * Create a new booking
@@ -39,37 +54,36 @@ export const bookingService = {
     }
 
     // Get room details to calculate price
-    const room = await prisma.room.findUnique({
-      where: { id: roomId },
-      include: {
-        hotel: {
-          select: {
-            id: true,
-            name: true,
-            vendor: {
-              select: {
-                id: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const [roomResult] = await pool.query(`
+      SELECT
+        rooms.*,
+        hotels.id as hotel_id,
+        hotels.name as hotel_name,
+        vendors.id as vendor_id
+      FROM rooms
+      JOIN hotels ON rooms.hotelId = hotels.id
+      LEFT JOIN vendors ON hotels.vendorId = vendors.id
+      WHERE rooms.id = ?
+    `, [roomId]);
+
+    const room = (roomResult as any[])[0];
 
     if (!room) {
       throw new Error('Room not found');
     }
 
     // Get hotel settings for payment
-    const hotelPaymentSettings = await prisma.hotelPaymentSetting.findUnique({
-      where: { hotelId },
-      select: {
-        allowPayAtHotel: true,
-        requirePrePayment: true,
-        taxRate: true,
-        commissionRate: true,
-      },
-    });
+    const [paymentSettingsResult] = await pool.query(`
+      SELECT
+        allowPayAtHotel,
+        requirePrePayment,
+        taxRate,
+        commissionRate
+      FROM hotel_payment_settings
+      WHERE hotelId = ?
+    `, [hotelId]);
+
+    const hotelPaymentSettings = (paymentSettingsResult as any[])[0];
 
     if (!hotelPaymentSettings) {
       throw new Error('Hotel payment settings not found');
@@ -92,18 +106,15 @@ export const bookingService = {
       checkOutDate,
     });
 
-    // Get customer details for email
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+    // Get customer details for email (already done above in the email section, so we can reuse the customer data)
+    const [customerResults] = await pool.query(
+      `SELECT * FROM customers
+       LEFT JOIN users ON customers.userId = users.id
+       WHERE customers.id = ?`,
+      [customerId]
+    );
+
+    const customer = (customerResults as any[])[0];
 
     if (!customer) {
       throw new Error('Customer not found');
@@ -119,42 +130,72 @@ export const bookingService = {
       : PaymentStatus.PENDING; // Will be updated after payment
 
     // Create booking in a transaction
-    const booking = await prisma.$transaction(async (tx) => {
-      const newBooking = await tx.booking.create({
-        data: {
+    const connection = await pool.getConnection();
+    let booking: any = null;
+
+    try {
+      await connection.beginTransaction();
+
+      // Create booking
+      const [bookingResult] = await connection.query(
+        `INSERT INTO bookings (
+          hotelId, roomId, customerId, checkInDate, checkOutDate,
+          numberOfGuests, totalAmount, status, paymentStatus, specialRequests,
+          createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [
           hotelId,
           roomId,
           customerId,
           checkInDate,
           checkOutDate,
           numberOfGuests,
-          totalAmount: totalPrice,
-          status: initialBookingStatus,
-          paymentStatus: initialPaymentStatus,
-          specialRequests,
-        },
-      });
+          totalPrice,
+          initialBookingStatus,
+          initialPaymentStatus,
+          specialRequests || null,
+        ]
+      );
+
+      const bookingId = (bookingResult as any).insertId;
 
       // If payment is at hotel, we don't create a payment record yet
       if (!isPayAtHotel) {
         // Create payment record with zero amount, will be updated after payment
-        await tx.payment.create({
-          data: {
-            bookingId: newBooking.id,
+        await connection.query(
+          `INSERT INTO payments (
+            bookingId, customerId, amount, currency, paymentMethod, status,
+            adminCommission, vendorAmount, taxAmount, createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [
+            bookingId,
             customerId,
-            amount: 0, // Will be updated after payment
-            currency: 'NGN',
-            method: paymentMethod,
-            status: PaymentStatus.PENDING,
-            adminCommission: 0, // Will be updated
-            vendorAmount: 0, // Will be updated
-            taxAmount: 0, // Will be updated
-          },
-        });
+            0, // Will be updated after payment
+            'NGN',
+            paymentMethod,
+            PaymentStatus.PENDING,
+            0, // Will be updated
+            0, // Will be updated
+            0, // Will be updated
+          ]
+        );
       }
 
-      return newBooking;
-    });
+      await connection.commit();
+
+      // Fetch the created booking
+      const [createdBookingResult] = await pool.query(
+        'SELECT * FROM bookings WHERE id = ?',
+        [bookingId]
+      );
+
+      booking = (createdBookingResult as any[])[0];
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
 
     // Send confirmation email if booking is confirmed
     if (booking.status === BookingStatus.CONFIRMED) {
@@ -234,231 +275,234 @@ export const bookingService = {
    * Get a booking by ID
    */
   async getBookingById(id: string, includeCustomer = false, includeHotel = false, includeRoom = false) {
-    try {
-      // Use LEFT JOIN for users to support guest bookings
-      const [bookingResults] = await pool.query(
-        `SELECT bookings.*, 
-                hotels.id as hotelId, 
-                hotels.name as hotelName, 
-                hotels.address as hotelAddress, 
-                hotels.city as hotelCity,
-                hotels.state as hotelState,
-                hotels.country as hotelCountry,
-                hotels.images as hotelImages,
-                rooms.id as roomId,
-                rooms.name as roomName,
-                rooms.type as roomType,
-                rooms.capacity as roomCapacity,
-                rooms.pricePerNight as roomPricePerNight,
-                rooms.discountedPrice as roomDiscountedPrice,
-                rooms.images as roomImages,
-                customers.id as customerId,
-                customers.firstName as customerFirstName,
-                customers.lastName as customerLastName,
-                customers.phone as customerPhone,
-                customers.email as customerEmail,
-                users.name as userName,
-                users.email as userEmail,
-                users.phone as userPhone
-         FROM bookings
-         JOIN hotels ON bookings.hotelId = hotels.id
-         JOIN rooms ON bookings.roomId = rooms.id
-         JOIN customers ON bookings.customerId = customers.id
-         LEFT JOIN users ON customers.userId = users.id
-         WHERE bookings.id = ?`,
-        [id]
-      );
-      if ((bookingResults as any[]).length === 0) {
-        throw new Error('Booking not found');
-      }
-      const bookingData = (bookingResults as any[])[0];
-      // Use user fields if present, otherwise fallback to customer fields
-      const customerName = bookingData.userName || [bookingData.customerFirstName, bookingData.customerLastName].filter(Boolean).join(' ') || 'Guest';
-      const customerEmail = bookingData.userEmail || bookingData.customerEmail || '';
-      const customerPhone = bookingData.userPhone || bookingData.customerPhone || '';
-      // Format the data
-      const formattedBooking = {
-        id: bookingData.id,
-        hotelId: bookingData.hotelId,
-        roomId: bookingData.roomId,
-        customerId: bookingData.customerId,
-        checkInDate: bookingData.checkInDate,
-        checkOutDate: bookingData.checkOutDate,
-        numberOfGuests: bookingData.numberOfGuests,
-        totalAmount: bookingData.totalAmount,
-        status: bookingData.status,
-        paymentStatus: bookingData.paymentStatus,
-        specialRequests: bookingData.specialRequests || '',
-        createdAt: bookingData.createdAt,
-        updatedAt: bookingData.updatedAt,
-        hotel: {
-          id: bookingData.hotelId,
-          name: bookingData.hotelName,
-          address: bookingData.hotelAddress,
-          city: bookingData.hotelCity,
-          state: bookingData.hotelState,
-          country: bookingData.hotelCountry,
-          images: tryParseJSON(bookingData.hotelImages, [])
-        },
-        room: {
-          id: bookingData.roomId,
-          name: bookingData.roomName,
-          type: bookingData.roomType,
-          capacity: bookingData.roomCapacity,
-          pricePerNight: bookingData.roomPricePerNight,
-          discountedPrice: bookingData.roomDiscountedPrice,
-          images: tryParseJSON(bookingData.roomImages, [])
-        },
-        customer: {
-          id: bookingData.customerId,
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone
-        }
-      };
-      return formattedBooking;
-    } catch (error) {
-      console.error('Error fetching booking with pool:', error);
-      
-      // If pool method fails, try using Prisma as a fallback
-      const booking = await prisma.booking.findUnique({
-        where: { id },
-        include: {
-          customer: includeCustomer
-            ? {
-                include: {
-                  user: {
-                    select: {
-                      name: true,
-                      email: true,
-                    },
-                  },
-                },
-              }
-            : false,
-          hotel: includeHotel
-            ? {
-                select: {
-                  id: true,
-                  name: true,
-                  address: true,
-                  city: true,
-                  state: true,
-                  country: true,
-                  phone: true,
-                  email: true,
-                  images: true,
-                },
-              }
-            : false,
-          room: includeRoom
-            ? {
-                select: {
-                  id: true,
-                  name: true,
-                  type: true,
-                  capacity: true,
-                  pricePerNight: true,
-                  discountedPrice: true,
-                  images: true,
-                },
-              }
-            : false,
-          payments: true,
-          keycards: true,
-        },
-      });
+    // Get booking with all related data
+    const [bookingResults] = await pool.query(
+            `SELECT bookings.*,
+            hotels.id as hotelId,
+            hotels.name as hotelName,
+            hotels.address as hotelAddress,
+            hotels.city as hotelCity,
+            hotels.state as hotelState,
+            hotels.country as hotelCountry,
+            hotels.phone as hotelPhone,
+            hotels.email as hotelEmail,
+            hotels.images as hotelImages,
+            hotels.vendorId as hotelVendorId,
+            rooms.id as roomId,
+            rooms.name as roomName,
+            rooms.type as roomType,
+            rooms.capacity as roomCapacity,
+            rooms.pricePerNight as roomPricePerNight,
+            rooms.discountedPrice as roomDiscountedPrice,
+            rooms.images as roomImages,
+            customers.id as customerId,
+            customers.firstName as customerFirstName,
+            customers.lastName as customerLastName,
+            customers.phone as customerPhone,
+            users.name as userName,
+            users.email as userEmail
+      FROM bookings
+      LEFT JOIN hotels ON bookings.hotelId = hotels.id
+      LEFT JOIN rooms ON bookings.roomId = rooms.id
+      LEFT JOIN customers ON bookings.customerId = customers.id
+      LEFT JOIN users ON customers.userId = users.id
+      WHERE bookings.id = ?`,
+      [id]
+    );
 
-      if (!booking) {
-        throw new Error('Booking not found');
-      }
-
-      // Format the data
-      const formattedBooking = {
-        ...booking,
-        wifiCredentials: booking.wifiCredentials
-          ? JSON.parse(booking.wifiCredentials as string)
-          : null,
-        hotel: booking.hotel
-          ? {
-              ...booking.hotel,
-              images: JSON.parse(booking.hotel.images as string),
-            }
-          : null,
-        room: booking.room
-          ? {
-              ...booking.room,
-              images: JSON.parse(booking.room.images as string),
-            }
-          : null,
-      };
-
-      return formattedBooking;
+    if ((bookingResults as any[]).length === 0) {
+      throw new Error('Booking not found');
     }
+
+    const bookingData = (bookingResults as any[])[0];
+
+    // Get payments for this booking
+    const [paymentsResult] = await pool.query(
+      `SELECT
+        id, bookingId, amount, currency, paymentMethod, status,
+        transactionId,
+        createdAt, updatedAt
+       FROM payments
+       WHERE bookingId = ?`,
+      [id]
+    );
+
+    const payments = (paymentsResult as any[]);
+
+    // Use user fields if present, otherwise fallback to customer fields
+    const customerName = bookingData.userName || [bookingData.customerFirstName, bookingData.customerLastName].filter(Boolean).join(' ') || 'Guest';
+    const customerEmail = bookingData.userEmail || bookingData.customerEmail || '';
+    const customerPhone = bookingData.userPhone || bookingData.customerPhone || '';
+
+    // Format the data
+    const formattedBooking = {
+      id: bookingData.id,
+      hotelId: bookingData.hotelId,
+      roomId: bookingData.roomId,
+      customerId: bookingData.customerId,
+      checkInDate: bookingData.checkInDate,
+      checkOutDate: bookingData.checkOutDate,
+      numberOfGuests: bookingData.numberOfGuests,
+      totalAmount: bookingData.totalAmount,
+      status: bookingData.status,
+      paymentStatus: bookingData.paymentStatus,
+      specialRequests: bookingData.specialRequests || '',
+      createdAt: bookingData.createdAt,
+      updatedAt: bookingData.updatedAt,
+      wifiCredentials: bookingData.wifiCredentials ? JSON.parse(bookingData.wifiCredentials) : null,
+      payments: payments,
+      hotel: includeHotel && bookingData.hotelId ? {
+        id: bookingData.hotelId,
+        name: bookingData.hotelName,
+        address: bookingData.hotelAddress,
+        city: bookingData.hotelCity,
+        state: bookingData.hotelState,
+        country: bookingData.hotelCountry,
+        phone: bookingData.hotelPhone,
+        email: bookingData.hotelEmail,
+        images: tryParseJSON(bookingData.hotelImages, []),
+        vendorId: bookingData.hotelVendorId
+      } : null,
+      room: includeRoom && bookingData.roomId ? {
+        id: bookingData.roomId,
+        name: bookingData.roomName,
+        type: bookingData.roomType,
+        capacity: bookingData.roomCapacity,
+        pricePerNight: bookingData.roomPricePerNight,
+        discountedPrice: bookingData.roomDiscountedPrice,
+        images: tryParseJSON(bookingData.roomImages, [])
+      } : null,
+      customer: includeCustomer && bookingData.customerId ? {
+        id: bookingData.customerId,
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+        user: bookingData.userName ? {
+          name: bookingData.userName,
+          email: bookingData.userEmail,
+        } : undefined
+      } : null
+    };
+
+    return formattedBooking;
   },
 
   /**
-   * Get bookings for a customer with pagination
+   * Get bookings for a customer with pagination and optional status filter
    */
-  async getCustomerBookings(customerId: string, { page = 1, limit = 10 }: PaginationParams) {
+  async getCustomerBookings(
+    customerId: string,
+    { page = 1, limit = 10, status }: PaginationParams & { status?: BookingStatus }
+  ) {
     // Calculate offset
     const offset = (page - 1) * limit;
 
+    // Build WHERE conditions
+    const whereConditions: string[] = ['bookings.customerId = ?'];
+    const params: any[] = [customerId];
+
+    if (status) {
+      whereConditions.push('bookings.status = ?');
+      params.push(status);
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
     // Get bookings with count
-    const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
-        where: {
-          customerId,
-        },
-        take: limit,
-        skip: offset,
-        orderBy: {
-          createdAt: 'desc',
-        },
-        include: {
-          hotel: {
-            select: {
-              id: true,
-              name: true,
-              city: true,
-              state: true,
-              country: true,
-              images: true,
-            },
-          },
-          room: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-            },
-          },
-          payments: {
-            select: {
-              id: true,
-              status: true,
-              method: true,
-              amount: true,
-              transactionId: true,
-            },
-          },
-        },
-      }),
-      prisma.booking.count({
-        where: {
-          customerId,
-        },
-      }),
+    const [bookingsResult, countResult] = await Promise.all([
+      pool.query(`
+        SELECT
+          bookings.*,
+          hotels.id as hotel_id,
+          hotels.name as hotel_name,
+          hotels.city as hotel_city,
+          hotels.state as hotel_state,
+          hotels.country as hotel_country,
+          hotels.images as hotel_images,
+          rooms.id as room_id,
+          rooms.name as room_name,
+          rooms.type as room_type
+        FROM bookings
+        LEFT JOIN hotels ON bookings.hotelId = hotels.id
+        LEFT JOIN rooms ON bookings.roomId = rooms.id
+        WHERE ${whereClause}
+        ORDER BY bookings.createdAt DESC
+        LIMIT ? OFFSET ?
+      `, [...params, limit, offset]),
+      pool.query(`
+        SELECT COUNT(*) as total
+        FROM bookings
+        WHERE ${whereClause}
+      `, params)
     ]);
 
+    const bookingsData = (bookingsResult as any[])[0];
+    const total = (countResult as any[])[0][0].total;
+
+    // Get payments for these bookings
+    const bookingIds = bookingsData.map((booking: any) => booking.id);
+    let paymentsMap: { [key: string]: any[] } = {};
+
+    if (bookingIds.length > 0) {
+      const [paymentsResult] = await pool.query(`
+        SELECT
+          bookingId,
+          id,
+          status,
+          paymentMethod,
+          amount,
+          transactionId
+        FROM payments
+        WHERE bookingId IN (${bookingIds.map(() => '?').join(',')})
+      `, bookingIds);
+
+      const payments = (paymentsResult as any[]);
+
+      // Group payments by bookingId
+      paymentsMap = payments.reduce((acc: { [key: string]: any[] }, payment: any) => {
+        if (!acc[payment.bookingId]) {
+          acc[payment.bookingId] = [];
+        }
+        acc[payment.bookingId].push({
+          id: payment.id,
+          status: payment.status,
+          method: payment.paymentMethod,
+          amount: payment.amount,
+          transactionId: payment.transactionId,
+        });
+        return acc;
+      }, {});
+    }
+
     // Format the data
-    const formattedBookings = bookings.map((booking) => ({
-      ...booking,
+    const formattedBookings = bookingsData.map((booking: any) => ({
+      id: booking.id,
+      hotelId: booking.hotelId,
+      roomId: booking.roomId,
+      customerId: booking.customerId,
+      checkInDate: booking.checkInDate,
+      checkOutDate: booking.checkOutDate,
+      numberOfGuests: booking.numberOfGuests,
+      totalAmount: booking.totalAmount,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      specialRequests: booking.specialRequests,
+      createdAt: booking.createdAt,
+      updatedAt: booking.updatedAt,
       hotel: {
-        ...booking.hotel,
-        images: JSON.parse(booking.hotel.images as string),
+        id: booking.hotel_id,
+        name: booking.hotel_name,
+        city: booking.hotel_city,
+        state: booking.hotel_state,
+        country: booking.hotel_country,
+        images: JSON.parse(booking.hotel_images || '[]'),
       },
-      payments: booking.payments,
+      room: {
+        id: booking.room_id,
+        name: booking.room_name,
+        type: booking.room_type,
+      },
+      payments: paymentsMap[booking.id] || [],
     }));
 
     // Calculate total pages
@@ -497,106 +541,146 @@ export const bookingService = {
     // Calculate offset
     const offset = (page - 1) * limit;
 
-    // Build filters
-    const where: any = {
-      hotelId,
-    };
+    // Build WHERE conditions
+    const whereConditions: string[] = ['bookings.hotelId = ?'];
+    const params: any[] = [hotelId];
 
     if (status) {
-      where.status = status;
+      whereConditions.push('bookings.status = ?');
+      params.push(status);
     }
 
     if (search) {
-      where.OR = [
-        {
-          customer: {
-            user: {
-              name: {
-                contains: search,
-                mode: 'insensitive',
-              },
-            },
-          },
-        },
-        {
-          customer: {
-            user: {
-              email: {
-                contains: search,
-                mode: 'insensitive',
-              },
-            },
-          },
-        },
-        {
-          id: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
-      ];
+      whereConditions.push(`(
+        users.name LIKE ?
+        OR users.email LIKE ?
+        OR bookings.id LIKE ?
+      )`);
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
     }
 
     if (checkInDate) {
-      where.checkInDate = {
-        ...where.checkInDate,
-        gte: checkInDate,
-      };
+      whereConditions.push('bookings.checkInDate >= ?');
+      params.push(checkInDate);
     }
 
     if (checkOutDate) {
-      where.checkOutDate = {
-        ...where.checkOutDate,
-        lte: checkOutDate,
-      };
+      whereConditions.push('bookings.checkOutDate <= ?');
+      params.push(checkOutDate);
     }
 
+    const whereClause = whereConditions.join(' AND ');
+
     // Get bookings with count
-    const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
-        where,
-        take: limit,
-        skip: offset,
-        orderBy: {
-          createdAt: 'desc',
-        },
-        include: {
-          customer: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          room: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-            },
-          },
-          payments: {
-            select: {
-              id: true,
-              status: true,
-              method: true,
-              amount: true,
-              transactionId: true,
-            },
-          },
-        },
-      }),
-      prisma.booking.count({ where }),
+    const [bookingsResult, countResult] = await Promise.all([
+      pool.query(`
+        SELECT
+          bookings.*,
+          customers.id as customer_id,
+          customers.firstName as customer_firstName,
+          customers.lastName as customer_lastName,
+          customers.phone as customer_phone,
+         
+          users.name as user_name,
+          users.email as user_email,
+          rooms.id as room_id,
+          rooms.name as room_name,
+          rooms.type as room_type
+        FROM bookings
+        LEFT JOIN customers ON bookings.customerId = customers.id
+        LEFT JOIN users ON customers.userId = users.id
+        LEFT JOIN rooms ON bookings.roomId = rooms.id
+        WHERE ${whereClause}
+        ORDER BY bookings.createdAt DESC
+        LIMIT ? OFFSET ?
+      `, [...params, limit, offset]),
+      pool.query(`
+        SELECT COUNT(*) as total
+        FROM bookings
+        LEFT JOIN customers ON bookings.customerId = customers.id
+        LEFT JOIN users ON customers.userId = users.id
+        WHERE ${whereClause}
+      `, params)
     ]);
+
+    const bookingsData = (bookingsResult as any[])[0];
+    const total = (countResult as any[])[0][0].total;
+
+    // Get payments for these bookings
+    const bookingIds = bookingsData.map((booking: any) => booking.id);
+    let paymentsMap: { [key: string]: any[] } = {};
+
+    if (bookingIds.length > 0) {
+      const [paymentsResult] = await pool.query(`
+        SELECT
+          bookingId,
+          id,
+          status,
+          paymentMethod,
+          amount,
+          transactionId
+        FROM payments
+        WHERE bookingId IN (${bookingIds.map(() => '?').join(',')})
+      `, bookingIds);
+
+      const payments = (paymentsResult as any[]);
+
+      // Group payments by bookingId
+      paymentsMap = payments.reduce((acc: { [key: string]: any[] }, payment: any) => {
+        if (!acc[payment.bookingId]) {
+          acc[payment.bookingId] = [];
+        }
+        acc[payment.bookingId].push({
+          id: payment.id,
+          status: payment.status,
+          method: payment.paymentMethod,
+          amount: payment.amount,
+          transactionId: payment.transactionId,
+        });
+        return acc;
+      }, {});
+    }
+
+    // Format the data to match the original structure
+    const formattedBookings = bookingsData.map((booking: any) => ({
+      id: booking.id,
+      hotelId: booking.hotelId,
+      roomId: booking.roomId,
+      customerId: booking.customerId,
+      checkInDate: booking.checkInDate,
+      checkOutDate: booking.checkOutDate,
+      numberOfGuests: booking.numberOfGuests,
+      totalAmount: booking.totalAmount,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      specialRequests: booking.specialRequests,
+      createdAt: booking.createdAt,
+      updatedAt: booking.updatedAt,
+      customer: {
+        id: booking.customer_id,
+        firstName: booking.customer_firstName,
+        lastName: booking.customer_lastName,
+        phone: booking.customer_phone,
+        email: booking.customer_email,
+        user: {
+          name: booking.user_name || `${booking.customer_firstName || ''} ${booking.customer_lastName || ''}`.trim(),
+          email: booking.user_email || booking.customer_email,
+        },
+      },
+      room: {
+        id: booking.room_id,
+        name: booking.room_name,
+        type: booking.room_type,
+      },
+      payments: paymentsMap[booking.id] || [],
+    }));
 
     // Calculate total pages
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: bookings,
+      data: formattedBookings,
       meta: {
         currentPage: page,
         totalPages,
@@ -610,52 +694,30 @@ export const bookingService = {
    * Update booking status
    */
   async updateBookingStatus(id: string, status: BookingStatus, staffId?: string) {
-    // Verify that booking exists
-    const booking = await prisma.booking.findUnique({
-      where: { id },
-      include: {
-        hotel: {
-          select: {
-            name: true,
-          },
-        },
-        customer: {
-          include: {
-            user: {
-              select: {
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    // Verify that booking exists and get related data
+    const booking = await this.getBookingById(id, true, true, true);
 
     if (!booking) {
       throw new Error('Booking not found');
     }
 
     // Update booking status
-    const updatedBooking = await prisma.booking.update({
-      where: { id },
-      data: {
-        status,
-        updatedAt: new Date(),
-      },
-    });
+    await pool.query(
+      'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?',
+      [status, id]
+    );
+
+    // Get updated booking
+    const updatedBooking = await this.getBookingById(id, false, false, false);
 
     // Send notification email based on status change
     if (status === BookingStatus.CONFIRMED) {
       try {
-        // Get booking details with customer and hotel information
-        const booking = await this.getBookingById(id, true, true, true);
-        
-        if (booking && booking.customer && booking.hotel) {
+        if (booking.customer && booking.hotel) {
           // Send booking confirmation email
           await emailService.sendBookingConfirmation({
-            to: booking.customer.user.email,
-            guestName: booking.customer.user.name,
+            to: booking.customer.email,
+            guestName: booking.customer.name,
             bookingDetails: {
               id: booking.id,
               checkInDate: booking.checkInDate,
@@ -676,7 +738,7 @@ export const bookingService = {
               currency: 'NGN',
               primaryColor: '#1e3a8a' // Default primary color
             },
-            vendorId: booking.hotel.vendorId // Pass vendor ID for vendor-specific templates
+            vendorId: booking.hotel.vendorId || '' // Pass vendor ID for vendor-specific templates
           });
         }
       } catch (error) {
@@ -692,28 +754,8 @@ export const bookingService = {
    * Cancel a booking
    */
   async cancelBooking(id: string, reason: string, cancelledBy: 'CUSTOMER' | 'VENDOR' | 'ADMIN') {
-    // Verify that booking exists
-    const booking = await prisma.booking.findUnique({
-      where: { id },
-      include: {
-        payments: true,
-        hotel: {
-          select: {
-            name: true,
-          },
-        },
-        customer: {
-          include: {
-            user: {
-              select: {
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    // Verify that booking exists and get related data
+    const booking = await this.getBookingById(id, true, true, false);
 
     if (!booking) {
       throw new Error('Booking not found');
@@ -731,45 +773,55 @@ export const bookingService = {
     // Calculate if refund is applicable
     // This is a simplified example - actual refund policy would depend on business rules
     const now = new Date();
-    const hoursTillCheckIn = (booking.checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const hoursTillCheckIn = (new Date(booking.checkInDate).getTime() - now.getTime()) / (1000 * 60 * 60);
     const isRefundEligible = hoursTillCheckIn >= 24; // Refund if cancellation is at least 24 hours before check-in
 
     // Update booking and handle payment in a transaction
-    const updatedBooking = await prisma.$transaction(async (tx) => {
-      // Update booking status
-      const cancelled = await tx.booking.update({
-        where: { id },
-        data: {
-          status: BookingStatus.CANCELLED,
-          specialRequests: booking.specialRequests
-            ? `${booking.specialRequests}\n\nCANCELLATION: ${reason} (by ${cancelledBy})`
-            : `CANCELLATION: ${reason} (by ${cancelledBy})`,
-        },
-      });
+    const connection = await pool.getConnection();
 
-      // Handle payment if there's any
-      if (booking.payments.length > 0 && booking.paymentStatus === PaymentStatus.PAID) {
+    try {
+      await connection.beginTransaction();
+
+      // Update booking special requests with cancellation info
+      const currentSpecialRequests = booking.specialRequests || '';
+      const cancellationNote = `CANCELLATION: ${reason} (by ${cancelledBy})`;
+      const updatedSpecialRequests = currentSpecialRequests
+        ? `${currentSpecialRequests}\n\n${cancellationNote}`
+        : cancellationNote;
+
+      // Update booking status
+      await connection.query(
+        'UPDATE bookings SET status = ?, specialRequests = ?, updatedAt = NOW() WHERE id = ?',
+        [BookingStatus.CANCELLED, updatedSpecialRequests, id]
+      );
+
+      // Handle payment if there's any completed payment
+      if (booking.payments && booking.payments.length > 0 && booking.paymentStatus === PaymentStatus.COMPLETED) {
         // If refund is eligible, update payment status
         if (isRefundEligible) {
-          await tx.payment.updateMany({
-            where: { bookingId: id },
-            data: {
-              status: PaymentStatus.REFUNDED,
-            },
-          });
+          await connection.query(
+            'UPDATE payments SET status = ? WHERE bookingId = ?',
+            [PaymentStatus.REFUNDED, id]
+          );
 
           // Update booking payment status
-          await tx.booking.update({
-            where: { id },
-            data: {
-              paymentStatus: PaymentStatus.REFUNDED,
-            },
-          });
+          await connection.query(
+            'UPDATE bookings SET paymentStatus = ? WHERE id = ?',
+            [PaymentStatus.REFUNDED, id]
+          );
         }
       }
 
-      return cancelled;
-    });
+      await connection.commit();
+
+      // Get updated booking
+      const updatedBooking = await this.getBookingById(id, false, false, false);
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
 
     // Send cancellation email
     try {
@@ -781,23 +833,10 @@ export const bookingService = {
     }
 
     return {
-      ...updatedBooking,
+      ...booking,
+      status: BookingStatus.CANCELLED,
+      specialRequests: booking.specialRequests,
       isRefundEligible,
     };
   },
 };
-
-// Helper function to safely parse JSON
-function tryParseJSON(jsonString: any, defaultValue: any = null) {
-  if (!jsonString) return defaultValue;
-  
-  try {
-    if (typeof jsonString === 'string') {
-      return JSON.parse(jsonString);
-    }
-    return jsonString;
-  } catch (e) {
-    console.error('Error parsing JSON:', e);
-    return defaultValue;
-  }
-}
