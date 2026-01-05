@@ -103,12 +103,29 @@ export default function CustomerDashboardPage() {
 
   // using shared formatDate from lib/utils
 
-  const handleOpenBooking = (hotelId: string) => {
-    setSelectedHotel(hotelId);
-    const hotel = hotels.find((h) => h.id === hotelId);
-    const firstAvailableRoom = hotel?.rooms?.find((r) => (r.availableUnits ?? 0) > 0) || hotel?.rooms?.[0];
-    setSelectedRoom(firstAvailableRoom?.id || null);
-    setModalOpen(true);
+  const handleOpenBooking = async (hotelId: string) => {
+    try {
+      // Fetch full hotel details (includes per-room availability)
+      const res = await fetch(`/api/hotels/${hotelId}`);
+      if (!res.ok) throw new Error('Failed to load hotel details');
+
+      const hotelDetail = await res.json();
+
+      // Update hotels list with the detailed hotel so UI reflects accurate availability
+      setHotels(prev => {
+        const exists = prev.find(h => h.id === hotelId);
+        if (!exists) return [hotelDetail, ...prev];
+        return prev.map(h => (h.id === hotelId ? hotelDetail : h));
+      });
+
+      setSelectedHotel(hotelId);
+      const firstAvailableRoom = (hotelDetail.rooms || []).find((r: any) => (r.availableUnits ?? 0) > 0) || hotelDetail.rooms?.[0];
+      setSelectedRoom(firstAvailableRoom?.id || null);
+      setModalOpen(true);
+    } catch (err) {
+      console.error('Unable to open booking modal:', err);
+      alert('Unable to load hotel details for booking. Please try again.');
+    }
   };
 
   const handleCreateBooking = async () => {
