@@ -5,6 +5,22 @@ import { canAccessModule } from '@/lib/services/module-access.service';
 import { ModuleType } from '@/lib/types/enums';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
+import { RowDataPacket } from 'mysql2';
+
+interface StaffRow extends RowDataPacket {
+  id: string;
+  hotelId: string;
+  userId: string;
+  name: string;
+  email: string;
+}
+
+interface TaskRow extends RowDataPacket {
+  id: string;
+  hotelId: string;
+  assignedToId: string | null;
+  title: string;
+}
 
 const assignSchema = z.object({
   assignedToId: z.string().uuid('Invalid staff ID')
@@ -42,24 +58,32 @@ export async function POST(
     const body = await request.json();
     const { assignedToId } = assignSchema.parse(body);
 
-    // Check if staff exists and belongs to the same hotel as the task
-    const task = await prisma.facilityTask.findUnique({
-      where: { id: taskId },
-      select: { hotelId: true, assignedToId: true }
-    });
+    // Get the task
+    const [taskRows] = await pool.query<RowDataPacket[]>(
+      `SELECT id, hotelId, assignedToId, title FROM facility_tasks WHERE id = ?`,
+      [taskId]
+    );
 
-    if (!task) {
+    if (taskRows.length === 0) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    const staff = await prisma.staff.findUnique({
-      where: { id: assignedToId },
-      select: { hotelId: true, userId: true }
-    });
+    const task = taskRows[0] as TaskRow;
 
-    if (!staff) {
+    // Get staff member with user info
+    const [staffRows] = await pool.query<RowDataPacket[]>(
+      `SELECT s.id, s.hotelId, s.userId, u.name, u.email 
+       FROM staff s
+       JOIN users u ON s.userId = u.id
+       WHERE s.id = ?`,
+      [assignedToId]
+    );
+
+    if (staffRows.length === 0) {
       return NextResponse.json({ error: 'Staff not found' }, { status: 404 });
     }
+
+    const staff = staffRows[0] as StaffRow;
 
     // Ensure staff belongs to the same hotel as the task
     if (staff.hotelId !== task.hotelId) {
@@ -75,48 +99,103 @@ export async function POST(
     }
 
     // Update the task with the new assignee
-    const updatedTask = await prisma.facilityTask.update({
-      where: { id: taskId },
-      data: {
-        assignedToId,
-        lastUpdatedById: session.user.id
-      },
-      include: {
-        assignedTo: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
-          }
-        }
-      }
-    });
+    await pool.query(
+      `UPDATE facility_tasks SET assignedToId = ?, lastUpdatedById = ?, updatedAt = NOW() WHERE id = ?`,
+      [assignedToId, session.user.id, taskId]
+    );
 
     // Create a notification for the staff member
-    await prisma.notification.create({
-      data: {
-        title: `Task Assigned: ${updatedTask.title}`,
-        content: `You have been assigned a new task: ${updatedTask.title}`,
-        type: 'TASK',
-        recipient: 'USER',
-        userId: staff.userId,
-        senderId: session.user.id,
-        metadata: JSON.stringify({ taskId: updatedTask.id })
-      }
-    });
+    try {
+      await pool.query(
+        `INSERT INTO notifications 
+         (title, content, type, status, recipient, recipientId, senderId, metadata, createdAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          `Task Assigned: ${task.title}`,
+          `You have been assigned a new task: ${task.title}`,
+          'TASK',
+          'UNREAD',
+          'USER',
+          staff.userId,
+          session.user.id,
+          JSON.stringify({ taskId: task.id }),
+        ]
+      );
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError);
+    }
 
     // Create a task comment about the assignment
-    await prisma.taskComment.create({
-      data: {
-        taskId,
-        userId: session.user.id,
-        content: `Task assigned to ${updatedTask.assignedTo?.user.name || 'a staff member'}.`
-      }
-    });
+    try {
+      await pool.query(
+        `INSERT INTO task_comments (taskId, userId, content, createdAt)
+         VALUES (?, ?, ?, NOW())`,
+        [taskId, session.user.id, `Task assigned to ${staff.name}.`]
+      );
+    } catch (commentError) {
+      console.error('Error creating task comment:', commentError);
+    }
+
+    // Fetch and return updated task
+    const [updatedTaskRows] = await pool.query<RowDataPacket[]>(
+      `SELECT 
+        ft.*,
+        s.id as assignedToId,
+        u.name as assignedToName,
+        u.email as assignedToEmail,
+        u.id as assignedToUserId,
+        st.position as assignedToPosition
+       FROM facility_tasks ft
+       LEFT JOIN staff s ON ft.assignedToId = s.id
+       LEFT JOIN users u ON s.userId = u.id
+       LEFT JOIN staff st ON s.id = st.id
+       WHERE ft.id = ?`,
+      [taskId]
+    );
+
+    if (updatedTaskRows.length === 0) {
+      return NextResponse.json({ error: 'Task not found after update' }, { status: 404 });
+    }
+
+    const updatedTask = updatedTaskRows[0];
 
     return NextResponse.json({
       message: 'Task assigned successfully',
-      task: updatedTask
+      task: {
+        id: updatedTask.id,
+        title: updatedTask.title,
+        description: updatedTask.description,
+        status: updatedTask.status,
+        priority: updatedTask.priority,
+        category: updatedTask.category,
+        hotelId: updatedTask.hotelId,
+        roomUnitId: updatedTask.roomUnitId,
+        assignedToId: updatedTask.assignedToId,
+        assignedTo: updatedTask.assignedToId ? {
+          id: updatedTask.assignedToId,
+          userId: updatedTask.assignedToUserId,
+          position: updatedTask.assignedToPosition,
+          user: {
+            id: updatedTask.assignedToUserId,
+            name: updatedTask.assignedToName,
+            email: updatedTask.assignedToEmail,
+          },
+        } : null,
+        createdById: updatedTask.createdById,
+        createdAt: updatedTask.createdAt,
+        updatedAt: updatedTask.updatedAt,
+        dueDate: updatedTask.dueDate,
+        estimatedHours: updatedTask.estimatedHours,
+        actualHours: updatedTask.actualHours,
+        costEstimate: updatedTask.costEstimate,
+        actualCost: updatedTask.actualCost,
+        maintenanceType: updatedTask.maintenanceType,
+        isRecurring: updatedTask.isRecurring,
+        recurringPattern: updatedTask.recurringPattern,
+        completedAt: updatedTask.completedAt,
+        lastUpdatedById: updatedTask.lastUpdatedById,
+        attachments: updatedTask.attachments,
+      }
     });
   } catch (error) {
     console.error('Error assigning task:', error);

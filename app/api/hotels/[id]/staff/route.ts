@@ -20,7 +20,7 @@ export async function GET(
 
     // Verify hotel exists
     const [hotelExists] = await pool.query(
-      'SELECT id FROM hotels WHERE id = ?',
+      'SELECT id, vendorId FROM hotels WHERE id = ?',
       [hotelId]
     ) as [RowDataPacket[], any];
 
@@ -31,14 +31,16 @@ export async function GET(
       );
     }
 
+    console.log('Hotel data: ', hotelExists);
+
     // Get staff for the hotel
     const [staff] = await pool.query(
       `SELECT s.id, s.userId, s.position, u.name, u.email 
        FROM staff s
        JOIN users u ON s.userId = u.id
-       WHERE s.hotelId = ?
+       WHERE s.vendorId = ?
        ORDER BY u.name ASC`,
-      [hotelId]
+      [hotelExists[0].vendorId]
     ) as [RowDataPacket[], any];
 
     // Transform the data to match the expected format

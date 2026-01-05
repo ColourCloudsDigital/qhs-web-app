@@ -233,6 +233,7 @@ export default function TaskList({
                   <TaskActionsMenu
                     taskId={task.id}
                     taskStatus={task.status}
+                    taskTitle={task.title}
                     onTaskUpdate={() => {
                       fetchTasks();
                       onTaskUpdate();

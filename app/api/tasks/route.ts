@@ -54,59 +54,121 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = taskSchema.parse(body);
 
-    // Create checklist items if provided
-    const checklistItems = validatedData.checklist 
-      ? {
-          create: validatedData.checklist.map((item: { description: string, order: number }) => ({
-            description: item.description,
-            order: item.order,
-          }))
-        }
-      : undefined;
-    
     // Remove checklist from validated data since we'll handle it separately
     const { checklist, ...taskData } = validatedData;
 
-    // Create the task
-    const task = await prisma.facilityTask.create({
-      data: {
-        ...taskData,
-        createdById: session.user.id,
-        checklist: checklistItems,
-      },
-      include: {
-        assignedTo: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-        room: true,
-        checklist: true,
-      },
-    });
+    // Get vendor ID from user
+    const [vendorResult] = await pool.query(
+      'SELECT id FROM vendors WHERE userId = ?',
+      [session.user.id]
+    ) as [RowDataPacket[], any];
 
-    // If task is assigned to someone, create a notification
-    if (task.assignedToId) {
-      await prisma.notification.create({
-        data: {
-          title: `New Task Created: ${task.title}`,
-          content: `You have been assigned a new task: ${task.title}`,
-          type: 'TASK',
-          recipient: 'USER',
-          userId: task.assignedToId,
-          senderId: session.user.id,
-          metadata: JSON.stringify({ taskId: task.id })
-        },
-      });
+    const vendorId = vendorResult?.[0]?.id;
+
+    if (!vendorId) {
+      return NextResponse.json(
+        { error: 'Vendor information not found' },
+        { status: 403 }
+      );
     }
 
-    return NextResponse.json(task, { status: 201 });
+    // If a roomId is provided, try to find the corresponding room unit
+    let roomUnitId = null;
+    if (taskData.roomId) {
+      const [roomUnitResult] = await pool.query(
+        `SELECT id FROM room_units 
+         WHERE roomId = ? 
+         LIMIT 1`,
+        [taskData.roomId]
+      ) as [RowDataPacket[], any];
+
+      roomUnitId = roomUnitResult?.[0]?.id || null;
+    }
+
+    // Generate task ID
+    const taskId = require('crypto').randomUUID();
+
+    // Create the task in MySQL - matching the exact schema
+    const insertQuery = `
+      INSERT INTO facility_tasks (
+        taskId, hotelId, title, description, category, priority, 
+        due_date, staffId, vendorId, roomUnitId, maintenance_type, 
+        estimated_hours, cost_estimate, is_recurring, status, 
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    `;
+
+    await pool.query(insertQuery, [
+      taskId,
+      taskData.hotelId,
+      taskData.title,
+      taskData.description,
+      taskData.category,
+      taskData.priority,
+      taskData.dueDate,
+      taskData.assignedToId || null,
+      vendorId,
+      roomUnitId,
+      taskData.maintenanceType,
+      taskData.estimatedHours || null,
+      taskData.costEstimate || null,
+      taskData.isRecurring ? 1 : 0,
+      taskData.status,
+    ]);
+
+    // Create checklist items if provided
+    if (checklist && checklist.length > 0) {
+      const checklistInsertQuery = `
+        INSERT INTO task_checklist (id, taskId, description, \`order\`, created_at)
+        VALUES (?, ?, ?, ?, NOW())
+      `;
+
+      for (const item of checklist) {
+        const checklistId = require('crypto').randomUUID();
+        await pool.query(checklistInsertQuery, [
+          checklistId,
+          taskId,
+          item.description,
+          item.order,
+        ]);
+      }
+    }
+
+    // If task is assigned to someone, create a notification
+    if (taskData.assignedToId) {
+      const notificationId = require('crypto').randomUUID();
+      const notificationQuery = `
+        INSERT INTO notifications (id, title, content, type, recipient, userId, senderId, metadata, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      `;
+
+      await pool.query(notificationQuery, [
+        notificationId,
+        `New Task Created: ${taskData.title}`,
+        `You have been assigned a new task: ${taskData.title}`,
+        'TASK',
+        'USER',
+        taskData.assignedToId,
+        session.user.id,
+        JSON.stringify({ taskId }),
+      ]);
+    }
+
+    // Fetch the created task with related data
+    const [task] = await pool.query(
+      `SELECT ft.taskId, ft.hotelId, ft.title, ft.description, ft.category, 
+              ft.priority, ft.due_date, ft.staffId, ft.vendorId, ft.roomUnitId, 
+              ft.maintenance_type, ft.estimated_hours, ft.cost_estimate, 
+              ft.is_recurring, ft.status, ft.created_at, ft.updated_at,
+              u.name as staffName, u.email as staffEmail
+       FROM facility_tasks ft
+       LEFT JOIN staff s ON ft.staffId = s.id
+       LEFT JOIN users u ON s.userId = u.id
+       WHERE ft.taskId = ?`,
+      [taskId]
+    ) as [RowDataPacket[], any];
+
+    return NextResponse.json(task[0] || { taskId, ...taskData, vendorId }, { status: 201 });
   } catch (error) {
     console.error('Task creation error:', error);
     
