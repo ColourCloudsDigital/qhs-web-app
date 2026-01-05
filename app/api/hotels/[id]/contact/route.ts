@@ -4,10 +4,10 @@ import { emailService } from '@/lib/services/email.service';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { hotelId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { hotelId } = params;
+    const { id: hotelId } = params;
     const hotel = await HotelService.getHotelById(hotelId);
 
     if (!hotel) {
@@ -27,10 +27,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { hotelId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { hotelId } = params;
+    const { id: hotelId } = params;
     const hotel = await HotelService.getHotelById(hotelId);
 
     if (!hotel) {
