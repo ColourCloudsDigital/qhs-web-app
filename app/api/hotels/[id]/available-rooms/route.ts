@@ -36,7 +36,8 @@ export async function GET(
         r.name,
         r.type,
         r.capacity,
-        r.pricePerNight
+        r.pricePerNight,
+        r.status
       FROM rooms r
       WHERE r.hotelId = ?
       ORDER BY r.name
@@ -62,7 +63,7 @@ export async function GET(
             id: room.id,
             name: room.name,
             type: room.type,
-            status: 'available',
+            status: room.status,
             capacity: room.capacity,
             pricePerNight: room.pricePerNight,
             available: true,
@@ -75,7 +76,7 @@ export async function GET(
             id: room.id,
             name: room.name,
             type: room.type,
-            status: 'available',
+            status: room.status,
             capacity: room.capacity,
             pricePerNight: room.pricePerNight,
             available: true,

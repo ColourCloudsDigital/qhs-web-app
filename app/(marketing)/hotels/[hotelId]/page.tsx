@@ -43,17 +43,17 @@ async function getHotelData(id: string) {
 
     const data = await res.json();
     console.log('Page - Raw API response:', JSON.stringify(data, null, 2));
-    console.log('Page - Hotel data found:', !!data, 'Has hotel property:', !!data.hotel);
+    console.log('Page - Hotel data found:', !!data, 'Hotel ID:', data?.id, 'Hotel Name:', data?.name);
 
-    if (data.hotel) {
+    if (data) {
       console.log('Page - Hotel details:', {
-        id: data.hotel.id,
-        name: data.hotel.name,
-        roomsCount: data.hotel.rooms?.length || 0
+        id: data.id,
+        name: data.name,
+        roomsCount: data.rooms?.length || 0
       });
     }
 
-    return data.hotel;
+    return data;
   } catch (error) {
     console.error('Error fetching hotel:', error);
     return null;
@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   return {
     title: `${hotel.name} | Qaras Hotels`,
-    description: hotel.description.substring(0, 160) + (hotel.description.length > 160 ? '...' : '')
+    description: hotel.description ? hotel.description.substring(0, 160) + (hotel.description.length > 160 ? '...' : '') : 'Hotel accommodation'
   };
 }
 
