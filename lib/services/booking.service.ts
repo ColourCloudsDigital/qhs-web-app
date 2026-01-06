@@ -812,6 +812,13 @@ export const bookingService = {
         }
       }
 
+      // Release room units back to available status
+      // Clear currentBookingId and set status back to 'available'
+      await connection.query(
+        'UPDATE room_units SET status = ?, currentBookingId = NULL WHERE currentBookingId = ?',
+        ['available', id]
+      );
+
       await connection.commit();
 
       // Get updated booking
