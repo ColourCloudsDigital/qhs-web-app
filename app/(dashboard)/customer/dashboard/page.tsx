@@ -320,7 +320,7 @@ export default function CustomerDashboardPage() {
                       <span key={i} className={i < Math.floor(hotel.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
                     ))}
                   </div>
-                  <span className="ml-1 text-sm text-gray-500">{hotel.rating ?? 'N/A'}/5</span>
+                  {/* <span className="ml-1 text-sm text-gray-500">{hotel.rating ?? ''}/5</span> */}
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-700 dark:text-gray-200">

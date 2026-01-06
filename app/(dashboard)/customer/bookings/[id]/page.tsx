@@ -99,8 +99,17 @@ export default function BookingDetailPage() {
       const bookingData = await bookingRes.json();
       setBooking(bookingData);
 
-      // Fetch available rooms for the booking period
-      await fetchAvailableRooms(bookingData.hotelId, bookingData.checkInDate, bookingData.checkOutDate);
+      // Debug log booking payload
+      console.log('Booking data fetched:', bookingData);
+
+      // Normalize hotel id and dates, backend expects hotelId param and YYYY-MM-DD dates
+      const hotelId = bookingData.hotelId || bookingData.hotel?.id;
+      const normalizeDate = (d: string) => new Date(d).toISOString().slice(0, 10);
+      const checkIn = normalizeDate(bookingData.checkInDate);
+      const checkOut = normalizeDate(bookingData.checkOutDate);
+
+      // Fetch available rooms for the booking period (use backend's expected query names)
+      await fetchAvailableRooms(hotelId, checkIn, checkOut);
 
       // Show success toast if this was just created (could be from URL params or localStorage)
       const urlParams = new URLSearchParams(window.location.search);
@@ -128,17 +137,22 @@ export default function BookingDetailPage() {
 
   const fetchAvailableRooms = async (hotelId: string, checkInDate: string, checkOutDate: string) => {
     try {
-      const response = await fetch(
-        `/api/hotels/${hotelId}/available-rooms?checkIn=${checkInDate}&checkOut=${checkOutDate}`
-      );
+      const url = `/api/hotels/${encodeURIComponent(hotelId)}/available-rooms?checkInDate=${encodeURIComponent(
+        checkInDate
+      )}&checkOutDate=${encodeURIComponent(checkOutDate)}`;
+      console.log('Fetching available rooms URL:', url);
+      const response = await fetch(url);
 
       if (response.ok) {
         const rooms = await response.json();
         setAvailableRooms(rooms);
+      } else {
+        console.error('Failed to fetch available rooms:', response.status, response.statusText);
+        setAvailableRooms([]); // Set empty array on error
       }
     } catch (err) {
       console.error('Error fetching available rooms:', err);
-      // Don't show error for this - it's not critical
+      setAvailableRooms([]); // Set empty array on error
     }
   };
 

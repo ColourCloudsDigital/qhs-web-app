@@ -6,7 +6,7 @@ import { getUserVendorId } from '@/lib/utils/vendor';
 
 export async function GET(
   request: Request,
-  { params }: { params: { hotelId: string } }
+  { params }: { params: Record<string, string> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,10 +21,12 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { hotelId } = params;
+    // Support both param casing coming from Next.js routes (hotelid) and possible hotelId
+    const hotelId = (params as any).hotelid || (params as any).hotelId;
     const { searchParams } = new URL(request.url);
-    const checkInDate = searchParams.get('checkInDate');
-    const checkOutDate = searchParams.get('checkOutDate');
+    // Accept either `checkInDate`/`checkOutDate` or `checkIn`/`checkOut` from different clients
+    const checkInDate = searchParams.get('checkInDate') || searchParams.get('checkIn');
+    const checkOutDate = searchParams.get('checkOutDate') || searchParams.get('checkOut');
 
     // Verify hotel belongs to vendor
     const [hotelRows]: any = await pool.query(
@@ -56,7 +58,7 @@ export async function GET(
 
     const queryParams = [hotelId];
 
-    // If dates are provided, check availability for those dates
+    // If dates are provided, check availability for those dates using a simpler overlap check
     if (checkInDate && checkOutDate) {
       query = `
         SELECT 
@@ -72,11 +74,8 @@ export async function GET(
               LEFT JOIN bookings b ON ru2.currentBookingId = b.id
               WHERE ru2.roomId = r.id
               AND b.status NOT IN ('CANCELED', 'COMPLETED')
-              AND (
-                (b.checkInDate <= ? AND b.checkOutDate > ?)
-                OR (b.checkInDate < ? AND b.checkOutDate >= ?)
-                OR (b.checkInDate >= ? AND b.checkOutDate <= ?)
-              )
+              AND b.checkInDate < ?
+              AND b.checkOutDate > ?
             ), 0
           ) as availableUnits
         FROM rooms r
@@ -85,15 +84,8 @@ export async function GET(
         WHERE r.hotelId = ? AND r.isActive = 1
       `;
 
-      queryParams.push(
-        checkOutDate, // b.checkInDate <= checkOutDate
-        checkInDate,  // b.checkOutDate > checkInDate
-        checkOutDate, // b.checkInDate < checkOutDate
-        checkOutDate, // b.checkOutDate >= checkOutDate
-        checkInDate,  // b.checkInDate >= checkInDate
-        checkOutDate, // b.checkOutDate <= checkOutDate
-        hotelId
-      );
+      // placeholders correspond to the overlap check: desiredCheckOut, desiredCheckIn, hotelId
+      queryParams.push(checkOutDate, checkInDate, hotelId);
     }
 
     query += ' GROUP BY r.id';
