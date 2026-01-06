@@ -82,13 +82,23 @@ export async function getHotels(filters?: HotelFilters, page = 1, limit = 10) {
   const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
   const joinString = joinClauses.join(' '); // No joins needed currently with EXISTS approach
 
-  // Base query for hotels
+  // Base query for hotels with room summary
   const hotelsQuery = `
     SELECT
       h.id, h.name, h.description, h.address, h.city, h.state, h.country,
-      h.images, h.rating, h.createdAt
-      -- Add other necessary fields
+      h.images, h.rating, h.createdAt,
+      COALESCE(room_summary.room_count, 0) as room_count,
+      COALESCE(room_summary.total_capacity, 0) as total_capacity
     FROM hotels h
+    LEFT JOIN (
+      SELECT
+        hotelId,
+        COUNT(*) as room_count,
+        SUM(capacity) as total_capacity
+      FROM rooms
+      WHERE status = "available"
+      GROUP BY hotelId
+    ) room_summary ON h.id = room_summary.hotelId
     ${joinString}
     ${whereString}
     ORDER BY h.createdAt DESC
@@ -183,6 +193,7 @@ export async function getHotels(filters?: HotelFilters, page = 1, limit = 10) {
         images: parsedImages, // Use parsed images
         rating: hotel.rating ? parseFloat(hotel.rating) : null,
         startingPrice: null, // Set to null until we know the correct price column
+        discountedPrice: null, // Set to null as discounted price is not calculated yet
         totalRooms: roomCount,
         amenities: amenities,
         createdAt: hotel.createdAt,
@@ -346,7 +357,7 @@ export async function getPopularHotels(limit = 6) {
       h.images, h.rating
       -- Add other fields as needed
     FROM hotels h
-    WHERE h.isActive = TRUE
+    WHERE status = "available"
     ORDER BY h.rating DESC, h.createdAt DESC -- Added createdAt as secondary sort
     LIMIT ?
   `;
