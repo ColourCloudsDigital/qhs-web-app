@@ -29,7 +29,7 @@ export async function GET(
       );
     }
 
-    // Get rooms for this hotel
+    // Get rooms for this hotel with availability count
     const [rows]: any = await pool.query(`
       SELECT
         r.id,
@@ -37,9 +37,14 @@ export async function GET(
         r.type,
         r.capacity,
         r.pricePerNight,
-        r.status
+        r.status,
+        COUNT(ru.id) as total_units,
+        COUNT(CASE WHEN ru.status = 'available' THEN 1 END) as available_units
       FROM rooms r
-      WHERE r.hotelId = ?
+      LEFT JOIN room_units ru ON r.id = ru.roomId
+      WHERE r.hotelId = ? AND r.status = 'available'
+      GROUP BY r.id, r.name, r.type, r.capacity, r.pricePerNight, r.status
+      HAVING available_units > 0
       ORDER BY r.name
     `, [hotelId]);
 
@@ -59,16 +64,18 @@ export async function GET(
             [room.id]
           );
 
-          return {
-            id: room.id,
-            name: room.name,
-            type: room.type,
-            status: room.status,
-            capacity: room.capacity,
-            pricePerNight: room.pricePerNight,
-            available: true,
-            amenities: amenityRows || []
-          };
+        return {
+          id: room.id,
+          name: room.name,
+          type: room.type,
+          status: room.status,
+          capacity: room.capacity,
+          pricePerNight: room.pricePerNight,
+          availableUnits: room.available_units,
+          totalUnits: room.total_units,
+          available: room.available_units > 0,
+          amenities: amenityRows || []
+        };
         } catch (amenityError) {
           // If amenities fail to load, continue without them
           console.warn('Failed to load amenities for room:', room.id, amenityError);
@@ -79,7 +86,9 @@ export async function GET(
             status: room.status,
             capacity: room.capacity,
             pricePerNight: room.pricePerNight,
-            available: true,
+            availableUnits: room.available_units,
+            totalUnits: room.total_units,
+            available: room.available_units > 0,
             amenities: []
           };
         }
