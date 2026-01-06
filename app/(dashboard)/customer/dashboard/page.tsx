@@ -13,6 +13,18 @@ import IconCalendar from '@/components/icon/icon-calendar';
 import IconClock from '@/components/icon/icon-clock';
 import { formatDate } from '@/lib/utils';
 
+// Additional icons for booking cards
+import {
+  MapPin,
+  Bed,
+  Calendar as CalendarIcon,
+  Users,
+  Clock,
+  Eye,
+  Hotel
+} from 'lucide-react';
+import Image from 'next/image';
+
 type Hotel = {
   id: string;
   name: string;
@@ -22,6 +34,8 @@ type Hotel = {
   images?: string[];
   rating?: number | null;
   rooms?: Room[];
+  room_count?: number;
+  total_capacity?: number;
 };
 
 type Room = {
@@ -40,6 +54,7 @@ type Booking = {
   roomId: string;
   checkInDate: string;
   checkOutDate: string;
+  numberOfGuests: number;
   totalAmount: number;
   status: string;
 };
@@ -102,6 +117,34 @@ export default function CustomerDashboardPage() {
   const totalSpent = activeBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
 
   // using shared formatDate from lib/utils
+
+  // Helper function to calculate stay progress
+  const getStayProgress = (checkInDate: string, checkOutDate: string) => {
+    const now = new Date();
+    const start = new Date(checkInDate);
+    const end = new Date(checkOutDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+      return { percent: 0, label: 'Upcoming' };
+    }
+    if (now <= start) {
+      return { percent: 0, label: 'Upcoming' };
+    }
+    if (now >= end) {
+      return { percent: 100, label: 'Completed' };
+    }
+    const totalMs = end.getTime() - start.getTime();
+    const elapsedMs = now.getTime() - start.getTime();
+    const percent = Math.min(100, Math.max(0, Math.round((elapsedMs / totalMs) * 100)));
+    return { percent, label: 'In progress' };
+  };
+
+  // Calculate nights stayed
+  const getNights = (checkInDate: string, checkOutDate: string) => {
+    const start = new Date(checkInDate);
+    const end = new Date(checkOutDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+    return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  };
 
   const handleOpenBooking = async (hotelId: string) => {
     try {
@@ -246,50 +289,143 @@ export default function CustomerDashboardPage() {
           <h5 className="text-lg font-semibold dark:text-white-light">Upcoming Bookings</h5>
           <Link href="/customer/bookings" className="text-primary hover:underline">View All</Link>
         </div>
-        <div className="table-responsive">
-          <table className="w-full table-striped">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Hotel</th>
-                <th>Room</th>
-                <th>Check-in</th>
-                <th>Check-out</th>
-                <th>Amount</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeBookings.map((booking) => {
-                const hotelName = hotels.find((h) => h.id === booking.hotelId)?.name || booking.hotelId;
-                const roomName =
-                  hotels
-                    .find((h) => h.id === booking.hotelId)
-                    ?.rooms?.find((r) => r.id === booking.roomId)?.name || booking.roomId;
-                return (
-                  <tr key={booking.id}>
-                    <td>{booking.id}</td>
-                    <td>{hotelName}</td>
-                    <td>{roomName}</td>
-                    <td>{formatDate(booking.checkInDate)}</td>
-                    <td>{formatDate(booking.checkOutDate)}</td>
-                    <td>₦{Number(booking.totalAmount || 0).toLocaleString()}</td>
-                    <td>
-                      <span className={`badge ${booking.status === 'CONFIRMED' ? 'bg-success' : 'bg-warning'}`}>
-                        {booking.status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {activeBookings.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center py-4">No upcoming bookings found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+
+        {activeBookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
+            <CalendarIcon className="mb-4 h-16 w-16 text-gray-400" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">No upcoming bookings</h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              You don't have any upcoming bookings at the moment.
+            </p>
+            <Link
+              href="/hotels"
+              className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+            >
+              Browse Hotels
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {activeBookings.slice(0, 3).map((booking) => {
+              const hotel = hotels.find((h) => h.id === booking.hotelId);
+              const { percent, label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
+              const nights = getNights(booking.checkInDate, booking.checkOutDate);
+
+              return (
+                <div
+                  key={booking.id}
+                  className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                >
+                  <div className="grid md:grid-cols-3">
+                    {/* Hotel Image */}
+                    <div className="relative h-48 w-full md:h-full">
+                      {hotel?.images?.[0] ? (
+                        <Image
+                          src={hotel.images[0]}
+                          alt={hotel.name}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gray-200 dark:bg-gray-700">
+                          <Hotel className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Booking Details */}
+                    <div className="p-6 md:col-span-2">
+                      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                            {hotel?.name || booking.hotelId}
+                          </h3>
+                          <div className="mt-1 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                            <MapPin className="mr-1 h-4 w-4" />
+                            <span>
+                              {hotel ? [hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                          booking.status === 'CONFIRMED'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                            : booking.status === 'PENDING'
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
+                        }`}>
+                          {booking.status}
+                        </span>
+                      </div>
+
+                      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Room</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {booking.roomId} ({booking.numberOfGuests || 1} guest{booking.numberOfGuests !== 1 ? 's' : ''})
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Dates</p>
+                          <div className="flex items-center">
+                            <CalendarIcon className="mr-1 h-4 w-4 text-gray-400" />
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              {formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Amount</p>
+                          <p className="font-bold text-primary">
+                            ₦{Number(booking.totalAmount || 0).toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Booking ID</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            #{booking.id.slice(0, 8).toUpperCase()}
+                          </p>
+                        </div>
+
+                        {/* Stay progress */}
+                        <div className="sm:col-span-2">
+                          <p className="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Stay Progress
+                          </p>
+                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            <span>{label}</span>
+                            <span>{percent}%</span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Link
+                          href={`/customer/bookings/${booking.id}`}
+                          className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Recommended Hotels */}
@@ -309,13 +445,13 @@ export default function CustomerDashboardPage() {
                 />
               </div>
               <div className="p-4">
-                <h3 className="mb-1 text-lg font-semibold">{hotel.name}</h3>
-                <div className="mb-2 flex items-center text-sm text-gray-500">
+                <h3 className="mb-1 text-lg font-semibold text-black dark:text-white">{hotel.name}</h3>
+                <div className="mb-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
                   <IconHome className="mr-1 h-4 w-4" />
                   {[hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') || 'N/A'}
                 </div>
                 <div className="mb-3 flex items-center">
-                  <div className="flex text-yellow-400">
+                  <div className="flex text-yellow-400 dark:text-yellow-400">
                     {[...Array(5)].map((_, i) => (
                       <span key={i} className={i < Math.floor(hotel.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
                     ))}
@@ -323,16 +459,16 @@ export default function CustomerDashboardPage() {
                   {/* <span className="ml-1 text-sm text-gray-500">{hotel.rating ?? ''}/5</span> */}
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-700 dark:text-gray-200">
-                    {hotel.rooms && hotel.rooms.length > 0
-                      ? `${hotel.rooms.length} room types • ${hotel.rooms.reduce((sum, r) => sum + (r.availableUnits || 0), 0)} bedspaces`
+                  <div className="text-sm text-gray-700 dark:text-gray-400">
+                    {hotel.room_count && hotel.room_count > 0
+                      ? `${hotel.room_count} room types • ${hotel.total_capacity || 0} bedspaces`
                       : 'No rooms available'}
                   </div>
                   <button
                     type="button"
-                    className="btn btn-sm btn-primary"
+                    className="btn btn-sm btn-primary shadow-none"
                     onClick={() => handleOpenBooking(hotel.id)}
-                    disabled={!hotel.rooms || hotel.rooms.length === 0}
+                    disabled={!hotel.room_count || hotel.room_count === 0}
                   >
                     Book Now
                   </button>
@@ -470,19 +606,25 @@ export default function CustomerDashboardPage() {
                           onChange={(e) => setSpecialRequests(e.target.value)}
                         ></textarea>
                       </div>
-                      <div className="mt-8 flex items-center justify-end">
-                        <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-primary ltr:ml-4 rtl:mr-4"
-                          onClick={handleCreateBooking}
-                          disabled={bookingSubmitting}
-                        >
-                          {bookingSubmitting ? 'Booking...' : 'Book Now'}
-                        </button>
-                      </div>
+                      <div className="mt-8 flex items-center justify-end gap-4">
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger"
+                            onClick={() => setModalOpen(false)}
+                          >
+                            Cancel
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={handleCreateBooking}
+                            disabled={bookingSubmitting}
+                          >
+                            {bookingSubmitting ? 'Booking...' : 'Book Now'}
+                          </button>
+                        </div>
+  
                     </form>
                   </div>
                 </Dialog.Panel>

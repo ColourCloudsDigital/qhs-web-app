@@ -18,16 +18,19 @@ export async function GET(
 
     if (!hotel) {
       return NextResponse.json(
-        { error: 'Hotel not found' },
+        { success: false, message: 'Hotel not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(hotel, { status: 200 });
+    return NextResponse.json(
+      { success: true, hotel },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error fetching hotel details:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch hotel details' },
+      { success: false, message: 'Failed to fetch hotel details' },
       { status: 500 }
     );
   }
