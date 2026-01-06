@@ -146,10 +146,13 @@ export default function BookingDetailPage() {
       if (response.ok) {
         const rooms = await response.json();
         setAvailableRooms(rooms);
+      } else {
+        console.error('Failed to fetch available rooms:', response.status, response.statusText);
+        setAvailableRooms([]); // Set empty array on error
       }
     } catch (err) {
       console.error('Error fetching available rooms:', err);
-      // Don't show error for this - it's not critical
+      setAvailableRooms([]); // Set empty array on error
     }
   };
 
