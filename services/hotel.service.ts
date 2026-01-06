@@ -231,7 +231,7 @@ export async function getHotelById(id: string): Promise<any> {
     
     // Query to retrieve the hotel
     const [hotelResults] = await pool.query(
-      `SELECT * FROM hotels WHERE id = ?`,
+      `SELECT * FROM hotels WHERE id = ? AND isActive = 1`,
       [normalizedId]
     );
     
@@ -269,13 +269,13 @@ export async function getHotelById(id: string): Promise<any> {
     
     // Get rooms for this hotel
     const [roomResults] = await pool.query(
-      `SELECT 
+      `SELECT
          r.*,
          (SELECT GROUP_CONCAT(ra.amenityId) FROM room_amenities ra WHERE ra.roomId = r.id) as amenityIds,
          (SELECT COUNT(*) FROM room_units ru WHERE ru.roomId = r.id) as totalUnits,
          (SELECT COUNT(*) FROM room_units ru WHERE ru.roomId = r.id AND ru.status = 'available') as availableUnits
        FROM rooms r
-       WHERE r.hotelId = ?`,
+       WHERE r.hotelId = ? AND r.status = 'available'`,
       [hotel.id]
     );
     

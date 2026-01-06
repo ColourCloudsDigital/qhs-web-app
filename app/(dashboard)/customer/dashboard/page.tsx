@@ -232,10 +232,10 @@ export default function CustomerDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <div className="panel h-full">
           <div className="flex justify-between">
-            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1">Total Bookings</div>
+            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1 text-black dark:text-gray-400">Total Bookings</div>
           </div>
           <div className="mt-5 flex items-center">
-            <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3">{totalBookings}</div>
+            <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400">{totalBookings}</div>
             <div className="badge bg-success/20 text-success">Active</div>
           </div>
           <div className="mt-5 flex items-center font-semibold">
@@ -246,10 +246,10 @@ export default function CustomerDashboardPage() {
 
         <div className="panel h-full">
           <div className="flex justify-between">
-            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1">Available Hotels</div>
+            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1 text-black dark:text-gray-400">Available Hotels</div>
           </div>
           <div className="mt-5 flex items-center">
-            <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3">{hotels.length}</div>
+            <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400">{hotels.length}</div>
           </div>
           <div className="mt-5">
             <Link href="/hotels" className="text-primary hover:underline">Browse Hotels</Link>
@@ -258,10 +258,10 @@ export default function CustomerDashboardPage() {
 
         <div className="panel h-full">
           <div className="flex justify-between">
-            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1">Reward Points</div>
+            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1 text-black dark:text-gray-400">Reward Points</div>
           </div>
           <div className="mt-5 flex items-center">
-            <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3">0</div>
+            <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400"></div>
             <div className="badge bg-info/20 text-info">Coming soon</div>
           </div>
           <div className="mt-5">
@@ -271,10 +271,10 @@ export default function CustomerDashboardPage() {
 
         <div className="panel h-full">
           <div className="flex justify-between">
-            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1">Total Spent</div>
+            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1 text-black dark:text-gray-400">Total Spent</div>
           </div>
           <div className="mt-5 flex items-center">
-            <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3">₦{totalSpent.toLocaleString()}</div>
+            <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400">₦{totalSpent.toLocaleString()}</div>
           </div>
           <div className="mt-5 flex items-center font-semibold">
             <IconClock className="h-5 w-5 text-primary ltr:mr-2 rtl:ml-2" />
@@ -294,7 +294,7 @@ export default function CustomerDashboardPage() {
           <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
             <CalendarIcon className="mb-4 h-16 w-16 text-gray-400" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">No upcoming bookings</h3>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-sm text-black dark:text-gray-400">
               You don't have any upcoming bookings at the moment.
             </p>
             <Link
@@ -341,7 +341,7 @@ export default function CustomerDashboardPage() {
                           <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                             {hotel?.name || booking.hotelId}
                           </h3>
-                          <div className="mt-1 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                          <div className="mt-1 flex items-center text-sm text-black dark:text-gray-400">
                             <MapPin className="mr-1 h-4 w-4" />
                             <span>
                               {hotel ? [hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') : 'N/A'}
@@ -362,14 +362,14 @@ export default function CustomerDashboardPage() {
 
                       <div className="mb-6 grid gap-4 sm:grid-cols-2">
                         <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Room</p>
+                          <p className="text-sm font-medium text-black dark:text-gray-400">Room</p>
                           <p className="font-medium text-gray-900 dark:text-white">
                             {booking.roomId} ({booking.numberOfGuests || 1} guest{booking.numberOfGuests !== 1 ? 's' : ''})
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Dates</p>
+                          <p className="text-sm font-medium text-black dark:text-gray-400">Dates</p>
                           <div className="flex items-center">
                             <CalendarIcon className="mr-1 h-4 w-4 text-gray-400" />
                             <p className="font-medium text-gray-900 dark:text-white">
@@ -379,14 +379,14 @@ export default function CustomerDashboardPage() {
                         </div>
 
                         <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Amount</p>
+                          <p className="text-sm font-medium text-black dark:text-gray-400">Total Amount</p>
                           <p className="font-bold text-primary">
                             ₦{Number(booking.totalAmount || 0).toLocaleString()}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Booking ID</p>
+                          <p className="text-sm font-medium text-black dark:text-gray-400">Booking ID</p>
                           <p className="font-medium text-gray-900 dark:text-white">
                             #{booking.id.slice(0, 8).toUpperCase()}
                           </p>
@@ -394,10 +394,10 @@ export default function CustomerDashboardPage() {
 
                         {/* Stay progress */}
                         <div className="sm:col-span-2">
-                          <p className="mb-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                          <p className="mb-1 text-sm font-medium text-black dark:text-gray-400">
                             Stay Progress
                           </p>
-                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          <div className="flex items-center justify-between text-xs text-black dark:text-gray-400 mb-1">
                             <span>{label}</span>
                             <span>{percent}%</span>
                           </div>
@@ -446,7 +446,7 @@ export default function CustomerDashboardPage() {
               </div>
               <div className="p-4">
                 <h3 className="mb-1 text-lg font-semibold text-black dark:text-white">{hotel.name}</h3>
-                <div className="mb-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="mb-2 flex items-center text-sm text-black dark:text-gray-400">
                   <IconHome className="mr-1 h-4 w-4" />
                   {[hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') || 'N/A'}
                 </div>
