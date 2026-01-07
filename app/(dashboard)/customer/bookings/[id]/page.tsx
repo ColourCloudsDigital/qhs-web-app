@@ -30,6 +30,7 @@ interface Booking {
   checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
+  numberOfRooms?: number;
   totalAmount: number;
   status: string;
   paymentStatus: string;
@@ -566,6 +567,9 @@ export default function BookingDetailPage() {
             <p className="text-gray-600 mb-2">{roomType}</p>
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <span>Capacity: {roomCapacity} guest{roomCapacity !== 1 ? 's' : ''}</span>
+              {booking.numberOfRooms && booking.numberOfRooms > 1 && (
+                <span>{booking.numberOfRooms} room{booking.numberOfRooms !== 1 ? 's' : ''}</span>
+              )}
               <span>{formatCurrency(roomPrice)} / night</span>
             </div>
           </div>

@@ -116,12 +116,18 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Handle numberOfRooms (default to 1)
+    const numberOfRooms = bookingData.numberOfRooms ? parseInt(bookingData.numberOfRooms) : 1;
+    if (numberOfRooms < 1) {
+      return NextResponse.json({ error: 'Invalid number of rooms' }, { status: 400 });
+    }
+    
     // Begin transaction to handle the entire booking process
     const connection = await pool.getConnection();
     await connection.beginTransaction();
     
     try {
-      // Check if room exists and has available units
+      // Check if room exists and has enough available units
       const [roomResults] = await connection.query(
         'SELECT * FROM rooms WHERE id = ? AND status = ?',
         [bookingData.roomId, 'available']
@@ -132,21 +138,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Room not found or not available' }, { status: 400 });
       }
       
-      // Find an available room unit
+      // Find enough available room units
       const [availableUnits] = await connection.query(
         `SELECT * FROM room_units 
          WHERE roomId = ? AND status = 'available' 
          AND (currentBookingId IS NULL OR currentBookingId = '')
-         LIMIT 1`,
-        [bookingData.roomId]
+         LIMIT ?`,
+        [bookingData.roomId, numberOfRooms]
       );
       
-      if ((availableUnits as any[]).length === 0) {
+      if ((availableUnits as any[]).length < numberOfRooms) {
         await connection.rollback();
-        return NextResponse.json({ error: 'No available units for this room' }, { status: 400 });
+        return NextResponse.json({ error: 'Not enough available units for this room' }, { status: 400 });
       }
-      
-      const roomUnit = (availableUnits as any[])[0];
       
       // Calculate price
       const priceInfo = await availabilityService.calculateBookingPrice({
@@ -154,6 +158,9 @@ export async function POST(request: NextRequest) {
         checkInDate: new Date(bookingData.checkInDate),
         checkOutDate: new Date(bookingData.checkOutDate),
       });
+      
+      // Adjust total price for multiple rooms
+      const totalAmount = priceInfo.totalPrice * numberOfRooms;
       
       // Generate a UUID for the booking
       const bookingId = uuidv4();
@@ -163,15 +170,14 @@ export async function POST(request: NextRequest) {
       const paymentStatus = bookingData.paymentMethod === 'PAY_AT_HOTEL' ? 'PENDING' : 'PENDING';
       const specialRequests = bookingData.specialRequests || '';
       const paymentMethod = bookingData.paymentMethod || 'PAY_AT_HOTEL';
-      const totalAmount = priceInfo.totalPrice;
       
-      // Create booking in database
+      // Create booking in database (include numberOfRooms)
       const query = `
         INSERT INTO bookings (
           id, hotelId, roomId, customerId, checkInDate, checkOutDate, 
-          numberOfGuests, totalAmount, status, paymentStatus, specialRequests,
+          numberOfGuests, numberOfRooms, totalAmount, status, paymentStatus, specialRequests,
           createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
       
       await connection.query(query, [
@@ -182,17 +188,20 @@ export async function POST(request: NextRequest) {
         bookingData.checkInDate,
         bookingData.checkOutDate,
         bookingData.numberOfGuests,
+        numberOfRooms,
         totalAmount,
         status,
         paymentStatus,
         specialRequests
       ]);
       
-      // Update the room_unit status to reserved and set the currentBookingId
-      await connection.query(
-        `UPDATE room_units SET status = 'reserved', currentBookingId = ? WHERE id = ?`,
-        [bookingId, roomUnit.id]
-      );
+      // Update the room_units status to reserved and set the currentBookingId
+      for (const roomUnit of (availableUnits as any[])) {
+        await connection.query(
+          `UPDATE room_units SET status = 'reserved', currentBookingId = ? WHERE id = ?`,
+          [bookingId, roomUnit.id]
+        );
+      }
       
       // If payment method is online payment, create payment record
       if (paymentMethod !== 'PAY_AT_HOTEL') {

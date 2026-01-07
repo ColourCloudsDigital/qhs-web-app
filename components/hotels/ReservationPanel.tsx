@@ -101,20 +101,26 @@ export default function ReservationPanel({
 
     // If user is not authenticated, redirect to the booking page to continue
     if (!session?.user) {
-      router.push(`/hotels/${hotelId}/book?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}&roomId=${selectedRoomId || ''}`);
+      const queryParams = `?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`;
+      if (selectedRoomId) {
+        router.push(`/hotels/${hotelId}/book/${selectedRoomId}${queryParams}`);
+      } else {
+        // If no room selected, redirect to hotel page
+        router.push(`/hotels/${hotelId}${queryParams}`);
+      }
       return;
     }
 
     // If no selected room, fallback to redirect
     if (!selectedRoomId) {
-      router.push(`/hotels/${hotelId}/book?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`);
+      router.push(`/hotels/${hotelId}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`);
       return;
     }
 
     try {
       const customerId = (session as any).user?.customerId;
       if (!customerId) {
-        router.push(`/hotels/${hotelId}/book?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}&roomId=${selectedRoomId}`);
+        router.push(`/hotels/${hotelId}/book/${selectedRoomId}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`);
         return;
       }
 

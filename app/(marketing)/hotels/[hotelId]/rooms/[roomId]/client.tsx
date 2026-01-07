@@ -111,7 +111,7 @@ export default function RoomDetailClient({
     if (checkOutDate) params.append('checkOut', checkOutDate);
     if (guests) params.append('guests', guests.toString());
     
-    router.push(`/hotels/${hotel.id}/book?${params.toString()}`);
+    router.push(`/hotels/${hotel.id}/book/${room.id}?${params.toString()}`);
   };
   
   return (

@@ -179,17 +179,17 @@ export default function RoomSelector({
       <div className="space-y-6">
         {rooms.map((room) => {
           // Initialize image index for this room if not exist
-          if (activeImageIndices[room.roomId] === undefined) {
-            setActiveImageIndices(prev => ({...prev, [room.roomId]: 0}));
+          if (activeImageIndices[room.id] === undefined) {
+            setActiveImageIndices(prev => ({...prev, [room.id]: 0}));
           }
-          
-          const activeIndex = activeImageIndices[room.roomId] || 0;
+
+          const activeIndex = activeImageIndices[room.id] || 0;
           const hasMultipleImages = room.images && room.images.length > 1;
           const isSelected = selectedRoomId === room.id;
           
           return (
             <motion.div
-              key={room.roomId}
+              key={room.id}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.4 }}
@@ -206,7 +206,7 @@ export default function RoomSelector({
                   <div className="relative h-64 w-full md:h-auto md:w-2/5">
                     <AnimatePresence mode="wait">
                       <motion.div
-                        key={`${room.roomId}-${activeIndex}`}
+                        key={`${room.id}-${activeIndex}`}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -336,7 +336,7 @@ export default function RoomSelector({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRoomSelect(room.roomId);
+                          handleRoomSelect(room.id);
                         }}
                         className={`rounded-lg px-6 py-2 font-medium transition-all duration-300
                           ${isSelected
