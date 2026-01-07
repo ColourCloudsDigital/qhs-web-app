@@ -524,9 +524,7 @@ export default function CustomerDashboardPage() {
                           value={selectedHotel || ''}
                           onChange={(e) => {
                             setSelectedHotel(e.target.value);
-                            const hotel = hotels.find((h) => h.id === e.target.value);
-                            const firstAvailableRoom = hotel?.rooms?.find((r) => (r.availableUnits ?? 0) > 0) || hotel?.rooms?.[0];
-                            setSelectedRoom(firstAvailableRoom?.id || null);
+                            setSelectedRoom(null);
                           }}
                         >
                           <option value="">Select a hotel</option>
