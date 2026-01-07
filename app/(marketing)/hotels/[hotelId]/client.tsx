@@ -10,6 +10,7 @@ import ReservationPanel from '@/components/hotels/ReservationPanel';
 import ImageLightbox from '@/components/common/ImageLightbox';
 
 
+
 interface HotelDetailClientProps {
   hotel: any;
   sortedRooms: any[];
@@ -149,15 +150,14 @@ export default function HotelDetailClient({
             {/* Additional hotel info */}
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                <span>Check-in: 3:00 PM • Check-out: 11:00 AM</span>
+                {/* <Clock className="h-4 w-4" /> */}
               </div>
-              {sortedRooms.length > 0 && (
+              {/* {sortedRooms.length > 0 && (
                 <div className="flex items-center gap-1">
                   <Check className="h-4 w-4 text-green-500" />
                   <span>{sortedRooms.length} room{sortedRooms.length !== 1 ? 's' : ''} available</span>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         </div>

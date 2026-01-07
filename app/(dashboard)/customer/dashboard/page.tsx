@@ -123,8 +123,17 @@ export default function CustomerDashboardPage() {
   };
 
   const activeBookings = bookings.filter(b => b.status !== 'CANCELLED');
+  const sortedActiveBookings = [...activeBookings].sort((a, b) =>
+    new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime()
+  );
   const totalBookings = activeBookings.length;
   const totalSpent = activeBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
+
+  // Filter for truly upcoming bookings (future check-in dates or currently in progress)
+  const upcomingBookings = activeBookings.filter(booking => {
+    const { label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
+    return label === 'Upcoming' || label === 'In progress';
+  }).sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
 
   const getStayProgress = (checkInDate: string, checkOutDate: string) => {
     const now = new Date();
@@ -212,7 +221,7 @@ export default function CustomerDashboardPage() {
           </div>
           <div className="mt-5 flex items-center font-semibold">
             <IconCalendar className="h-5 w-5 text-primary ltr:mr-2 rtl:ml-2" />
-            <span className="text-white-dark">Latest booking: {formatDate(activeBookings[0]?.checkInDate)}</span>
+            <span className="text-white-dark">Latest booking: {formatDate(sortedActiveBookings[0]?.checkInDate)}</span>
           </div>
         </div>
 
@@ -250,7 +259,7 @@ export default function CustomerDashboardPage() {
           </div>
           <div className="mt-5 flex items-center font-semibold">
             <IconClock className="h-5 w-5 text-primary ltr:mr-2 rtl:ml-2" />
-            <span className="text-white-dark">Last booking: {formatDate(activeBookings[0]?.checkInDate)}</span>
+            <span className="text-white-dark">Last booking: {formatDate(sortedActiveBookings[0]?.checkInDate)}</span>
           </div>
         </div>
       </div>
@@ -261,8 +270,7 @@ export default function CustomerDashboardPage() {
           <h5 className="text-lg font-semibold dark:text-white-light">Upcoming Bookings</h5>
           <Link href="/customer/bookings" className="text-primary hover:underline">View All</Link>
         </div>
-
-        {activeBookings.length === 0 ? (
+        {upcomingBookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
             <CalendarIcon className="mb-4 h-16 w-16 text-gray-400" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">No upcoming bookings</h3>
@@ -278,7 +286,7 @@ export default function CustomerDashboardPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {activeBookings.slice(0, 3).map((booking) => {
+            {upcomingBookings.slice(0, 3).map((booking) => {
               const hotel = hotels.find((h) => h.id === booking.hotelId);
               const { percent, label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
               const nights = getNights(booking.checkInDate, booking.checkOutDate);
