@@ -112,8 +112,7 @@ export const roomService = {
           amenities.id,
           amenities.name,
           amenities.description,
-          amenities.icon,
-          amenities.category
+          amenities.icon
         FROM room_amenities
         JOIN amenities ON room_amenities.amenityId = amenities.id
         WHERE room_amenities.roomId IN (${roomIds.map(() => '?').join(',')})
@@ -208,8 +207,7 @@ export const roomService = {
         amenities.id,
         amenities.name,
         amenities.description,
-        amenities.icon,
-        amenities.category
+        amenities.icon
       FROM room_amenities
       JOIN amenities ON room_amenities.amenityId = amenities.id
       WHERE room_amenities.roomId = ?

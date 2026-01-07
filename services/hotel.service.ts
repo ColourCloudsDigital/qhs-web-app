@@ -1,6 +1,6 @@
 import pool from '@/lib/db';
 
-interface Amenity {
+export interface Amenity {
   id: string;
   name: string;
   description: string;
@@ -176,6 +176,10 @@ export async function getHotels(filters?: HotelFilters, page = 1, limit = 10) {
         images,
         rating: hotel.rating ? Number(hotel.rating) : null,
 
+        startingPrice: null, // Set to null until we know the correct price column
+        discountedPrice: null, // Set to null as discounted price is not calculated yet
+        totalRooms: hotel.room_count,
+
         room_count: hotel.room_count,
         total_capacity: hotel.total_capacity,
         hasAvailableRooms: Boolean(hotel.hasAvailableRooms),
@@ -204,6 +208,33 @@ export async function getHotels(filters?: HotelFilters, page = 1, limit = 10) {
   }
 }
 
+export async function getAmenities(category?: string) {
+  try {
+    let query = 'SELECT * FROM amenities';
+    const params = [];
+
+    if (category) {
+      query += ' WHERE category = ?';
+      params.push(category);
+    }
+
+    query += ' ORDER BY name ASC';
+
+    const [rows]: [any[], any] = await pool.query(query, params);
+
+    return rows.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      icon: row.icon,
+      category: row.category,
+    }));
+  } catch (error) {
+    console.error('Error fetching amenities:', error);
+    throw new Error('Failed to fetch amenities');
+  }
+}
+
 export async function getHotelById(id: string): Promise<any> {
   try {
     // Normalize ID - handle both string and number IDs
@@ -227,6 +258,20 @@ export async function getHotelById(id: string): Promise<any> {
       images = hotel.images ? JSON.parse(hotel.images) : [];
     } catch {
       images = [];
+    }
+
+    if (!hotel.rooms) {
+      hotel.rooms = [];
+    } else {
+      hotel.rooms = hotel.rooms.map((room: any) => {
+        let roomImages: string[] = [];
+        try {
+          roomImages = room.images ? JSON.parse(room.images) : [];
+        } catch {
+          roomImages = [];
+        }
+        return { ...room, images: roomImages };
+      });
     }
 
     // Fetch rooms with availability info
