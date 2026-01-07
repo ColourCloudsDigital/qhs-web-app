@@ -92,12 +92,13 @@ export async function getHotels(filters?: HotelFilters, page = 1, limit = 10) {
     FROM hotels h
     LEFT JOIN (
       SELECT
-        hotelId,
-        COUNT(*) as room_count,
-        SUM(capacity) as total_capacity
-      FROM rooms
-      WHERE status = "available"
-      GROUP BY hotelId
+        r.hotelId,
+        COUNT(DISTINCT r.id) as room_count,
+        SUM(r.capacity) as total_capacity
+      FROM rooms r
+      INNER JOIN room_units ru ON r.id = ru.roomId
+      WHERE r.status = "available" AND ru.status = "available"
+      GROUP BY r.hotelId
     ) room_summary ON h.id = room_summary.hotelId
     ${joinString}
     ${whereString}
