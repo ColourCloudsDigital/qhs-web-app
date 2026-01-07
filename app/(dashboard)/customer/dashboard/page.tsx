@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useState, useEffect, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 
-// Icons
 import IconPlus from '@/components/icon/icon-plus';
 import IconHome from '@/components/icon/icon-home';
 import IconX from '@/components/icon/icon-x';
@@ -13,7 +12,6 @@ import IconCalendar from '@/components/icon/icon-calendar';
 import IconClock from '@/components/icon/icon-clock';
 import { formatDate } from '@/lib/utils';
 
-// Additional icons for booking cards
 import {
   MapPin,
   Bed,
@@ -24,6 +22,16 @@ import {
   Hotel
 } from 'lucide-react';
 import Image from 'next/image';
+
+type Room = {
+  id: string;
+  name: string;
+  type: string;
+  capacity: number;
+  pricePerNight: number;
+  discountedPrice?: number | null;
+  availableUnits?: number;
+};
 
 type Hotel = {
   id: string;
@@ -36,16 +44,6 @@ type Hotel = {
   rooms?: Room[];
   room_count?: number;
   total_capacity?: number;
-};
-
-type Room = {
-  id: string;
-  name: string;
-  type: string;
-  capacity: number;
-  pricePerNight: number;
-  discountedPrice?: number | null;
-  availableUnits?: number;
 };
 
 type Booking = {
@@ -99,85 +97,70 @@ export default function CustomerDashboardPage() {
 
       if (bookingsRes.ok) {
         const data = await bookingsRes.json();
-        // bookings route returns { bookings }
         setBookings(data.bookings || []);
       }
     } catch (err) {
-      console.error('Error loading dashboard data', err);
+      console.error(err);
     } finally {
       setIsLoadingData(false);
     }
   };
 
-  const selectedHotelObj = hotels.find((h) => h.id === selectedHotel) || null;
-  const selectedRoomObj = selectedHotelObj?.rooms?.find((r) => r.id === selectedRoom) || null;
+  const selectedHotelObj = hotels.find(h => h.id === selectedHotel) || null;
+  const selectedRoomObj = selectedHotelObj?.rooms?.find(r => r.id === selectedRoom) || null;
+  
+
+  const getAvailabilityMeta = (hotel: Hotel) => {
+    const roomCount = hotel.room_count ?? 0;
+    const capacity = hotel.total_capacity ?? 0;
+
+    return {
+      hasAvailability: roomCount > 0,
+      text: roomCount > 0
+        ? `${roomCount} room unit${roomCount !== 1 ? 's' : ''} available • ${capacity} bedspace${capacity !== 1 ? 's' : ''}`
+        : 'No rooms available'
+    };
+  };
 
   const activeBookings = bookings.filter(b => b.status !== 'CANCELLED');
   const totalBookings = activeBookings.length;
-  const totalSpent = activeBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+  const totalSpent = activeBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
 
-  // using shared formatDate from lib/utils
-
-  // Helper function to calculate stay progress
   const getStayProgress = (checkInDate: string, checkOutDate: string) => {
     const now = new Date();
     const start = new Date(checkInDate);
     const end = new Date(checkOutDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-      return { percent: 0, label: 'Upcoming' };
-    }
-    if (now <= start) {
-      return { percent: 0, label: 'Upcoming' };
-    }
-    if (now >= end) {
-      return { percent: 100, label: 'Completed' };
-    }
-    const totalMs = end.getTime() - start.getTime();
-    const elapsedMs = now.getTime() - start.getTime();
-    const percent = Math.min(100, Math.max(0, Math.round((elapsedMs / totalMs) * 100)));
+
+    if (now <= start) return { percent: 0, label: 'Upcoming' };
+    if (now >= end) return { percent: 100, label: 'Completed' };
+
+    const percent = Math.round(((now.getTime() - start.getTime()) / (end.getTime() - start.getTime())) * 100);
     return { percent, label: 'In progress' };
   };
 
-  // Calculate nights stayed
-  const getNights = (checkInDate: string, checkOutDate: string) => {
-    const start = new Date(checkInDate);
-    const end = new Date(checkOutDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
-    return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  };
+  const getNights = (checkInDate: string, checkOutDate: string) =>
+    Math.round((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / 86400000);
 
   const handleOpenBooking = async (hotelId: string) => {
-    try {
-      // Fetch full hotel details (includes per-room availability)
-      const res = await fetch(`/api/hotels/${hotelId}`);
-      if (!res.ok) throw new Error('Failed to load hotel details');
+    const res = await fetch(`/api/hotels/${hotelId}`);
+    const hotelDetail = await res.json();
 
-      const hotelDetail = await res.json();
+    setHotels(prev =>
+      prev.map(h => (h.id === hotelId ? hotelDetail : h))
+    );
 
-      // Update hotels list with the detailed hotel so UI reflects accurate availability
-      setHotels(prev => {
-        const exists = prev.find(h => h.id === hotelId);
-        if (!exists) return [hotelDetail, ...prev];
-        return prev.map(h => (h.id === hotelId ? hotelDetail : h));
-      });
-
-      setSelectedHotel(hotelId);
-      const firstAvailableRoom = (hotelDetail.rooms || []).find((r: any) => (r.availableUnits ?? 0) > 0) || hotelDetail.rooms?.[0];
-      setSelectedRoom(firstAvailableRoom?.id || null);
-      setModalOpen(true);
-    } catch (err) {
-      console.error('Unable to open booking modal:', err);
-      alert('Unable to load hotel details for booking. Please try again.');
-    }
+    setSelectedHotel(hotelId);
+    const firstAvailable = hotelDetail.rooms?.find((r: Room) => (r.availableUnits ?? 0) > 0);
+    setSelectedRoom(firstAvailable?.id || null);
+    setModalOpen(true);
   };
 
   const handleCreateBooking = async () => {
-    if (!session?.user?.customerId || !selectedHotel || !selectedRoom || !checkInDate || !checkOutDate) {
-      return;
-    }
+    if (!session?.user?.customerId || !selectedHotel || !selectedRoom) return;
+
     try {
       setBookingSubmitting(true);
-      const res = await fetch('/api/bookings', {
+      await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -191,30 +174,19 @@ export default function CustomerDashboardPage() {
           paymentMethod: 'PAY_AT_HOTEL',
         }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to create booking');
-      }
+
       setModalOpen(false);
       setSpecialRequests('');
       setCheckInDate('');
       setCheckOutDate('');
       await loadHotelsAndBookings();
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Unable to create booking');
     } finally {
       setBookingSubmitting(false);
     }
   };
 
-  if (!isMounted || status === 'loading') {
-    return <div>Loading...</div>;
-  }
-
-  if (!session) {
-    return <div>Please log in to view your dashboard.</div>;
-  }
+  if (!isMounted || status === 'loading') return <div>Loading...</div>;
+  if (!session) return <div>Please log in to view your dashboard.</div>;
 
   return (
     <div className="space-y-6">
@@ -435,50 +407,59 @@ export default function CustomerDashboardPage() {
           <Link href="/hotels" className="text-primary hover:underline">Browse All</Link>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {hotels.map((hotel) => (
-            <div key={hotel.id} className="rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800">
-              <div className="h-48 w-full overflow-hidden rounded-t-lg bg-gray-300">
-                <img
-                  src={hotel.images?.[0] || '/assets/images/hotel-placeholder.jpg'}
-                  alt={hotel.name}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="mb-1 text-lg font-semibold text-black dark:text-white">{hotel.name}</h3>
-                <div className="mb-2 flex items-center text-sm text-black dark:text-gray-400">
-                  <IconHome className="mr-1 h-4 w-4" />
-                  {[hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') || 'N/A'}
+          {hotels.map((hotel) => {
+            const { hasAvailability, text } = getAvailabilityMeta(hotel);
+            return (
+              <div key={hotel.id} className="rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800">
+                <div className="h-48 w-full overflow-hidden rounded-t-lg bg-gray-300">
+                  <img
+                    src={hotel.images?.[0] || '/assets/images/hotel-placeholder.jpg'}
+                    alt={hotel.name}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
-                <div className="mb-3 flex items-center">
-                  <div className="flex text-yellow-400 dark:text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <span key={i} className={i < Math.floor(hotel.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
-                    ))}
+                <div className="p-4">
+                  <h3 className="mb-1 text-lg font-semibold text-black dark:text-white">{hotel.name}</h3>
+                  <div className="mb-2 flex items-center text-sm text-black dark:text-gray-400">
+                    <IconHome className="mr-1 h-4 w-4" />
+                    {[hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') || 'N/A'}
                   </div>
-                  {/* <span className="ml-1 text-sm text-gray-500">{hotel.rating ?? ''}/5</span> */}
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-700 dark:text-gray-400">
-                    {hotel.room_count && hotel.room_count > 0
-                      ? `${hotel.room_count} room types • ${hotel.total_capacity || 0} bedspaces`
-                      : 'No rooms available'}
+                  <div className="mb-3 flex items-center">
+                    <div className="flex text-yellow-400 dark:text-yellow-400">
+                      {[...Array(5)].map((_, i) => (
+                        <span key={i} className={i < Math.floor(hotel.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
+                      ))}
+                    </div>
+                    {/* <span className="ml-1 text-sm text-gray-500">{hotel.rating ?? ''}/5</span> */}
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary shadow-none"
-                    onClick={() => handleOpenBooking(hotel.id)}
-                    disabled={!hotel.room_count || hotel.room_count === 0}
-                  >
-                    Book Now
-                  </button>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-700 dark:text-gray-400">
+                      {text}
+                      {hasAvailability && (
+                        <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                          ✓ Available for booking
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary shadow-none"
+                      onClick={() => handleOpenBooking(hotel.id)}
+                      disabled={!hasAvailability}
+                    >
+                      Book Now
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {hotels.length === 0 && (
             <div className="col-span-full text-center text-sm text-gray-500">No hotels found.</div>
           )}
+        </div>
+        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center">
+          Room availability is updated in real-time. Prices and availability may change.
         </div>
       </div>
 
@@ -547,7 +528,7 @@ export default function CustomerDashboardPage() {
                           <option value="">Select a room type</option>
                           {selectedHotelObj?.rooms?.map((room) => (
                             <option key={room.id} value={room.id} disabled={(room.availableUnits ?? 0) === 0}>
-                              {room.name} ({room.availableUnits ?? 0} available)
+                              {room.name} - ₦{room.pricePerNight?.toLocaleString()}/night ({room.availableUnits ?? 0} unit{(room.availableUnits ?? 0) !== 1 ? 's' : ''} available)
                             </option>
                           ))}
                         </select>
