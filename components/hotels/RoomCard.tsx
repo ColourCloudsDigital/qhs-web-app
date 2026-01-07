@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { User, ArrowRight, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
@@ -23,7 +24,7 @@ interface RoomProps {
   images?: string[];
   status: string;
   amenities: Amenity[];
-  onReserve: (roomId: string) => void;
+  hotelId?: string;
 }
 
 export default function RoomCard({
@@ -37,8 +38,9 @@ export default function RoomCard({
   images = [],
   status,
   amenities,
-  onReserve
+  hotelId
 }: RoomProps) {
+  const router = useRouter();
   // Ensure images is always an array
   const safeImages = Array.isArray(images) ? images : [];
   const [expanded, setExpanded] = useState(false);
@@ -69,7 +71,14 @@ export default function RoomCard({
     // Stop propagation to prevent parent click handlers
     e.stopPropagation();
     e.preventDefault();
-    onReserve(id);
+
+    // Navigate to room detail page where user can view details and book
+    if (hotelId) {
+      router.push(`/hotels/${hotelId}/rooms/${id}`);
+    } else {
+      // Fallback if hotelId is not available
+      router.push(`/hotels/${id}`);
+    }
   };
 
   const handleImageDotClick = (e: React.MouseEvent, index: number) => {

@@ -53,8 +53,10 @@ type Booking = {
   checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
+  numberOfRooms?: number;
   totalAmount: number;
   status: string;
+  createdAt?: string; // Added for booking creation time
 };
 
 export default function CustomerDashboardPage() {
@@ -69,6 +71,7 @@ export default function CustomerDashboardPage() {
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
   const [guests, setGuests] = useState(1);
+  const [roomCount, setRoomCount] = useState(1);
   const [specialRequests, setSpecialRequests] = useState('');
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
 
@@ -108,7 +111,6 @@ export default function CustomerDashboardPage() {
 
   const selectedHotelObj = hotels.find(h => h.id === selectedHotel) || null;
   const selectedRoomObj = selectedHotelObj?.rooms?.find(r => r.id === selectedRoom) || null;
-  
 
   const getAvailabilityMeta = (hotel: Hotel) => {
     const roomCount = hotel.room_count ?? 0;
@@ -123,17 +125,21 @@ export default function CustomerDashboardPage() {
   };
 
   const activeBookings = bookings.filter(b => b.status !== 'CANCELLED');
-  const sortedActiveBookings = [...activeBookings].sort((a, b) =>
-    new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime()
-  );
   const totalBookings = activeBookings.length;
   const totalSpent = activeBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
 
-  // Filter for truly upcoming bookings (future check-in dates or currently in progress)
-  const upcomingBookings = activeBookings.filter(booking => {
-    const { label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
-    return label === 'Upcoming' || label === 'In progress';
-  }).sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
+  // Sort active bookings by most recent booking time (createdAt) for stats
+  const sortedActiveBookingsByCreated = [...activeBookings].sort((a, b) =>
+    new Date(b.createdAt || b.checkInDate).getTime() - new Date(a.createdAt || a.checkInDate).getTime()
+  );
+
+  // Upcoming bookings: future or in-progress, sorted by soonest check-in first
+  const upcomingBookings = activeBookings
+    .filter(booking => {
+      const { label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
+      return label === 'Upcoming' || label === 'In progress';
+    })
+    .sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
 
   const getStayProgress = (checkInDate: string, checkOutDate: string) => {
     const now = new Date();
@@ -149,6 +155,15 @@ export default function CustomerDashboardPage() {
 
   const getNights = (checkInDate: string, checkOutDate: string) =>
     Math.round((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / 86400000);
+
+  // New utility for formatting booking creation time
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) +
+      ' at ' +
+      date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
 
   const handleOpenBooking = async (hotelId: string) => {
     const res = await fetch(`/api/hotels/${hotelId}`);
@@ -169,7 +184,7 @@ export default function CustomerDashboardPage() {
 
     try {
       setBookingSubmitting(true);
-      await fetch('/api/bookings', {
+      const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -179,16 +194,28 @@ export default function CustomerDashboardPage() {
           checkInDate,
           checkOutDate,
           numberOfGuests: guests,
+          numberOfRooms: roomCount,
           specialRequests,
           paymentMethod: 'PAY_AT_HOTEL',
         }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Booking failed');
+        return;
+      }
+
       setModalOpen(false);
       setSpecialRequests('');
       setCheckInDate('');
       setCheckOutDate('');
+      setGuests(1);
+      setRoomCount(1);
       await loadHotelsAndBookings();
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while booking');
     } finally {
       setBookingSubmitting(false);
     }
@@ -199,6 +226,7 @@ export default function CustomerDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name}</h1>
         <div className="flex space-x-3">
@@ -209,26 +237,25 @@ export default function CustomerDashboardPage() {
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats - updated to use createdAt for "latest/last booking" where possible */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <div className="panel h-full">
-          <div className="flex justify-between">
-            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1 text-black dark:text-gray-400">Total Bookings</div>
-          </div>
+          <div className="text-lg font-semibold text-black dark:text-gray-400">Total Bookings</div>
           <div className="mt-5 flex items-center">
             <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400">{totalBookings}</div>
             <div className="badge bg-success/20 text-success">Active</div>
           </div>
           <div className="mt-5 flex items-center font-semibold">
             <IconCalendar className="h-5 w-5 text-primary ltr:mr-2 rtl:ml-2" />
-            <span className="text-white-dark">Latest booking: {formatDate(sortedActiveBookings[0]?.checkInDate)}</span>
+            <span className="text-white-dark">
+              Latest booked: {formatDateTime(sortedActiveBookingsByCreated[0]?.createdAt || sortedActiveBookingsByCreated[0]?.checkInDate)}
+            </span>
           </div>
         </div>
 
+        {/* Other stats remain unchanged */}
         <div className="panel h-full">
-          <div className="flex justify-between">
-            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1 text-black dark:text-gray-400">Available Hotels</div>
-          </div>
+          <div className="text-lg font-semibold text-black dark:text-gray-400">Available Hotels</div>
           <div className="mt-5 flex items-center">
             <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400">{hotels.length}</div>
           </div>
@@ -238,9 +265,7 @@ export default function CustomerDashboardPage() {
         </div>
 
         <div className="panel h-full">
-          <div className="flex justify-between">
-            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1 text-black dark:text-gray-400">Reward Points</div>
-          </div>
+          <div className="text-lg font-semibold text-black dark:text-gray-400">Reward Points</div>
           <div className="mt-5 flex items-center">
             <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400"></div>
             <div className="badge bg-info/20 text-info">Coming soon</div>
@@ -251,20 +276,20 @@ export default function CustomerDashboardPage() {
         </div>
 
         <div className="panel h-full">
-          <div className="flex justify-between">
-            <div className="text-lg font-semibold ltr:mr-1 rtl:ml-1 text-black dark:text-gray-400">Total Spent</div>
-          </div>
+          <div className="text-lg font-semibold text-black dark:text-gray-400">Total Spent</div>
           <div className="mt-5 flex items-center">
             <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400">₦{totalSpent.toLocaleString()}</div>
           </div>
           <div className="mt-5 flex items-center font-semibold">
             <IconClock className="h-5 w-5 text-primary ltr:mr-2 rtl:ml-2" />
-            <span className="text-white-dark">Last booking: {formatDate(sortedActiveBookings[0]?.checkInDate)}</span>
+            <span className="text-white-dark">
+              Last booking: {formatDateTime(sortedActiveBookingsByCreated[0]?.createdAt || sortedActiveBookingsByCreated[0]?.checkInDate)}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Upcoming Bookings */}
+      {/* Upcoming Bookings - refactored for better display */}
       <div className="panel">
         <div className="mb-5 flex items-center justify-between">
           <h5 className="text-lg font-semibold dark:text-white-light">Upcoming Bookings</h5>
@@ -275,7 +300,7 @@ export default function CustomerDashboardPage() {
             <CalendarIcon className="mb-4 h-16 w-16 text-gray-400" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">No upcoming bookings</h3>
             <p className="mt-2 text-sm text-black dark:text-gray-400">
-              You don't have any upcoming bookings at the moment.
+              You don't have any upcoming or in-progress bookings at the moment.
             </p>
             <Link
               href="/hotels"
@@ -288,8 +313,8 @@ export default function CustomerDashboardPage() {
           <div className="space-y-4">
             {upcomingBookings.slice(0, 3).map((booking) => {
               const hotel = hotels.find((h) => h.id === booking.hotelId);
+              const room = hotel?.rooms?.find((r) => r.id === booking.roomId);
               const { percent, label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
-              const nights = getNights(booking.checkInDate, booking.checkOutDate);
 
               return (
                 <div
@@ -341,15 +366,19 @@ export default function CustomerDashboardPage() {
                       </div>
 
                       <div className="mb-6 grid gap-4 sm:grid-cols-2">
+                        {/* Room with name fallback and multiple rooms support */}
                         <div>
                           <p className="text-sm font-medium text-black dark:text-gray-400">Room</p>
                           <p className="font-medium text-gray-900 dark:text-white">
-                            {booking.roomId} ({booking.numberOfGuests || 1} guest{booking.numberOfGuests !== 1 ? 's' : ''})
+                            {room?.name || booking.roomId}
+                            {booking.numberOfRooms && booking.numberOfRooms > 1 && ` (${booking.numberOfRooms} rooms)`}
+                            {' '}({booking.numberOfGuests || 1} guest{booking.numberOfGuests !== 1 ? 's' : ''})
                           </p>
                         </div>
 
+                        {/* Dates */}
                         <div>
-                          <p className="text-sm font-medium text-black dark:text-gray-400">Dates</p>
+                          <p className="text-sm font-medium text-black dark:text-gray-400">Stay Dates</p>
                           <div className="flex items-center">
                             <CalendarIcon className="mr-1 h-4 w-4 text-gray-400" />
                             <p className="font-medium text-gray-900 dark:text-white">
@@ -358,6 +387,7 @@ export default function CustomerDashboardPage() {
                           </div>
                         </div>
 
+                        {/* Total Amount */}
                         <div>
                           <p className="text-sm font-medium text-black dark:text-gray-400">Total Amount</p>
                           <p className="font-bold text-primary">
@@ -365,6 +395,7 @@ export default function CustomerDashboardPage() {
                           </p>
                         </div>
 
+                        {/* Booking ID */}
                         <div>
                           <p className="text-sm font-medium text-black dark:text-gray-400">Booking ID</p>
                           <p className="font-medium text-gray-900 dark:text-white">
@@ -372,7 +403,15 @@ export default function CustomerDashboardPage() {
                           </p>
                         </div>
 
-                        {/* Stay progress */}
+                        {/* Booked On (new - shows confirmation/booking creation time) */}
+                        <div className="sm:col-span-2">
+                          <p className="text-sm font-medium text-black dark:text-gray-400">Booked On</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {formatDateTime(booking.createdAt)}
+                          </p>
+                        </div>
+
+                        {/* Stay Progress */}
                         <div className="sm:col-span-2">
                           <p className="mb-1 text-sm font-medium text-black dark:text-gray-400">
                             Stay Progress
@@ -514,6 +553,7 @@ export default function CustomerDashboardPage() {
                           onChange={(e) => {
                             setSelectedHotel(e.target.value);
                             setSelectedRoom(null);
+                            setRoomCount(1);
                           }}
                         >
                           <option value="">Select a hotel</option>
@@ -530,7 +570,11 @@ export default function CustomerDashboardPage() {
                           id="bookingRoom"
                           className="form-select"
                           value={selectedRoom || ''}
-                          onChange={(e) => setSelectedRoom(e.target.value)}
+                          onChange={(e) => {
+                            setSelectedRoom(e.target.value);
+                            // Reset room count to 1 and it will be validated in the dropdown options
+                            setRoomCount(1);
+                          }}
                           disabled={!selectedHotelObj}
                         >
                           <option value="">Select a room type</option>
@@ -579,7 +623,19 @@ export default function CustomerDashboardPage() {
                         </div>
                         <div>
                           <label htmlFor="roomCount">Number of Rooms</label>
-                          <input id="roomCount" className="form-input" value="1" disabled />
+                          <select
+                            id="roomCount"
+                            className="form-select"
+                            value={roomCount}
+                            onChange={(e) => setRoomCount(Number(e.target.value))}
+                          >
+                            {Array.from(
+                              { length: Math.min(5, selectedRoomObj?.availableUnits ?? 1) },
+                              (_, i) => i + 1
+                            ).map((n) => (
+                              <option key={n} value={n}>{n} Room{n > 1 ? 's' : ''}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                       <div className="mb-5">

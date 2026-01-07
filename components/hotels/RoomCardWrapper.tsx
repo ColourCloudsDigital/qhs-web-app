@@ -51,13 +51,13 @@ export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps)
       try {
         const customerId = (session as any).user?.customerId;
         if (!customerId) {
-          // If no customerId, redirect to book flow
-          const params = new URLSearchParams({ roomId });
+          // If no customerId, redirect to book flow with new route structure
+          const params = new URLSearchParams();
           if (checkIn) params.set('checkIn', checkIn);
           if (checkOut) params.set('checkOut', checkOut);
           if (guests) params.set('guests', guests);
           if (hotelId) {
-            router.push(`/hotels/${hotelId}/book?${params.toString()}`);
+            router.push(`/hotels/${hotelId}/book/${roomId}${params.toString() ? `?${params.toString()}` : ''}`);
             return;
           }
         }
@@ -72,6 +72,7 @@ export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps)
             checkInDate: checkIn,
             checkOutDate: checkOut,
             numberOfGuests: guests ? Number(guests) : 1,
+            numberOfRooms: 1, // Default to 1 room for immediate booking
             specialRequests: '',
             paymentMethod: 'PAY_AT_HOTEL'
           })
@@ -104,20 +105,21 @@ export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps)
           return;
         }
       } catch (error) {
-        console.error('Immediate booking failed, falling back to book flow', error);
+        console.error('Immediate booking failed, falling back to booking page', error);
         // Continue to fallback behavior below
       }
     }
 
-    // Fallback: redirect to booking flow page with params
-    const params = new URLSearchParams({ roomId });
+    // Fallback: redirect to booking flow page with new route structure
+    const params = new URLSearchParams();
     if (checkIn) params.set('checkIn', checkIn);
     if (checkOut) params.set('checkOut', checkOut);
     if (guests) params.set('guests', guests);
+    const queryString = params.toString();
     if (hotelId) {
-      router.push(`/hotels/${hotelId}/book?${params.toString()}`);
+      router.push(`/hotels/${hotelId}/book/${roomId}${queryString ? `?${queryString}` : ''}`);
     } else {
-      router.push(`/booking?${params.toString()}`);
+      router.push(`/booking?${queryString}`);
     }
   };
 
@@ -126,13 +128,6 @@ export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps)
     if (hotelId) {
       router.push(`/hotels/${hotelId}/rooms/${room.id}`);
     }
-  };
-
-  // Create a wrapper function for the RoomCard onReserve
-  // This stops propagation of click events to prevent navigation conflicts
-  const handleReserveClick = (roomId: string) => {
-    // We need to manually stop propagation in the RoomCard component
-    handleReserve(roomId);
   };
 
   return (
@@ -148,7 +143,7 @@ export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps)
         images={room.images}
         status={room.status}
         amenities={room.amenities}
-        onReserve={handleReserveClick}
+        hotelId={hotelId}
       />
     </div>
   );

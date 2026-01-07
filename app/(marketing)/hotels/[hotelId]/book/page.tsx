@@ -34,41 +34,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function BookingPage({ params, searchParams }: PageProps) {
-  // Check authentication (optional now)
-  const session = await getServerSession(authOptions);
-  
-  // Get hotel details
-  const hotel = await getHotelById(params.hotelId);
-  
-  if (!hotel) {
-    notFound();
+  // Check if roomId is provided in query params
+  const { roomId } = searchParams;
+
+  // If roomId is provided, redirect to the new nested route
+  if (roomId) {
+    const { checkIn, checkOut, guests } = searchParams;
+    const queryParams = new URLSearchParams();
+    if (checkIn) queryParams.set('checkIn', checkIn);
+    if (checkOut) queryParams.set('checkOut', checkOut);
+    if (guests) queryParams.set('guests', guests);
+
+    const redirectUrl = `/hotels/${params.hotelId}/book/${roomId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return redirect(redirectUrl);
   }
-  
-  // Get check-in, check-out, guest count, and roomId from query params
-  const { checkIn, checkOut, guests, roomId } = searchParams;
-  if (!checkIn || !checkOut) {
-    // Redirect back to hotel detail page if dates are not provided
-    return redirect(`/hotels/${params.hotelId}`);
-  }
-  // Sort rooms by price (lowest first)
-  const sortedRooms = [...hotel.rooms].sort((a, b) => {
-    const priceA = a.discountedPrice || a.pricePerNight;
-    const priceB = b.discountedPrice || b.pricePerNight;
-    return priceA - priceB;
-  });
-  // Pass session info if available, otherwise pass null
-  const customerId = session?.user?.customerId || undefined;
-  const isLoggedIn = !!session?.user;
-  return (
-    <BookingClient 
-      hotel={hotel}
-      rooms={sortedRooms}
-      initialCheckInDate={checkIn}
-      initialCheckOutDate={checkOut}
-      initialGuests={parseInt(guests || '2')}
-      initialSelectedRoomId={roomId || null}
-      customerId={customerId}
-      isLoggedIn={isLoggedIn}
-    />
-  );
+
+  // If no roomId, redirect to hotel detail page (legacy behavior)
+  return redirect(`/hotels/${params.hotelId}`);
 }
