@@ -7,32 +7,6 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { RowDataPacket } from 'mysql2';
 
-interface TaskRow extends RowDataPacket {
-  id: string;
-  title: string;
-  description: string;
-  status: TaskStatus;
-  priority: string;
-  category: string;
-  hotelId: string;
-  roomUnitId: string | null;
-  assignedToId: string | null;
-  createdById: string;
-  createdAt: Date;
-  updatedAt: Date;
-  dueDate: Date;
-  estimatedHours: number | null;
-  actualHours: number | null;
-  costEstimate: number | null;
-  actualCost: number | null;
-  maintenanceType: string;
-  isRecurring: boolean;
-  recurringPattern: string | null;
-  completedAt: Date | null;
-  lastUpdatedById: string | null;
-  attachments: string | null;
-}
-
 // Schema for updating a task
 const updateTaskSchema = z.object({
   title: z.string().min(3).optional(),
@@ -42,15 +16,11 @@ const updateTaskSchema = z.object({
   priority: z.string().optional(),
   category: z.string().optional(),
   dueDate: z.string().transform(str => new Date(str)).optional(),
-  completedAt: z.string().transform(str => new Date(str)).nullable().optional(),
   estimatedHours: z.number().positive().optional(),
-  actualHours: z.number().positive().nullable().optional(),
   costEstimate: z.number().nonnegative().optional(),
-  actualCost: z.number().nonnegative().nullable().optional(),
   roomId: z.string().uuid().nullable().optional(),
   maintenanceType: z.string().optional(),
   isRecurring: z.boolean().optional(),
-  recurringPattern: z.string().nullable().optional(),
   attachments: z.string().optional(), // JSON string of URLs
   notes: z.string().optional(), // Additional notes for status changes
 });
@@ -62,7 +32,7 @@ async function canAccessTask(userId: string, taskId: string) {
     const userResult = await pool.query<RowDataPacket[]>(
       `SELECT u.id, u.role, v.id as vendorId, s.id as staffId, s.hotelId as staffHotelId
        FROM users u
-       LEFT JOIN vendors v ON u.id = v.ownerId
+       LEFT JOIN vendors v ON u.id = v.userId
        LEFT JOIN staff s ON u.id = s.userId
        WHERE u.id = ?`,
       [userId]
@@ -73,21 +43,24 @@ async function canAccessTask(userId: string, taskId: string) {
 
     // Get task info
     const taskResult = await pool.query<RowDataPacket[]>(
-      `SELECT id, hotelId, assignedToId, createdById FROM facility_tasks WHERE id = ?`,
+      `SELECT taskId as id, hotelId, staffId as assignedToId, vendorId as createdById FROM facility_tasks WHERE taskId = ?`,
       [taskId]
     );
 
     if (taskResult[0].length === 0) return false;
     const task = taskResult[0][0];
 
-    // Creator always has access
-    if (task.createdById === userId) return true;
-
     // Super admin has access
     if (user.role === 'SUPER_ADMIN') return true;
 
-    // Vendor can access if task is in one of their hotels
+    // Vendor can access if:
+    // 1. They created the task (task.createdById === user.vendorId)
+    // 2. Task is in one of their hotels
     if (user.role === 'VENDOR' && user.vendorId) {
+      // Check if vendor created the task
+      if (task.createdById === user.vendorId) return true;
+      
+      // Check if task is in one of their hotels
       const hotelResult = await pool.query<RowDataPacket[]>(
         `SELECT COUNT(*) as count FROM hotels WHERE id = ? AND vendorId = ?`,
         [task.hotelId, user.vendorId]
@@ -144,22 +117,39 @@ export async function GET(
     // Fetch the task with complete relations
     const [taskRows] = await pool.query<RowDataPacket[]>(
       `SELECT 
-        ft.*,
-        s.id as assignedToId,
+        ft.taskId as id,
+        ft.title,
+        ft.description,
+        ft.status,
+        ft.priority,
+        ft.category,
+        ft.hotelId,
+        ft.roomUnitId,
+        ft.staffId as assignedToId,
+        ft.vendorId as createdById,
+        ft.created_at as createdAt,
+        ft.updated_at as updatedAt,
+        ft.due_date as dueDate,
+        ft.estimated_hours as estimatedHours,
+        ft.cost_estimate as costEstimate,
+        ft.maintenance_type as maintenanceType,
+        ft.is_recurring as isRecurring,
+        s.id as assignedToStaffId,
         u.name as assignedToName,
         u.email as assignedToEmail,
         u.id as assignedToUserId,
         st.position as assignedToPosition,
-        ru.name as roomName,
-        ru.number as roomNumber,
+        r.name as roomName,
+        ru.roomNumber as roomNumber,
         h.name as hotelName
        FROM facility_tasks ft
-       LEFT JOIN staff s ON ft.assignedToId = s.id
+       LEFT JOIN staff s ON ft.staffId = s.id
        LEFT JOIN users u ON s.userId = u.id
        LEFT JOIN staff st ON s.id = st.id
        LEFT JOIN room_units ru ON ft.roomUnitId = ru.id
+       LEFT JOIN rooms r ON ru.roomId = r.id
        LEFT JOIN hotels h ON ft.hotelId = h.id
-       WHERE ft.id = ?`,
+       WHERE ft.taskId = ?`,
       [taskId]
     );
 
@@ -168,19 +158,7 @@ export async function GET(
     }
 
     const task = taskRows[0];
-
-    // Fetch checklist items
-    const [checklistRows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, description, isCompleted, order FROM task_checklist WHERE taskId = ? ORDER BY order ASC`,
-      [taskId]
-    );
-
-    // Fetch comments
-    const [commentRows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, content, createdBy, createdAt FROM task_comments WHERE taskId = ? ORDER BY createdAt DESC`,
-      [taskId]
-    );
-
+    
     // Format response
     return NextResponse.json({
       id: task.id,
@@ -194,7 +172,7 @@ export async function GET(
       roomUnitId: task.roomUnitId,
       room: task.roomUnitId ? {
         id: task.roomUnitId,
-        name: task.roomName,
+        name: task.roomName ? `${task.roomName} - ${task.roomNumber}` : task.roomNumber,
         number: task.roomNumber,
       } : null,
       assignedToId: task.assignedToId,
@@ -213,17 +191,9 @@ export async function GET(
       updatedAt: task.updatedAt,
       dueDate: task.dueDate,
       estimatedHours: task.estimatedHours,
-      actualHours: task.actualHours,
       costEstimate: task.costEstimate,
-      actualCost: task.actualCost,
       maintenanceType: task.maintenanceType,
       isRecurring: task.isRecurring,
-      recurringPattern: task.recurringPattern,
-      completedAt: task.completedAt,
-      lastUpdatedById: task.lastUpdatedById,
-      attachments: task.attachments,
-      checklist: checklistRows,
-      comments: commentRows,
     });
   } catch (error) {
     console.error('Error fetching task:', error);
@@ -271,7 +241,7 @@ export async function PUT(
 
     // Get the existing task
     const [existingTaskRows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, assignedToId, status FROM facility_tasks WHERE id = ?`,
+      `SELECT taskId as id, staffId as assignedToId, status FROM facility_tasks WHERE taskId = ?`,
       [taskId]
     );
 
@@ -310,28 +280,20 @@ export async function PUT(
       updateValues.push(validatedData.category);
     }
     if (validatedData.dueDate !== undefined) {
-      updateFields.push('dueDate = ?');
+      updateFields.push('due_date = ?');
       updateValues.push(validatedData.dueDate);
     }
     if (validatedData.assignedToId !== undefined) {
-      updateFields.push('assignedToId = ?');
+      updateFields.push('staffId = ?');
       updateValues.push(validatedData.assignedToId);
     }
     if (validatedData.estimatedHours !== undefined) {
-      updateFields.push('estimatedHours = ?');
+      updateFields.push('estimated_hours = ?');
       updateValues.push(validatedData.estimatedHours);
     }
-    if (validatedData.actualHours !== undefined) {
-      updateFields.push('actualHours = ?');
-      updateValues.push(validatedData.actualHours);
-    }
     if (validatedData.costEstimate !== undefined) {
-      updateFields.push('costEstimate = ?');
+      updateFields.push('cost_estimate = ?');
       updateValues.push(validatedData.costEstimate);
-    }
-    if (validatedData.actualCost !== undefined) {
-      updateFields.push('actualCost = ?');
-      updateValues.push(validatedData.actualCost);
     }
     if (validatedData.roomId !== undefined) {
       if (validatedData.roomId === null) {
@@ -349,33 +311,23 @@ export async function PUT(
       }
     }
     if (validatedData.maintenanceType !== undefined) {
-      updateFields.push('maintenanceType = ?');
+      updateFields.push('maintenance_type = ?');
       updateValues.push(validatedData.maintenanceType);
     }
     if (validatedData.isRecurring !== undefined) {
-      updateFields.push('isRecurring = ?');
+      updateFields.push('is_recurring = ?');
       updateValues.push(validatedData.isRecurring ? 1 : 0);
-    }
-    if (validatedData.recurringPattern !== undefined) {
-      updateFields.push('recurringPattern = ?');
-      updateValues.push(validatedData.recurringPattern);
     }
     if (validatedData.attachments !== undefined) {
       updateFields.push('attachments = ?');
       updateValues.push(validatedData.attachments);
     }
-    if (validatedData.completedAt !== undefined) {
-      updateFields.push('completedAt = ?');
-      updateValues.push(validatedData.completedAt);
-    }
 
-    // Always update lastUpdatedById and updatedAt
-    updateFields.push('lastUpdatedById = ?');
-    updateValues.push(session.user.id);
-    updateFields.push('updatedAt = NOW()');
+    // Always update updatedAt
+    updateFields.push('updated_at = NOW()');
 
     // Execute update
-    const updateQuery = `UPDATE facility_tasks SET ${updateFields.join(', ')} WHERE id = ?`;
+    const updateQuery = `UPDATE facility_tasks SET ${updateFields.join(', ')} WHERE taskId = ?`;
     updateValues.push(taskId);
 
     await pool.query(updateQuery, updateValues);
@@ -389,22 +341,39 @@ export async function PUT(
     // Fetch updated task
     const [updatedTaskRows] = await pool.query<RowDataPacket[]>(
       `SELECT 
-        ft.*,
-        s.id as assignedToId,
+        ft.taskId as id,
+        ft.title,
+        ft.description,
+        ft.status,
+        ft.priority,
+        ft.category,
+        ft.hotelId,
+        ft.roomUnitId,
+        ft.staffId as assignedToId,
+        ft.vendorId as createdById,
+        ft.created_at as createdAt,
+        ft.updated_at as updatedAt,
+        ft.due_date as dueDate,
+        ft.estimated_hours as estimatedHours,
+        ft.cost_estimate as costEstimate,
+        ft.maintenance_type as maintenanceType,
+        ft.is_recurring as isRecurring,
+        s.id as assignedToStaffId,
         u.name as assignedToName,
         u.email as assignedToEmail,
         u.id as assignedToUserId,
         st.position as assignedToPosition,
-        ru.name as roomName,
-        ru.number as roomNumber,
+        r.name as roomName,
+        ru.roomNumber as roomNumber,
         h.name as hotelName
        FROM facility_tasks ft
-       LEFT JOIN staff s ON ft.assignedToId = s.id
+       LEFT JOIN staff s ON ft.staffId = s.id
        LEFT JOIN users u ON s.userId = u.id
        LEFT JOIN staff st ON s.id = st.id
        LEFT JOIN room_units ru ON ft.roomUnitId = ru.id
+       LEFT JOIN rooms r ON ru.roomId = r.id
        LEFT JOIN hotels h ON ft.hotelId = h.id
-       WHERE ft.id = ?`,
+       WHERE ft.taskId = ?`,
       [taskId]
     );
 
@@ -441,26 +410,34 @@ export async function PUT(
     if (statusChanged) {
       try {
         const [createdByRows] = await pool.query<RowDataPacket[]>(
-          `SELECT createdById FROM facility_tasks WHERE id = ?`,
+          `SELECT vendorId as createdById FROM facility_tasks WHERE taskId = ?`,
           [taskId]
         );
 
         if (createdByRows.length > 0 && createdByRows[0].createdById !== session.user.id) {
-          await pool.query(
-            `INSERT INTO notifications 
-             (title, content, type, status, recipient, recipientId, senderId, metadata, createdAt)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [
-              'Task Status Updated',
-              `Task "${updatedTask.title}" status changed to ${validatedData.status}`,
-              'SYSTEM',
-              'UNREAD',
-              'USER',
-              createdByRows[0].createdById,
-              session.user.id,
-              JSON.stringify({ taskId: updatedTask.id }),
-            ]
+          // Get the vendor's user ID
+          const [vendorUserRows] = await pool.query<RowDataPacket[]>(
+            `SELECT userId FROM vendors WHERE id = ?`,
+            [createdByRows[0].createdById]
           );
+          
+          if (vendorUserRows.length > 0) {
+            await pool.query(
+              `INSERT INTO notifications 
+               (title, content, type, status, recipient, recipientId, senderId, metadata, createdAt)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+              [
+                'Task Status Updated',
+                `Task "${updatedTask.title}" status changed to ${validatedData.status}`,
+                'SYSTEM',
+                'UNREAD',
+                'USER',
+                vendorUserRows[0].userId,
+                session.user.id,
+                JSON.stringify({ taskId: updatedTask.id }),
+              ]
+            );
+          }
         }
       } catch (notifError) {
         console.error('Error creating notification:', notifError);
@@ -480,7 +457,7 @@ export async function PUT(
       roomUnitId: updatedTask.roomUnitId,
       room: updatedTask.roomUnitId ? {
         id: updatedTask.roomUnitId,
-        name: updatedTask.roomName,
+        name: updatedTask.roomName ? `${updatedTask.roomName} - ${updatedTask.roomNumber}` : updatedTask.roomNumber,
         number: updatedTask.roomNumber,
       } : null,
       assignedToId: updatedTask.assignedToId,
@@ -499,15 +476,9 @@ export async function PUT(
       updatedAt: updatedTask.updatedAt,
       dueDate: updatedTask.dueDate,
       estimatedHours: updatedTask.estimatedHours,
-      actualHours: updatedTask.actualHours,
       costEstimate: updatedTask.costEstimate,
-      actualCost: updatedTask.actualCost,
       maintenanceType: updatedTask.maintenanceType,
       isRecurring: updatedTask.isRecurring,
-      recurringPattern: updatedTask.recurringPattern,
-      completedAt: updatedTask.completedAt,
-      lastUpdatedById: updatedTask.lastUpdatedById,
-      attachments: updatedTask.attachments,
     });
   } catch (error) {
     console.error('Error updating task:', error);
@@ -527,7 +498,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -562,7 +533,7 @@ export async function DELETE(
 
     // Get the task first
     const [taskRows] = await pool.query<RowDataPacket[]>(
-      `SELECT id FROM facility_tasks WHERE id = ?`,
+      `SELECT taskId as id FROM facility_tasks WHERE taskId = ?`,
       [taskId]
     );
 
@@ -570,14 +541,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    // Delete task checklist items first (foreign key constraint)
-    await pool.query(`DELETE FROM task_checklist WHERE taskId = ?`, [taskId]);
-
-    // Delete task comments (foreign key constraint)
-    await pool.query(`DELETE FROM task_comments WHERE taskId = ?`, [taskId]);
-
     // Delete the task itself
-    await pool.query(`DELETE FROM facility_tasks WHERE id = ?`, [taskId]);
+    await pool.query(`DELETE FROM facility_tasks WHERE taskId = ?`, [taskId]);
 
     return NextResponse.json({ success: true, message: 'Task deleted successfully' });
   } catch (error) {

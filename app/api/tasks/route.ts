@@ -14,13 +14,13 @@ const taskSchema = z.object({
   assignedToId: z.string().optional().nullable(),
   hotelId: z.string().uuid('Invalid hotel ID'),
   roomId: z.string().uuid('Invalid room ID').optional().nullable(),
-  status: z.nativeEnum(TaskStatus).default('PENDING'),
-  priority: z.nativeEnum(TaskPriority).default('MEDIUM'),
+  status: z.nativeEnum(TaskStatus).default(TaskStatus.PENDING),
+  priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
   category: z.nativeEnum(TaskCategory),
   dueDate: z.string().transform(str => new Date(str)),
   estimatedHours: z.number().positive().optional(),
   costEstimate: z.number().nonnegative().optional(),
-  maintenanceType: z.nativeEnum(MaintenanceType).default('CORRECTIVE'),
+  maintenanceType: z.nativeEnum(MaintenanceType).default(MaintenanceType.CORRECTIVE),
   isRecurring: z.boolean().default(false),
   recurringPattern: z.string().optional(),
   attachments: z.string().optional(), // JSON string of URLs
@@ -156,10 +156,10 @@ export async function POST(request: Request) {
 
     // Fetch the created task with related data
     const [task] = await pool.query(
-      `SELECT ft.taskId, ft.hotelId, ft.title, ft.description, ft.category, 
-              ft.priority, ft.due_date, ft.staffId, ft.vendorId, ft.roomUnitId, 
-              ft.maintenance_type, ft.estimated_hours, ft.cost_estimate, 
-              ft.is_recurring, ft.status, ft.created_at, ft.updated_at,
+      `SELECT ft.taskId as id, ft.hotelId, ft.title, ft.description, ft.category, 
+              ft.priority, ft.due_date as dueDate, ft.staffId, ft.vendorId, ft.roomUnitId, 
+              ft.maintenance_type as maintenanceType, ft.estimated_hours as estimatedHours, ft.cost_estimate as costEstimate, 
+              ft.is_recurring as isRecurring, ft.status, ft.created_at as createdAt, ft.updated_at as updatedAt,
               u.name as staffName, u.email as staffEmail
        FROM facility_tasks ft
        LEFT JOIN staff s ON ft.staffId = s.id
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
       [taskId]
     ) as [RowDataPacket[], any];
 
-    return NextResponse.json(task[0] || { taskId, ...taskData, vendorId }, { status: 201 });
+    return NextResponse.json(task[0] || { id: taskId, ...taskData, vendorId }, { status: 201 });
   } catch (error) {
     console.error('Task creation error:', error);
     
@@ -243,24 +243,57 @@ export async function GET(request: Request) {
 
     // Get tasks with pagination
     const [tasks] = await pool.query(
-      `SELECT ft.taskId, ft.hotelId, ft.title, ft.description, ft.category, 
-              ft.priority, ft.due_date, ft.staffId, ft.vendorId, ft.roomUnitId, 
-              ft.maintenance_type, ft.estimated_hours, ft.cost_estimate, 
-              ft.is_recurring, ft.status, ft.created_at, ft.updated_at,
-              u.name as staffName, u.email as staffEmail
+      `SELECT ft.taskId as id, ft.hotelId, ft.title, ft.description, ft.category, 
+              ft.priority, ft.due_date as dueDate, ft.staffId, ft.vendorId, ft.roomUnitId, 
+              ft.maintenance_type as maintenanceType, ft.estimated_hours as estimatedHours, ft.cost_estimate as costEstimate, 
+              ft.is_recurring as isRecurring, ft.status, ft.created_at as createdAt, ft.updated_at as updatedAt,
+              s.id as assignedToId, u.id as assignedToUserId, u.name as assignedToName, u.email as assignedToEmail,
+              r.name as roomName, ru.roomNumber
        FROM facility_tasks ft
        LEFT JOIN staff s ON ft.staffId = s.id
        LEFT JOIN users u ON s.userId = u.id
+       LEFT JOIN room_units ru ON ft.roomUnitId = ru.id
+       LEFT JOIN rooms r ON ru.roomId = r.id
        ${whereClause}
        ORDER BY ft.priority DESC, ft.due_date ASC
        LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     ) as [RowDataPacket[], any];
 
+    // Format the tasks with proper nested objects
+    const formattedTasks = (tasks || []).map((task: any) => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      category: task.category,
+      priority: task.priority,
+      status: task.status,
+      dueDate: task.dueDate,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      hotelId: task.hotelId,
+      maintenanceType: task.maintenanceType,
+      estimatedHours: task.estimatedHours,
+      costEstimate: task.costEstimate,
+      isRecurring: task.isRecurring,
+      assignedTo: task.assignedToId ? {
+        id: task.assignedToId,
+        user: {
+          id: task.assignedToUserId,
+          name: task.assignedToName,
+          email: task.assignedToEmail,
+        }
+      } : null,
+      room: task.roomUnitId ? {
+        id: task.roomUnitId,
+        name: task.roomName ? `${task.roomName} - ${task.roomNumber}` : task.roomNumber,
+      } : null,
+    }));
+
     const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
-      tasks: tasks || [],
+      tasks: formattedTasks,
       pagination: {
         currentPage: page,
         totalPages,
