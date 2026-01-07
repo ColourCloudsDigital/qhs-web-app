@@ -7,7 +7,7 @@ import { Bed, Users, Check, X, Info, Wifi, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Room {
-  roomId: string;
+  id: string;
   name: string;
   type: string;
   capacity: number;
@@ -67,7 +67,7 @@ export default function RoomSelector({
         if (
           selectedRoomId &&
           !data.rooms.find(
-            (room: Room) => room.roomId === selectedRoomId && room.isAvailable
+            (room: Room) => room.id === selectedRoomId && room.isAvailable
           )
         ) {
           onRoomSelect(null);
@@ -101,10 +101,10 @@ export default function RoomSelector({
   // Handle image navigation
   const handleImageNav = (e: React.MouseEvent, roomId: string, direction: 'next' | 'prev') => {
     e.stopPropagation();
-    
-    if (!rooms.find(room => room.roomId === roomId)?.images?.length) return;
-    
-    const imagesLength = rooms.find(room => room.roomId === roomId)?.images?.length || 0;
+
+    if (!rooms.find(room => room.id === roomId)?.images?.length) return;
+
+    const imagesLength = rooms.find(room => room.id === roomId)?.images?.length || 0;
     
     setActiveImageIndices(prev => {
       const currentIndex = prev[roomId] || 0;
@@ -185,7 +185,7 @@ export default function RoomSelector({
           
           const activeIndex = activeImageIndices[room.roomId] || 0;
           const hasMultipleImages = room.images && room.images.length > 1;
-          const isSelected = selectedRoomId === room.roomId;
+          const isSelected = selectedRoomId === room.id;
           
           return (
             <motion.div
@@ -198,7 +198,7 @@ export default function RoomSelector({
                   ? 'border-4 border-black dark:border-gray-900 shadow-lg transform scale-[1.01]' 
                   : 'border border-gray-200 dark:border-gray-700 hover:shadow-md'}
                 ${!room.isAvailable ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-              onClick={() => room.isAvailable && handleRoomSelect(room.roomId)}
+              onClick={() => room.isAvailable && handleRoomSelect(room.id)}
             >
               <div className="flex flex-col md:flex-row">
                 {/* Room Image with carousel controls */}
@@ -228,13 +228,13 @@ export default function RoomSelector({
                     {hasMultipleImages && (
                       <>
                         <button 
-                          onClick={(e) => handleImageNav(e, room.roomId, 'prev')}
+                          onClick={(e) => handleImageNav(e, room.id, 'prev')}
                           className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-all hover:bg-black/60"
                         >
                           &#10094;
                         </button>
                         <button
-                          onClick={(e) => handleImageNav(e, room.roomId, 'next')}
+                          onClick={(e) => handleImageNav(e, room.id, 'next')}
                           className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-all hover:bg-black/60"
                         >
                           &#10095;
@@ -368,12 +368,12 @@ export default function RoomSelector({
             <div className="container mx-auto flex max-w-6xl items-center justify-between">
               <div className="flex items-center">
                 <div className="mr-4 h-12 w-12 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-                  {rooms.find(r => r.roomId === selectedRoomId)?.images?.[0] ? (
-                    <Image 
-                      src={rooms.find(r => r.roomId === selectedRoomId)?.images?.[0] || ''} 
-                      alt="Selected room" 
-                      width={48} 
-                      height={48} 
+                  {rooms.find(r => r.id === selectedRoomId)?.images?.[0] ? (
+                    <Image
+                      src={rooms.find(r => r.id === selectedRoomId)?.images?.[0] || ''}
+                      alt="Selected room"
+                      width={48}
+                      height={48}
                       className="h-full w-full object-cover"
                       unoptimized={true}
                     />
@@ -383,7 +383,7 @@ export default function RoomSelector({
                 </div>
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {rooms.find(r => r.roomId === selectedRoomId)?.name}
+                    {rooms.find(r => r.id === selectedRoomId)?.name}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Selected Room
