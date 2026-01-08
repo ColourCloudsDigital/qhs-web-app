@@ -26,9 +26,14 @@ export async function GET(request: NextRequest) {
     if (session.user.role === 'CUSTOMER' && session.user.customerId) {
       // Customers can only see their own bookings
       const [bookings] = await pool.query(
-        `SELECT * FROM bookings WHERE customerId = ? LIMIT ?, ?`,
+        `SELECT * FROM bookings
+         WHERE customerId = ?
+         AND status IN ('CONFIRMED', 'PENDING')
+         ORDER BY createdAt DESC
+         LIMIT ?, ?`,
         [session.user.customerId, (page - 1) * limit, limit]
       );
+      
       
       return NextResponse.json({ bookings });
     } else if (session.user.role === 'VENDOR' && session.user.vendorId) {
