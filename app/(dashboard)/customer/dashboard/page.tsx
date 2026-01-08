@@ -133,15 +133,15 @@ export default function CustomerDashboardPage() {
     new Date(b.createdAt || b.checkInDate).getTime() - new Date(a.createdAt || a.checkInDate).getTime()
   );
 
-  // Upcoming bookings: future or in-progress, sorted by soonest check-in first
+  // Upcoming bookings: future, in-progress, or completed (recent), sorted by soonest check-in first
   const upcomingBookings = activeBookings
     .filter(booking => {
       const { label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
-      return label === 'Upcoming' || label === 'In progress';
+      return label === 'Upcoming' || label === 'In progress' || label === 'Completed';
     })
     .sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
 
-  const getStayProgress = (checkInDate: string, checkOutDate: string) => {
+  function getStayProgress (checkInDate: string, checkOutDate: string) {
     const now = new Date();
     const start = new Date(checkInDate);
     const end = new Date(checkOutDate);
@@ -289,10 +289,10 @@ export default function CustomerDashboardPage() {
         </div>
       </div>
 
-      {/* Upcoming Bookings - refactored for better display */}
+      {/* Recent Bookings - shows upcoming, in-progress, and completed bookings */}
       <div className="panel">
         <div className="mb-5 flex items-center justify-between">
-          <h5 className="text-lg font-semibold dark:text-white-light">Upcoming Bookings</h5>
+          <h5 className="text-lg font-semibold dark:text-white-light">Recent Bookings</h5>
           <Link href="/customer/bookings" className="text-primary hover:underline">View All</Link>
         </div>
         {upcomingBookings.length === 0 ? (
@@ -300,7 +300,7 @@ export default function CustomerDashboardPage() {
             <CalendarIcon className="mb-4 h-16 w-16 text-gray-400" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">No upcoming bookings</h3>
             <p className="mt-2 text-sm text-black dark:text-gray-400">
-              You don't have any upcoming or in-progress bookings at the moment.
+              You don't have any upcoming, in-progress, or recent completed bookings at the moment.
             </p>
             <Link
               href="/hotels"
