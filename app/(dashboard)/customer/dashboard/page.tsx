@@ -271,9 +271,6 @@ export default function CustomerDashboardPage() {
             <div className="text-3xl font-bold ltr:mr-3 rtl:ml-3 text-black dark:text-gray-400"></div>
             <div className="badge bg-info/20 text-info">Coming soon</div>
           </div>
-          <div className="mt-5">
-            <Link href="/dashboard/rewards" className="text-primary hover:underline">View Rewards</Link>
-          </div>
         </div>
 
         <div className="panel h-full">
