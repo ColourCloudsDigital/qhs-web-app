@@ -24,7 +24,7 @@ import {
 import Image from 'next/image';
 
 type Room = {
-  id: string;
+  roomId: string;
   name: string;
   type: string;
   capacity: number;
@@ -50,6 +50,7 @@ type Booking = {
   id: string;
   hotelId: string;
   roomId: string;
+  roomName: string;
   checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
@@ -110,7 +111,7 @@ export default function CustomerDashboardPage() {
   };
 
   const selectedHotelObj = hotels.find(h => h.id === selectedHotel) || null;
-  const selectedRoomObj = selectedHotelObj?.rooms?.find(r => r.id === selectedRoom) || null;
+  const selectedRoomObj = selectedHotelObj?.rooms?.find(r => r.roomId === selectedRoom) || null;
 
   const getAvailabilityMeta = (hotel: Hotel) => {
     const roomCount = hotel.room_count ?? 0;
@@ -313,7 +314,7 @@ export default function CustomerDashboardPage() {
           <div className="space-y-4">
             {upcomingBookings.slice(0, 3).map((booking) => {
               const hotel = hotels.find((h) => h.id === booking.hotelId);
-              const room = hotel?.rooms?.find((r) => r.id === booking.roomId);
+              const room = hotel?.rooms?.find((r) => r.roomId === booking.roomId);
               const { percent, label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
 
               return (
@@ -370,8 +371,8 @@ export default function CustomerDashboardPage() {
                         <div>
                           <p className="text-sm font-medium text-black dark:text-gray-400">Room</p>
                           <p className="font-medium text-gray-900 dark:text-white">
-                            {room?.name || booking.roomId}
-                            {booking.numberOfRooms && booking.numberOfRooms > 1 && ` (${booking.numberOfRooms} rooms)`}
+                            {booking.roomName ?? booking.roomId}{' '}
+                            {/* {booking.numberOfRooms && booking.numberOfRooms > 1 && ` (${booking.numberOfRooms} rooms)`} */}
                             {' '}({booking.numberOfGuests || 1} guest{booking.numberOfGuests !== 1 ? 's' : ''})
                           </p>
                         </div>
@@ -579,7 +580,7 @@ export default function CustomerDashboardPage() {
                         >
                           <option value="">Select a room type</option>
                           {selectedHotelObj?.rooms?.map((room) => (
-                            <option key={room.id} value={room.id} disabled={(room.availableUnits ?? 0) === 0}>
+                            <option key={room.roomId} value={room.roomId} disabled={(room.availableUnits ?? 0) === 0}>
                               {room.name} - ₦{room.pricePerNight?.toLocaleString()}/night ({room.availableUnits ?? 0} unit{(room.availableUnits ?? 0) !== 1 ? 's' : ''} available)
                             </option>
                           ))}

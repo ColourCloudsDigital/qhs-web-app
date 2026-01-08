@@ -26,9 +26,13 @@ export async function GET(request: NextRequest) {
     if (session.user.role === 'CUSTOMER' && session.user.customerId) {
       // Customers can only see their own bookings
       const [bookings] = await pool.query(
-        `SELECT * FROM bookings
-         WHERE customerId = ?
-         AND status IN ('CONFIRMED', 'PENDING')
+        `SELECT 
+        bookings.*,
+        rooms.name AS roomName
+        FROM bookings
+        JOIN rooms ON rooms.id = bookings.roomId
+        WHERE bookings.customerId = ?
+         AND bookings.status IN ('CONFIRMED', 'PENDING')
          ORDER BY createdAt DESC
          LIMIT ?, ?`,
         [session.user.customerId, (page - 1) * limit, limit]
