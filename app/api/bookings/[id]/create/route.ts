@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
       checkInDate,
       checkOutDate,
       numberOfGuests,
+      numberOfRooms,
       specialRequests,
       paymentMethod 
     } = body;
@@ -104,12 +105,12 @@ export async function POST(request: NextRequest) {
     
     await connection.query(
       `INSERT INTO bookings (id, hotelId, roomId, customerId, checkInDate, checkOutDate, 
-       numberOfGuests, totalAmount, status, paymentStatus, specialRequests, createdAt, updatedAt) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', 'PENDING', ?, NOW(), NOW())`,
+       numberOfGuests, numberOfRooms, totalAmount, status, paymentStatus, specialRequests, createdAt, updatedAt) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', 'PENDING', ?, NOW(), NOW())`,
       [
         bookingId, hotelId, roomId, customerId,
-        checkInDate, checkOutDate, numberOfGuests,
-        totalAmount, specialRequests || null
+        checkInDate, checkOutDate, numberOfGuests, numberOfRooms, totalAmount,
+        specialRequests || null, 'CONFIRMED', 'PENDING'
       ]
     );
     

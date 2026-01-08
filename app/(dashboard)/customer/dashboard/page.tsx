@@ -24,7 +24,7 @@ import {
 import Image from 'next/image';
 
 type Room = {
-  roomId: string;
+  id: string;  // Changed from roomId to id to match API response
   name: string;
   type: string;
   capacity: number;
@@ -75,6 +75,7 @@ export default function CustomerDashboardPage() {
   const [roomCount, setRoomCount] = useState(1);
   const [specialRequests, setSpecialRequests] = useState('');
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -85,6 +86,15 @@ export default function CustomerDashboardPage() {
       loadHotelsAndBookings();
     }
   }, [status]);
+
+  useEffect(() => {
+    if (showSuccessBanner) {
+      const timer = setTimeout(() => {
+        setShowSuccessBanner(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessBanner]);
 
   const loadHotelsAndBookings = async () => {
     try {
@@ -111,7 +121,7 @@ export default function CustomerDashboardPage() {
   };
 
   const selectedHotelObj = hotels.find(h => h.id === selectedHotel) || null;
-  const selectedRoomObj = selectedHotelObj?.rooms?.find(r => r.roomId === selectedRoom) || null;
+  const selectedRoomObj = selectedHotelObj?.rooms?.find(r => r.id === selectedRoom) || null;
 
   const getAvailabilityMeta = (hotel: Hotel) => {
     const roomCount = hotel.room_count ?? 0;
@@ -207,6 +217,9 @@ export default function CustomerDashboardPage() {
         return;
       }
 
+      const successData = await response.json();
+
+
       setModalOpen(false);
       setSpecialRequests('');
       setCheckInDate('');
@@ -214,6 +227,7 @@ export default function CustomerDashboardPage() {
       setGuests(1);
       setRoomCount(1);
       await loadHotelsAndBookings();
+      setShowSuccessBanner(true);
     } catch (err) {
       console.error(err);
       alert('An error occurred while booking');
@@ -225,7 +239,7 @@ export default function CustomerDashboardPage() {
   if (!isMounted || status === 'loading') return <div>Loading...</div>;
   if (!session) return <div>Please log in to view your dashboard.</div>;
 
-  return (
+  return ( 
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -311,7 +325,7 @@ export default function CustomerDashboardPage() {
           <div className="space-y-4">
             {upcomingBookings.slice(0, 3).map((booking) => {
               const hotel = hotels.find((h) => h.id === booking.hotelId);
-              const room = hotel?.rooms?.find((r) => r.roomId === booking.roomId);
+              const room = hotel?.rooms?.find((r) => r.id === booking.roomId);
               const { percent, label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
 
               return (
@@ -577,7 +591,7 @@ export default function CustomerDashboardPage() {
                         >
                           <option value="">Select a room type</option>
                           {selectedHotelObj?.rooms?.map((room) => (
-                            <option key={room.roomId} value={room.roomId} disabled={(room.availableUnits ?? 0) === 0}>
+                            <option key={room.id} value={room.id} disabled={(room.availableUnits ?? 0) === 0}>
                               {room.name} - ₦{room.pricePerNight?.toLocaleString()}/night ({room.availableUnits ?? 0} unit{(room.availableUnits ?? 0) !== 1 ? 's' : ''} available)
                             </option>
                           ))}
@@ -674,6 +688,14 @@ export default function CustomerDashboardPage() {
           </div>
         </Dialog>
       </Transition>
+      {/* Success Notification Banner */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-[1000] bg-green-500 text-white p-4 text-center transform transition-transform duration-300 ease-in-out ${
+          showSuccessBanner ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        Booking successful!
+        </div>
     </div>
   );
 }
