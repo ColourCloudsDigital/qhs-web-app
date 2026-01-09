@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '@/lib/db';
 import { availabilityService } from '@/lib/services/availability.service';
+import { customerNotificationService } from '@/lib/services/customer-notification.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -233,6 +234,50 @@ export async function POST(request: NextRequest) {
       }
       
       await connection.commit();
+      
+      // Send booking confirmation notification to customer
+      try {
+        // Get customer details for notification
+        const [customerRows] = await pool.query(
+          'SELECT userId, firstName, lastName FROM customers WHERE id = ?',
+          [bookingData.customerId]
+        );
+        
+        const customer = (customerRows as any[])[0];
+        
+        if (customer && customer.userId) {
+          // Get hotel details for notification
+          const [hotelRows] = await pool.query(
+            'SELECT name FROM hotels WHERE id = ?',
+            [bookingData.hotelId]
+          );
+          
+          const hotel = (hotelRows as any[])[0];
+          
+          // Get room details for notification
+          const [roomRows] = await pool.query(
+            'SELECT name FROM rooms WHERE id = ?',
+            [bookingData.roomId]
+          );
+          
+          const room = (roomRows as any[])[0];
+          
+          await customerNotificationService.sendBookingNotification('confirmed', {
+            bookingId,
+            customerId: bookingData.customerId,
+            userId: customer.userId,
+            hotelName: hotel?.name || 'Hotel',
+            roomName: room?.name || 'Room',
+            checkInDate: bookingData.checkInDate,
+            checkOutDate: bookingData.checkOutDate,
+            totalAmount,
+            status
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to send booking notification:', notificationError);
+        // Don't fail the booking if notification fails
+      }
       
       return NextResponse.json({
         bookingId,

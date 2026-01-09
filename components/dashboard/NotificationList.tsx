@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
+import { Dialog, Transition } from '@headlessui/react';
 import { 
   Bell, 
   Check, 
@@ -15,7 +16,14 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  InfoIcon
+  InfoIcon,
+  X,
+  Eye,
+  Calendar,
+  CreditCard,
+  MessageSquare,
+  Megaphone,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { NotificationType, NotificationStatus } from '@/lib/types/enums';
 import { useSession } from 'next-auth/react';
@@ -64,6 +72,11 @@ export default function NotificationList() {
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
+  
+  // Modal states
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Get current page from URL or default to 1
   const currentPage = searchParams.get('page') 
@@ -163,6 +176,80 @@ export default function NotificationList() {
     }
   };
 
+  // Handle individual notification actions
+  const handleNotificationAction = async (notificationId: string, action: 'mark_read' | 'archive' | 'delete') => {
+    try {
+      setActionLoading(notificationId);
+      
+      if (action === 'delete') {
+        const response = await fetch(`/api/notifications/${notificationId}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete notification');
+        }
+        
+        // Remove from local state
+        setNotifications(prevNotifications =>
+          prevNotifications.filter(notification => notification.id !== notificationId)
+        );
+      } else {
+        const response = await fetch(`/api/notifications/${notificationId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to ${action.replace('_', ' ')} notification`);
+        }
+        
+        // Update local state
+        if (action === 'mark_read') {
+          setNotifications(prevNotifications =>
+            prevNotifications.map(notification =>
+              notification.id === notificationId
+                ? { ...notification, status: NotificationStatus.READ }
+                : notification
+            )
+          );
+        } else if (action === 'archive') {
+          if (selectedStatus !== NotificationStatus.ARCHIVED) {
+            // Remove from list if not viewing archived
+            setNotifications(prevNotifications =>
+              prevNotifications.filter(notification => notification.id !== notificationId)
+            );
+          } else {
+            // Update status if viewing archived
+            setNotifications(prevNotifications =>
+              prevNotifications.map(notification =>
+                notification.id === notificationId
+                  ? { ...notification, status: NotificationStatus.ARCHIVED }
+                  : notification
+              )
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error performing ${action} on notification:`, error);
+      alert(`Failed to ${action.replace('_', ' ')} notification. Please try again.`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle viewing notification details
+  const handleViewNotification = async (notification: Notification) => {
+    setSelectedNotification(notification);
+    setViewModalOpen(true);
+    
+    // Mark as read if it's unread
+    if (notification.status === NotificationStatus.UNREAD) {
+      await handleNotificationAction(notification.id, 'mark_read');
+    }
+  };
   // Bulk actions handler
   const handleBulkAction = async (action: 'mark_read' | 'archive' | 'delete') => {
     if (selectedIds.length === 0) return;
@@ -225,6 +312,7 @@ export default function NotificationList() {
       setSelectAll(false);
     } catch (error) {
       console.error(`Error performing bulk action ${action}:`, error);
+      alert(`Failed to ${action.replace('_', ' ')} notifications. Please try again.`);
     }
   };
 
@@ -260,11 +348,11 @@ export default function NotificationList() {
   // Get notification icon
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
-      case 'BOOKING': return <Bell className="h-5 w-5 text-blue-500" />;
-      case 'PAYMENT': return <Bell className="h-5 w-5 text-green-500" />;
-      case 'SUBSCRIPTION': return <Bell className="h-5 w-5 text-purple-500" />;
-      case 'MESSAGE': return <Bell className="h-5 w-5 text-yellow-500" />;
-      case 'ANNOUNCEMENT': return <Bell className="h-5 w-5 text-red-500" />;
+      case 'BOOKING': return <Calendar className="h-5 w-5 text-blue-500" />;
+      case 'PAYMENT': return <CreditCard className="h-5 w-5 text-green-500" />;
+      case 'SUBSCRIPTION': return <SettingsIcon className="h-5 w-5 text-purple-500" />;
+      case 'MESSAGE': return <MessageSquare className="h-5 w-5 text-yellow-500" />;
+      case 'ANNOUNCEMENT': return <Megaphone className="h-5 w-5 text-red-500" />;
       case 'SYSTEM': return <Bell className="h-5 w-5 text-gray-500" />;
       default: return <Bell className="h-5 w-5" />;
     }
@@ -386,11 +474,11 @@ export default function NotificationList() {
                       className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:focus:ring-primary-dark"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left">Title</th>
-                  <th className="px-4 py-3 text-left">Type</th>
-                  <th className="hidden px-4 py-3 text-left sm:table-cell">Time</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="w-[30%] px-2 py-2 text-left">Title</th>
+                  <th className="w-[15%] px-2 py-2 text-left">Type</th>
+                  <th className="hidden sm:table-cell w-[30%] px-2 py-2 text-left">Time</th>
+                  <th className="w-[15%] px-2 py-2 text-left">Status</th>
+                  <th className="w-[20%] px-2 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -414,15 +502,20 @@ export default function NotificationList() {
                     <td className="px-4 py-4">
                       <div className="flex items-center">
                         <div className="mr-3">{getNotificationIcon(notification.type)}</div>
-                        <div>
-                          <div className="font-medium">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 dark:text-white">
                             {notification.title}
                           </div>
-                          <div className="mt-1 max-w-md text-sm text-gray-500 dark:text-gray-400">
+                          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 truncate max-w-md">
                             {notification.content.length > 100
                               ? `${notification.content.substring(0, 100)}...`
                               : notification.content}
                           </div>
+                          {notification.sender && (
+                            <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                              From: {notification.sender.name}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -447,27 +540,59 @@ export default function NotificationList() {
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        {/* View Button */}
+                        <button
+                          onClick={() => handleViewNotification(notification)}
+                          className="rounded p-1 text-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-300"
+                          title="View details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        
+                        {/* Mark as Read Button */}
                         {notification.status === 'UNREAD' && (
                           <button
-                            onClick={() => handleBulkAction('mark_read')}
-                            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                            onClick={() => handleNotificationAction(notification.id, 'mark_read')}
+                            disabled={actionLoading === notification.id}
+                            className="rounded p-1 text-green-500 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/20 dark:hover:text-green-300 disabled:opacity-50"
+                            title="Mark as read"
                           >
-                            <Check className="h-4 w-4" />
+                            {actionLoading === notification.id ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
                           </button>
                         )}
+                        
+                        {/* Archive Button */}
                         {notification.status !== 'ARCHIVED' && (
                           <button
-                            onClick={() => handleBulkAction('archive')}
-                            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                            onClick={() => handleNotificationAction(notification.id, 'archive')}
+                            disabled={actionLoading === notification.id}
+                            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white disabled:opacity-50"
+                            title="Archive"
                           >
-                            <Archive className="h-4 w-4" />
+                            {actionLoading === notification.id ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-transparent"></div>
+                            ) : (
+                              <Archive className="h-4 w-4" />
+                            )}
                           </button>
                         )}
+                        
+                        {/* Delete Button */}
                         <button
-                          onClick={() => handleBulkAction('delete')}
-                          className="rounded p-1 text-red-500 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                          onClick={() => handleNotificationAction(notification.id, 'delete')}
+                          disabled={actionLoading === notification.id}
+                          className="rounded p-1 text-red-500 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300 disabled:opacity-50"
+                          title="Delete"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {actionLoading === notification.id ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></div>
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -588,6 +713,199 @@ export default function NotificationList() {
           </div>
         )}
       </div>
+      
+      {/* Notification Detail Modal */}
+      <Transition appear show={viewModalOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setViewModalOpen(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800">
+                  {selectedNotification && (
+                    <>
+                      {/* Modal Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            {getNotificationIcon(selectedNotification.type)}
+                          </div>
+                          <div>
+                            <Dialog.Title
+                              as="h3"
+                              className="text-lg font-medium leading-6 text-gray-900 dark:text-white"
+                            >
+                              {selectedNotification.title}
+                            </Dialog.Title>
+                            <div className="flex items-center space-x-4 mt-1">
+                              <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                {getNotificationTypeName(selectedNotification.type)}
+                              </span>
+                              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                {getStatusIcon(selectedNotification.status)}
+                                <span className="ml-1 capitalize">
+                                  {selectedNotification.status.toLowerCase()}
+                                </span>
+                              </div>
+                              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <Clock className="mr-1 h-4 w-4" />
+                                {formatNotificationDate(selectedNotification.createdAt)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:text-gray-500 dark:hover:text-gray-400"
+                          onClick={() => setViewModalOpen(false)}
+                        >
+                          <span className="sr-only">Close</span>
+                          <X className="h-6 w-6" aria-hidden="true" />
+                        </button>
+                      </div>
+
+                      {/* Sender Information */}
+                      {selectedNotification.sender && (
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg dark:bg-gray-700">
+                          <div className="text-sm text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">From:</span> {selectedNotification.sender.name}
+                          </div>
+                          {selectedNotification.sender.email && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {selectedNotification.sender.email}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Notification Content */}
+                      <div className="mb-6">
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Message</h4>
+                        <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
+                          <p className="whitespace-pre-wrap">{selectedNotification.content}</p>
+                        </div>
+                      </div>
+
+                      {/* Metadata */}
+                      {selectedNotification.metadata && Object.keys(selectedNotification.metadata).length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Additional Details</h4>
+                          <div className="bg-gray-50 rounded-lg p-3 dark:bg-gray-700">
+                            <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                              {Object.entries(selectedNotification.metadata).map(([key, value]) => {
+                                if (key === 'action' || key === 'notificationType') return null;
+                                
+                                let displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                let displayValue = value;
+                                
+                                // Format specific metadata fields
+                                if (key === 'amount' && typeof value === 'number') {
+                                  displayValue = `₦${value.toLocaleString()}`;
+                                } else if (key.includes('Date') && typeof value === 'string') {
+                                  displayValue = formatNotificationDate(value);
+                                } else if (typeof value === 'object') {
+                                  displayValue = JSON.stringify(value, null, 2);
+                                }
+                                
+                                return (
+                                  <div key={key}>
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                      {displayKey}
+                                    </dt>
+                                    <dd className="text-sm text-gray-900 dark:text-white">
+                                      {typeof displayValue === 'object' ? (
+                                        <pre className="text-xs bg-gray-100 p-2 rounded dark:bg-gray-600 overflow-x-auto">
+                                          {JSON.stringify(displayValue, null, 2)}
+                                        </pre>
+                                      ) : (
+                                        displayValue?.toString() || 'N/A'
+                                      )}
+                                    </dd>
+                                  </div>
+                                );
+                              })}
+                            </dl>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-end space-x-3">
+                        {selectedNotification.status === 'UNREAD' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleNotificationAction(selectedNotification.id, 'mark_read');
+                              setViewModalOpen(false);
+                            }}
+                            className="inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                          >
+                            <Check className="mr-2 h-4 w-4" />
+                            Mark as Read
+                          </button>
+                        )}
+                        
+                        {selectedNotification.status !== 'ARCHIVED' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleNotificationAction(selectedNotification.id, 'archive');
+                              setViewModalOpen(false);
+                            }}
+                            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                          >
+                            <Archive className="mr-2 h-4 w-4" />
+                            Archive
+                          </button>
+                        )}
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleNotificationAction(selectedNotification.id, 'delete');
+                            setViewModalOpen(false);
+                          }}
+                          className="inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setViewModalOpen(false)}
+                          className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 }
