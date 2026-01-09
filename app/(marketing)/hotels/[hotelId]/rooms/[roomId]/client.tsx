@@ -69,7 +69,7 @@ export default function RoomDetailClient({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
-  const [guests, setGuests] = useState(1);
+  const [guests, setGuests] = useState(2); // Aligned default to 2
   
   // Get today's date and tomorrow's date
   const today = new Date();
@@ -102,17 +102,27 @@ export default function RoomDetailClient({
     }
   };
   
-  const handleReservation = () => {
-    const params = new URLSearchParams();
-    params.append('hotelId', hotel.id);
-    params.append('roomId', room.id);
-    
-    if (checkInDate) params.append('checkIn', checkInDate);
-    if (checkOutDate) params.append('checkOut', checkOutDate);
-    if (guests) params.append('guests', guests.toString());
-    
-    router.push(`/hotels/${hotel.id}/book/${room.id}?${params.toString()}`);
-  };
+ const handleReservation = () => {
+  if (!checkInDate || !checkOutDate || !guests) {
+    alert('Please select check-in date, check-out date and number of guests');
+    return;
+  }
+  if (new Date(checkOutDate) <= new Date(checkInDate)) { // Added validation
+    alert('Check-out date must be after check-in date');
+    return;
+  }
+
+  const params = new URLSearchParams({
+    checkInDate,
+    checkOutDate,
+    guests: guests.toString(), // Aligned param name
+  });
+
+  router.push(
+    `/hotels/${hotel.id}/book/${room.id}?${params.toString()}`
+  );
+};
+
   
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect for validation
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -36,13 +36,23 @@ export default function BookingClient({
   const router = useRouter();
   const [checkInDate, setCheckInDate] = useState(initialCheckInDate);
   const [checkOutDate, setCheckOutDate] = useState(initialCheckOutDate);
+  const [guests, setGuests] = useState(initialGuests); // Added guests state
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(initialSelectedRoomId);
-  const [step, setStep] = useState<'select-room' | 'booking-details'>('select-room');
+  const [step, setStep] = useState<'select-room' | 'booking-details'>(
+    initialSelectedRoomId ? 'booking-details' : 'select-room' // Conditional initial step
+  );
 
   // Find the selected room details
   const selectedRoom = selectedRoomId
     ? rooms.find(room => room.id === selectedRoomId)
     : null;
+
+  // Basic date validation (ensure checkOut > checkIn)
+  useEffect(() => {
+    if (checkInDate && checkOutDate && new Date(checkOutDate) <= new Date(checkInDate)) {
+      setCheckOutDate(''); // Reset invalid checkOut
+    }
+  }, [checkInDate, checkOutDate]);
 
   // Handle continuing to the booking details step
   const handleContinue = () => {
@@ -354,7 +364,7 @@ export default function BookingClient({
                   pricePerNight={selectedRoom.pricePerNight}
                   discountedPrice={selectedRoom.discountedPrice}
                   maxGuests={selectedRoom.capacity}
-                  initialGuests={initialGuests}
+                  initialGuests={guests} // Use state instead of prop
                 />
               </motion.div>
             ) : null}

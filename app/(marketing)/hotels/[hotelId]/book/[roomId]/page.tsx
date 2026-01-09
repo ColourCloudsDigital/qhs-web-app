@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { getHotelById } from '@/services/hotel.service';
+import { HotelService } from '@/services/hotels';
 import BookingClient from './client';
 
 interface PageProps {
@@ -18,7 +18,7 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const hotel = await getHotelById(params.hotelId);
+  const hotel = await HotelService.getHotelById(params.hotelId);
 
   if (!hotel) {
     return {
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   // Find the room for better metadata
-  const room = hotel.rooms?.find(r => r.id === params.roomId);
+  const room = hotel.rooms?.find((r: any) => r.id === params.roomId);
 
   return {
     title: `Book ${room?.name || 'Room'} at ${hotel.name} | Qaras Hotels`,
@@ -41,7 +41,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
   const session = await getServerSession(authOptions);
 
   // Get hotel details
-  const hotel = await getHotelById(params.hotelId);
+  const hotel = await HotelService.getHotelById(params.hotelId);
 
   if (!hotel) {
     notFound();
@@ -55,7 +55,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
   }
 
   // Sort rooms by price (lowest first)
-  const sortedRooms = [...hotel.rooms].sort((a, b) => {
+  const sortedRooms = [...hotel.rooms].sort((a: any, b: any) => {
     const priceA = a.discountedPrice || a.pricePerNight;
     const priceB = b.discountedPrice || b.pricePerNight;
     return priceA - priceB;
