@@ -11,6 +11,7 @@ import IconX from '@/components/icon/icon-x';
 import IconCalendar from '@/components/icon/icon-calendar';
 import IconClock from '@/components/icon/icon-clock';
 import { formatDate } from '@/lib/utils';
+import NotificationDashboard from '@/components/customer/NotificationDashboard';
 
 import {
   MapPin,
@@ -299,6 +300,15 @@ export default function CustomerDashboardPage() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Notification Dashboard */}
+      <div className="panel">
+        <div className="mb-5 flex items-center justify-between">
+          <h5 className="text-lg font-semibold dark:text-white-light">Notifications</h5>
+          <Link href="/customer/notifications" className="text-primary hover:underline">View All</Link>
+        </div>
+        <NotificationDashboard />
       </div>
 
       {/* Recent Bookings - shows upcoming, in-progress, and completed bookings */}

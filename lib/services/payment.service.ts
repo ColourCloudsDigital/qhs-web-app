@@ -2,6 +2,7 @@ import pool from '@/lib/db';
 import { PaymentMethod, PaymentStatus } from '@/lib/types/enums';
 import { BookingStatus } from '@/lib/types/enums';
 import { emailService } from './email.service';
+import { customerNotificationService } from './customer-notification.service';
 import { getAppSettings } from './settings.service';
 import { RowDataPacket, PoolConnection, ResultSetHeader } from 'mysql2/promise';
 
@@ -324,6 +325,18 @@ export const paymentService = {
           guestName: payment.customerName,
           bookingDetails,
           hotelDetails
+        });
+
+        // Send payment confirmation notification
+        await customerNotificationService.sendPaymentNotification('completed', {
+          paymentId: payment.id,
+          bookingId: payment.booking_id,
+          customerId: payment.customer_id,
+          userId: payment.customer_id, // Assuming customer_id is the userId
+          amount: payment.amount,
+          status: 'COMPLETED',
+          hotelName: payment.hotelName,
+          paymentMethod: payment.payment_method
         });
       } catch (error: any) {
         console.error('Failed to send payment receipt email:', error.message);
