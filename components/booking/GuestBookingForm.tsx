@@ -228,9 +228,21 @@ export default function GuestBookingForm({
       setSuccess(true);
       setBookingId(result.id);
       
-      // Redirect to confirmation page after a delay
+      // Redirect to success page with booking details
+      const successParams = new URLSearchParams({
+        bookingId: result.id,
+        hotelName: hotelId, // This should be the hotel name, but we'll use ID for now
+        roomName: roomName,
+        checkInDate: formatDate(checkInDate),
+        checkOutDate: formatDate(checkOutDate),
+        numberOfGuests: numberOfGuests.toString(),
+        totalAmount: result.bookingDetails?.totalAmount?.toString() || '0',
+        nights: result.bookingDetails?.nights?.toString() || '1',
+        paymentRequired: result.bookingDetails?.paymentRequired?.toString() || 'false'
+      });
+      
       setTimeout(() => {
-        router.push(`/hotels/${hotelId}?booking=success`);
+        router.push(`/booking-success?${successParams.toString()}`);
       }, 2000);
       
     } catch (err: any) {

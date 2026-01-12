@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import ImageLightbox from '@/components/common/ImageLightbox';
+import { useBookingStore } from '@/lib/hooks/useBookingContext';
 
 // Defining more specific types
 interface Hotel {
@@ -64,6 +65,7 @@ export default function RoomDetailClient({
   relatedRooms
 }: RoomDetailClientProps) {
   const router = useRouter();
+  const addBooking = useBookingStore((state) => state.addBooking);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -102,26 +104,41 @@ export default function RoomDetailClient({
     }
   };
   
- const handleReservation = () => {
-  if (!checkInDate || !checkOutDate || !guests) {
-    alert('Please select check-in date, check-out date and number of guests');
-    return;
-  }
-  if (new Date(checkOutDate) <= new Date(checkInDate)) { // Added validation
-    alert('Check-out date must be after check-in date');
-    return;
-  }
+  const handleReservation = () => {
+    if (!checkInDate || !checkOutDate || !guests) {
+      alert('Please select check-in date, check-out date and number of guests');
+      return;
+    }
+    if (new Date(checkOutDate) <= new Date(checkInDate)) {
+      alert('Check-out date must be after check-in date');
+      return;
+    }
 
-  const params = new URLSearchParams({
-    checkInDate,
-    checkOutDate,
-    guests: guests.toString(), // Aligned param name
-  });
+    // Add booking to store
+    const bookingId = `${room.id}-${Date.now()}`;
+    addBooking({
+      id: bookingId,
+      roomId: room.id,
+      roomName: room.name,
+      hotelId: hotel.id,
+      hotelName: hotel.name,
+      checkInDate,
+      checkOutDate,
+      guests,
+      price: room.discountedPrice || room.pricePerNight,
+      bookedAt: new Date().toISOString(),
+    });
 
-  router.push(
-    `/hotels/${hotel.id}/book/${room.id}?${params.toString()}`
-  );
-};
+    const params = new URLSearchParams({
+      checkInDate,
+      checkOutDate,
+      guests: guests.toString(),
+    });
+
+    router.push(
+      `/hotels/${hotel.id}/book/${room.id}?${params.toString()}`
+    );
+  };
 
   
   return (

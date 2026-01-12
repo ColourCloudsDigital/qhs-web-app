@@ -16,11 +16,10 @@ import {
   Clock,
   Users,
   Trash2,
-  X,
-  RefreshCw,
-  Edit3
+  X
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useBookingStore } from '@/lib/hooks/useBookingContext';
 
 interface Booking {
   id: string;
@@ -30,14 +29,13 @@ interface Booking {
   checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
-  numberOfRooms?: number;
   totalAmount: number;
   status: string;
   paymentStatus: string;
   specialRequests: string | null;
   createdAt: string;
   updatedAt: string;
-  hotel?: {
+  hotel: {
     id: string;
     name: string;
     address: string;
@@ -46,20 +44,13 @@ interface Booking {
     country: string;
     images: string[];
   };
-  room?: {
+  room: {
     id: string;
     name: string;
     type: string;
     capacity: number;
     pricePerNight: number;
     images: string[];
-  };
-  customer?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
   };
 }
 
@@ -71,8 +62,6 @@ interface RoomAvailability {
   capacity: number;
   pricePerNight: number;
   available: boolean;
-  availableUnits: number;
-  totalUnits: number;
 }
 
 export default function BookingDetailPage() {
@@ -87,7 +76,6 @@ export default function BookingDetailPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
-  const [refreshingAvailability, setRefreshingAvailability] = useState(false);
 
   useEffect(() => {
     if (bookingId) {
@@ -106,30 +94,25 @@ export default function BookingDetailPage() {
         if (bookingRes.status === 404) {
           throw new Error('Booking not found');
         }
-        if (bookingRes.status === 403) {
-          throw new Error('You do not have permission to view this booking');
-        }
         throw new Error('Failed to fetch booking details');
       }
 
       const bookingData = await bookingRes.json();
-
-      // Validate booking data structure
-      if (!bookingData || typeof bookingData !== 'object') {
-        throw new Error('Invalid booking data received');
-      }
-
       setBooking(bookingData);
-      console.log('Booking data loaded:', bookingData.id);
 
-      // Only fetch available rooms if we have hotel information
+      // Debug log booking payload
+      console.log('Booking data fetched:', bookingData);
+
+      // Normalize hotel id and dates, backend expects hotelId param and YYYY-MM-DD dates
       const hotelId = bookingData.hotelId || bookingData.hotel?.id;
-      if (hotelId) {
-        // Fetch current availability (not historical booking period availability)
-        await fetchAvailableRooms(hotelId);
-      }
+      const normalizeDate = (d: string) => new Date(d).toISOString().slice(0, 10);
+      const checkIn = normalizeDate(bookingData.checkInDate);
+      const checkOut = normalizeDate(bookingData.checkOutDate);
 
-      // Show success toast if this was just created
+      // Fetch available rooms for the booking period (use backend's expected query names)
+      await fetchAvailableRooms(hotelId, checkIn, checkOut);
+
+      // Show success toast if this was just created (could be from URL params or localStorage)
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('success') === 'true') {
         toast.success('Booking created successfully!', {
@@ -146,95 +129,34 @@ export default function BookingDetailPage() {
       }
 
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to load booking details';
-      setError(errorMessage);
+      setError(err.message || 'Failed to load booking details');
       console.error('Error fetching booking:', err);
-
-      // Show error toast for API errors
-      if (!errorMessage.includes('not found') && !errorMessage.includes('permission')) {
-        toast.error(errorMessage, {
-          duration: 5000,
-          position: 'bottom-center',
-        });
-      }
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAvailableRooms = async (hotelId: string) => {
-    if (!hotelId) {
-      console.warn('No hotel ID provided for fetching available rooms');
-      setAvailableRooms([]);
-      return;
-    }
-
+  const fetchAvailableRooms = async (hotelId: string, checkInDate: string, checkOutDate: string) => {
     try {
-      setRefreshingAvailability(true);
-
-      // Get current date + 30 days for availability check
-      const checkInDate = new Date().toISOString().split('T')[0];
-      const checkOutDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
       const url = `/api/hotels/${encodeURIComponent(hotelId)}/available-rooms?checkInDate=${encodeURIComponent(
         checkInDate
       )}&checkOutDate=${encodeURIComponent(checkOutDate)}`;
-
-      console.log('Fetching current available rooms:', url);
-
+      console.log('Fetching available rooms URL:', url);
       const response = await fetch(url);
 
       if (response.ok) {
-        const roomsData = await response.json();
-
-        // Validate rooms data structure
-        if (Array.isArray(roomsData)) {
-          setAvailableRooms(roomsData);
-          console.log(`Loaded ${roomsData.length} available rooms`);
-        } else {
-          console.warn('Invalid rooms data structure:', roomsData);
-          setAvailableRooms([]);
-        }
-      } else {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        console.error('Failed to fetch available rooms:', response.status, errorText);
-        setAvailableRooms([]);
+        const rooms = await response.json();
+        setAvailableRooms(rooms);
       }
     } catch (err) {
       console.error('Error fetching available rooms:', err);
-      setAvailableRooms([]);
-    } finally {
-      setRefreshingAvailability(false);
-    }
-  };
-
-  const refreshAvailability = async () => {
-    if (booking?.hotelId || booking?.hotel?.id) {
-      const hotelId = booking.hotelId || booking.hotel?.id;
-      if (hotelId) {
-        await fetchAvailableRooms(hotelId);
-        toast.success('Room availability refreshed', {
-          duration: 2000,
-          position: 'bottom-center',
-        });
-      }
+      // Don't show error for this - it's not critical
     }
   };
 
   const handleCancelBooking = async () => {
     if (!cancelReason.trim()) {
-      toast.error('Please provide a reason for cancellation', {
-        duration: 3000,
-        position: 'bottom-center',
-      });
-      return;
-    }
-
-    if (cancelReason.trim().length < 10) {
-      toast.error('Please provide a more detailed reason (at least 10 characters)', {
-        duration: 3000,
-        position: 'bottom-center',
-      });
+      toast.error('Please provide a reason for cancellation');
       return;
     }
 
@@ -252,34 +174,17 @@ export default function BookingDetailPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || `Cancellation failed (${response.status})`;
-
-        // Handle specific error cases
-        if (response.status === 400 && errorMessage.includes('already cancelled')) {
-          toast.error('This booking is already cancelled', {
-            duration: 4000,
-            position: 'bottom-center',
-          });
-          setShowCancelDialog(false);
-          setCancelReason('');
-          // Refresh the page to show updated status
-          setTimeout(() => window.location.reload(), 1000);
-          return;
-        }
-
-        if (response.status === 403) {
-          toast.error('You do not have permission to cancel this booking', {
-            duration: 4000,
-            position: 'bottom-center',
-          });
-          return;
-        }
-
-        throw new Error(errorMessage);
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to cancel booking');
       }
 
-      const cancelledBooking = await response.json();
+      // Update booking data to reflect cancellation
+      if (booking) {
+        setBooking({
+          ...booking,
+          status: 'CANCELLED',
+        });
+      }
 
       toast.success('Booking cancelled successfully', {
         duration: 4000,
@@ -294,18 +199,14 @@ export default function BookingDetailPage() {
       setShowCancelDialog(false);
       setCancelReason('');
 
-      // Update local booking state
-      setBooking(cancelledBooking);
-
       // Redirect to bookings list after a short delay
       setTimeout(() => {
         router.push('/customer/bookings');
-      }, 2500);
+      }, 2000);
 
     } catch (err: any) {
-      console.error('Cancellation error:', err);
       toast.error(err.message || 'Failed to cancel booking', {
-        duration: 5000,
+        duration: 4000,
         position: 'bottom-center',
         style: {
           background: '#EF4444',
@@ -324,76 +225,6 @@ export default function BookingDetailPage() {
     // Can only cancel if booking is PENDING or CONFIRMED
     const cancellableStatuses = ['PENDING', 'CONFIRMED'];
     return cancellableStatuses.includes(booking.status.toUpperCase());
-  };
-
-  const canModifyBooking = () => {
-    if (!booking) return false;
-
-    // Can only modify if booking is PENDING
-    return booking.status.toUpperCase() === 'PENDING';
-  };
-
-  const getBookingActions = () => {
-    if (!booking) return [];
-
-    const actions = [];
-    const status = booking.status.toUpperCase();
-
-    // Cancel action
-    if (canCancelBooking()) {
-      actions.push({
-        type: 'cancel',
-        label: 'Cancel Booking',
-        icon: Trash2,
-        variant: 'danger' as const,
-        action: () => setShowCancelDialog(true)
-      });
-    }
-
-    // View confirmation (only for confirmed bookings)
-    if (status === 'CONFIRMED') {
-      actions.push({
-        type: 'confirmation',
-        label: 'View Confirmation',
-        icon: CheckCircle,
-        variant: 'primary' as const,
-        action: () => {
-          // For now, show a toast since the confirmation page doesn't exist
-          toast('Confirmation feature coming soon!', {
-            duration: 3000,
-            position: 'bottom-center',
-            style: {
-              background: '#3B82F6',
-              color: '#fff',
-              fontWeight: '500',
-            },
-          });
-        }
-      });
-    }
-
-    // Modify booking (only for pending bookings)
-    if (canModifyBooking()) {
-      actions.push({
-        type: 'modify',
-        label: 'Modify Booking',
-        icon: Edit3,
-        variant: 'secondary' as const,
-        action: () => {
-          toast('Booking modification feature coming soon!', {
-            duration: 3000,
-            position: 'bottom-center',
-            style: {
-              background: '#3B82F6',
-              color: '#fff',
-              fontWeight: '500',
-            },
-          });
-        }
-      });
-    }
-
-    return actions;
   };
 
   if (loading) {
@@ -429,19 +260,9 @@ export default function BookingDetailPage() {
     );
   }
 
-  // Safely calculate dates and nights
   const checkInDate = new Date(booking.checkInDate);
   const checkOutDate = new Date(booking.checkOutDate);
-  const nights = Math.max(1, Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
-
-  // Safe access to nested properties
-  const hotelName = booking.hotel?.name || booking.hotelId || 'Hotel';
-  const hotelAddress = booking.hotel?.address || '';
-  const hotelLocation = booking.hotel ? [booking.hotel.city, booking.hotel.state, booking.hotel.country].filter(Boolean).join(', ') : 'Location not specified';
-  const roomName = booking.room?.name || booking.roomId || 'Room';
-  const roomType = booking.room?.type || 'Standard Room';
-  const roomCapacity = booking.room?.capacity || booking.numberOfGuests || 1;
-  const roomPrice = booking.room?.pricePerNight || 0;
+  const nights = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -511,12 +332,12 @@ export default function BookingDetailPage() {
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{hotelName}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{booking.hotel.name}</h3>
               <p className="text-gray-600 text-sm mb-1">
-                {hotelAddress}
+                {booking.hotel.address}
               </p>
               <p className="text-gray-600 text-sm">
-                {hotelLocation}
+                {booking.hotel.city}, {booking.hotel.state}, {booking.hotel.country}
               </p>
             </div>
           </div>
@@ -563,14 +384,11 @@ export default function BookingDetailPage() {
             </div>
           </div>
           <div className="flex-1">
-            <h4 className="text-xl font-medium text-gray-900 mb-1">{roomName}</h4>
-            <p className="text-gray-600 mb-2">{roomType}</p>
+            <h4 className="text-xl font-medium text-gray-900 mb-1">{booking.room.name}</h4>
+            <p className="text-gray-600 mb-2">{booking.room.type}</p>
             <div className="flex items-center gap-4 text-sm text-gray-500">
-              <span>Capacity: {roomCapacity} guest{roomCapacity !== 1 ? 's' : ''}</span>
-              {booking.numberOfRooms && booking.numberOfRooms > 1 && (
-                <span>{booking.numberOfRooms} room{booking.numberOfRooms !== 1 ? 's' : ''}</span>
-              )}
-              <span>{formatCurrency(roomPrice)} / night</span>
+              <span>Capacity: {booking.room.capacity} guest{booking.room.capacity !== 1 ? 's' : ''}</span>
+              <span>{formatCurrency(booking.room.pricePerNight)} / night</span>
             </div>
           </div>
           <div className="text-right">
@@ -588,41 +406,20 @@ export default function BookingDetailPage() {
         </div>
       )}
 
-      {/* Current Room Availability */}
+      {/* Available Rooms at Checkout Time */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Current Room Availability
-          </h3>
-          {(booking?.hotelId || booking?.hotel?.id) && (
-            <button
-              onClick={refreshAvailability}
-              disabled={refreshingAvailability}
-              className="inline-flex items-center px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3 w-3 mr-1 ${refreshingAvailability ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          )}
-        </div>
-
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Available Rooms During Your Stay
+        </h3>
         <p className="text-gray-600 mb-6">
-          Current availability at {hotelName} for the next 30 days.
-          {booking.room && (
-            <span className="block mt-1 text-sm text-blue-600">
-              Your booked room: <strong>{roomName}</strong> ({roomType})
-            </span>
-          )}
+          These rooms were available at {booking.hotel.name} during your check-in and check-out period
+          ({formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}).
         </p>
 
         {availableRooms.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {availableRooms.slice(0, 6).map((room) => (
-              <div key={room.id} className={`border rounded-lg p-4 transition-shadow ${
-                room.available
-                  ? 'border-green-200 bg-green-50 hover:shadow-md'
-                  : 'border-gray-200 bg-gray-50 opacity-60'
-              }`}>
+              <div key={room.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium text-gray-900">{room.name}</h4>
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -630,45 +427,28 @@ export default function BookingDetailPage() {
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {room.available ? 'Available' : 'Fully Booked'}
+                    {room.available ? 'Available' : 'Booked'}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mb-2">{room.type}</p>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">
-                    {room.availableUnits}/{room.totalUnits} units available
-                  </span>
+                  <span className="text-gray-500">Up to {room.capacity} guests</span>
                   <span className="font-medium text-primary">{formatCurrency(room.pricePerNight)}/night</span>
                 </div>
-                {room.capacity && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    Up to {room.capacity} guests
-                  </div>
-                )}
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-8">
             <Bed className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 mb-2">Unable to load current room availability.</p>
-            {refreshingAvailability ? (
-              <p className="text-sm text-gray-400">Refreshing...</p>
-            ) : (
-              <button
-                onClick={refreshAvailability}
-                className="text-primary hover:underline text-sm"
-              >
-                Try again
-              </button>
-            )}
+            <p className="text-gray-500">No room availability information available for this period.</p>
           </div>
         )}
 
         {availableRooms.length > 6 && (
           <div className="mt-4 text-center">
             <p className="text-sm text-gray-500">
-              Showing 6 of {availableRooms.length} room types
+              Showing 6 of {availableRooms.length} available rooms
             </p>
           </div>
         )}
@@ -684,37 +464,24 @@ export default function BookingDetailPage() {
           Back to Bookings
         </Link>
 
-        {/* Dynamic action buttons based on booking status */}
-        {getBookingActions().map((action) => {
-          const IconComponent = action.icon;
-          const buttonClasses = action.variant === 'danger'
-            ? "flex-1 inline-flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
-            : action.variant === 'primary'
-            ? "flex-1 inline-flex items-center justify-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-            : "flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors";
-
-          return (
-            <button
-              key={action.type}
-              onClick={action.action}
-              className={buttonClasses}
-            >
-              <IconComponent className="h-4 w-4 mr-2" />
-              {action.label}
-            </button>
-          );
-        })}
-
-        {/* Refresh availability button */}
-        {(booking?.hotelId || booking?.hotel?.id) && (
+        {canCancelBooking() && (
           <button
-            onClick={refreshAvailability}
-            disabled={refreshingAvailability}
-            className="inline-flex items-center justify-center px-4 py-2 border border-blue-300 rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:bg-blue-100 disabled:text-blue-400 transition-colors"
-            title="Refresh room availability"
+            onClick={() => setShowCancelDialog(true)}
+            className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
           >
-            <RefreshCw className={`h-4 w-4 ${refreshingAvailability ? 'animate-spin' : ''}`} />
+            <Trash2 className="h-4 w-4 mr-2" />
+            Cancel Booking
           </button>
+        )}
+
+        {booking.status === 'CONFIRMED' && (
+          <Link
+            href={`/bookings/${booking.id}/confirmation`}
+            className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            View Confirmation
+          </Link>
         )}
       </div>
 
