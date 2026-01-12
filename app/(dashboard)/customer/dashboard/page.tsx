@@ -12,6 +12,7 @@ import IconCalendar from '@/components/icon/icon-calendar';
 import IconClock from '@/components/icon/icon-clock';
 import { formatDate } from '@/lib/utils';
 import NotificationDashboard from '@/components/customer/NotificationDashboard';
+import { useBookingStore } from '@/lib/hooks/useBookingContext';
 
 import {
   MapPin,
@@ -63,6 +64,7 @@ type Booking = {
 
 export default function CustomerDashboardPage() {
   const { data: session, status } = useSession();
+  const refreshTrigger = useBookingStore((state) => state.refreshTrigger);
   const [isMounted, setIsMounted] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -88,6 +90,13 @@ export default function CustomerDashboardPage() {
     }
   }, [status]);
 
+  // Refresh when booking is cancelled or status changes
+  useEffect(() => {
+    if (isMounted && status === 'authenticated' && refreshTrigger > 0) {
+      loadHotelsAndBookings();
+    }
+  }, [refreshTrigger, status, isMounted]);
+
   useEffect(() => {
     if (showSuccessBanner) {
       const timer = setTimeout(() => {
@@ -100,9 +109,14 @@ export default function CustomerDashboardPage() {
   const loadHotelsAndBookings = async () => {
     try {
       setIsLoadingData(true);
+      
+      // Check for new booking flag
+      const newBookingCreated = typeof window !== 'undefined' ? localStorage.getItem('new-booking-created') : null;
+      const newBookingId = typeof window !== 'undefined' ? localStorage.getItem('new-booking-id') : null;
+      
       const [hotelsRes, bookingsRes] = await Promise.all([
         fetch('/api/hotels?limit=8'),
-        fetch('/api/bookings?limit=5'),
+        fetch('/api/bookings?limit=5&sortBy=createdAt&order=desc'), // Ensure newest first
       ]);
 
       if (hotelsRes.ok) {
@@ -112,7 +126,26 @@ export default function CustomerDashboardPage() {
 
       if (bookingsRes.ok) {
         const data = await bookingsRes.json();
-        setBookings(data.bookings || []);
+        let bookings = data.bookings || [];
+        
+        // If there's a new booking, ensure it's at the top
+        if (newBookingCreated && newBookingId) {
+          const newBookingIndex = bookings.findIndex((b: any) => b.id === newBookingId);
+          if (newBookingIndex > 0) {
+            // Move new booking to top
+            const newBooking = bookings.splice(newBookingIndex, 1)[0];
+            bookings.unshift(newBooking);
+          }
+          
+          // Clear the flags after processing
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('new-booking-created');
+            localStorage.removeItem('new-booking-id');
+            localStorage.removeItem('new-booking-timestamp');
+          }
+        }
+        
+        setBookings(bookings);
       }
     } catch (err) {
       console.error(err);
@@ -152,6 +185,11 @@ export default function CustomerDashboardPage() {
       return label === 'Upcoming' || label === 'In progress' || label === 'Completed';
     })
     .sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
+
+  // Sort all bookings (including cancelled) by creation time, most recent first
+  const sortedBookingsByCreated = [...bookings].sort((a, b) =>
+    new Date(b.createdAt || b.checkInDate).getTime() - new Date(a.createdAt || a.checkInDate).getTime()
+  );
 
   function getStayProgress (checkInDate: string, checkOutDate: string) {
     const now = new Date();
@@ -311,18 +349,18 @@ export default function CustomerDashboardPage() {
         <NotificationDashboard />
       </div>
 
-      {/* Recent Bookings - shows upcoming, in-progress, and completed bookings */}
+      {/* Recent Bookings - shows most recent booking regardless of status */}
       <div className="panel">
         <div className="mb-5 flex items-center justify-between">
           <h5 className="text-lg font-semibold dark:text-white-light">Recent Bookings</h5>
           <Link href="/customer/bookings" className="text-primary hover:underline">View All</Link>
         </div>
-        {upcomingBookings.length === 0 ? (
+        {sortedBookingsByCreated.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
             <CalendarIcon className="mb-4 h-16 w-16 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">No upcoming bookings</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">No bookings</h3>
             <p className="mt-2 text-sm text-black dark:text-gray-400">
-              You don't have any upcoming, in-progress, or recent completed bookings at the moment.
+              You don't have any bookings at the moment.
             </p>
             <Link
               href="/hotels"
@@ -333,9 +371,8 @@ export default function CustomerDashboardPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {upcomingBookings.slice(0, 3).map((booking) => {
+            {sortedBookingsByCreated.slice(0, 1).map((booking) => {
               const hotel = hotels.find((h) => h.id === booking.hotelId);
-              const room = hotel?.rooms?.find((r) => r.id === booking.roomId);
               const { percent, label } = getStayProgress(booking.checkInDate, booking.checkOutDate);
 
               return (
@@ -343,98 +380,83 @@ export default function CustomerDashboardPage() {
                   key={booking.id}
                   className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
                 >
-                  <div className="grid md:grid-cols-3">
-                    {/* Hotel Image */}
-                    <div className="relative h-48 w-full md:h-full">
-                      {hotel?.images?.[0] ? (
-                        <Image
-                          src={hotel.images[0]}
-                          alt={hotel.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gray-200 dark:bg-gray-700">
-                          <Hotel className="h-12 w-12 text-gray-400" />
+                  <div className="p-6">
+                    {/* Header with Hotel Name and Status */}
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                          {hotel?.name || booking.hotelId}
+                        </h3>
+                        <div className="mt-1 flex items-center text-sm text-black dark:text-gray-400">
+                          <MapPin className="mr-1 h-4 w-4" />
+                          <span>
+                            {hotel ? [hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') : 'N/A'}
+                          </span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Booking Details */}
-                    <div className="p-6 md:col-span-2">
-                      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                            {hotel?.name || booking.hotelId}
-                          </h3>
-                          <div className="mt-1 flex items-center text-sm text-black dark:text-gray-400">
-                            <MapPin className="mr-1 h-4 w-4" />
-                            <span>
-                              {hotel ? [hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                          booking.status === 'CONFIRMED'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                            : booking.status === 'PENDING'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
-                        }`}>
-                          {booking.status}
-                        </span>
                       </div>
 
-                      <div className="mb-6 grid gap-4 sm:grid-cols-2">
-                        {/* Room with name fallback and multiple rooms support */}
-                        <div>
-                          <p className="text-sm font-medium text-black dark:text-gray-400">Room</p>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                        booking.status === 'CONFIRMED'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                          : booking.status === 'PENDING'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                          : booking.status === 'CANCELLED'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
+                      }`}>
+                        {booking.status}
+                      </span>
+                    </div>
+
+                    {/* Booking Details Grid */}
+                    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {/* Room with name fallback */}
+                      <div>
+                        <p className="text-sm font-medium text-black dark:text-gray-400">Room</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {booking.roomName ?? booking.roomId}{' '}
+                          ({booking.numberOfGuests || 1} guest{booking.numberOfGuests !== 1 ? 's' : ''})
+                        </p>
+                      </div>
+
+                      {/* Dates */}
+                      <div>
+                        <p className="text-sm font-medium text-black dark:text-gray-400">Stay Dates</p>
+                        <div className="flex items-center">
+                          <CalendarIcon className="mr-1 h-4 w-4 text-gray-400" />
                           <p className="font-medium text-gray-900 dark:text-white">
-                            {booking.roomName ?? booking.roomId}{' '}
-                            {/* {booking.numberOfRooms && booking.numberOfRooms > 1 && ` (${booking.numberOfRooms} rooms)`} */}
-                            {' '}({booking.numberOfGuests || 1} guest{booking.numberOfGuests !== 1 ? 's' : ''})
+                            {formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
                           </p>
                         </div>
+                      </div>
 
-                        {/* Dates */}
+                      {/* Total Amount */}
+                      <div>
+                        <p className="text-sm font-medium text-black dark:text-gray-400">Total Amount</p>
+                        <p className="font-bold text-primary">
+                          ₦{Number(booking.totalAmount || 0).toLocaleString()}
+                        </p>
+                      </div>
+
+                      {/* Booking ID */}
+                      <div>
+                        <p className="text-sm font-medium text-black dark:text-gray-400">Booking ID</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          #{booking.id.slice(0, 8).toUpperCase()}
+                        </p>
+                      </div>
+
+                      {/* Booked On */}
+                      <div>
+                        <p className="text-sm font-medium text-black dark:text-gray-400">Booked On</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {formatDateTime(booking.createdAt)}
+                        </p>
+                      </div>
+
+                      {/* Stay Progress - only show if not cancelled */}
+                      {booking.status !== 'CANCELLED' && (
                         <div>
-                          <p className="text-sm font-medium text-black dark:text-gray-400">Stay Dates</p>
-                          <div className="flex items-center">
-                            <CalendarIcon className="mr-1 h-4 w-4 text-gray-400" />
-                            <p className="font-medium text-gray-900 dark:text-white">
-                              {formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Total Amount */}
-                        <div>
-                          <p className="text-sm font-medium text-black dark:text-gray-400">Total Amount</p>
-                          <p className="font-bold text-primary">
-                            ₦{Number(booking.totalAmount || 0).toLocaleString()}
-                          </p>
-                        </div>
-
-                        {/* Booking ID */}
-                        <div>
-                          <p className="text-sm font-medium text-black dark:text-gray-400">Booking ID</p>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            #{booking.id.slice(0, 8).toUpperCase()}
-                          </p>
-                        </div>
-
-                        {/* Booked On (new - shows confirmation/booking creation time) */}
-                        <div className="sm:col-span-2">
-                          <p className="text-sm font-medium text-black dark:text-gray-400">Booked On</p>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {formatDateTime(booking.createdAt)}
-                          </p>
-                        </div>
-
-                        {/* Stay Progress */}
-                        <div className="sm:col-span-2">
                           <p className="mb-1 text-sm font-medium text-black dark:text-gray-400">
                             Stay Progress
                           </p>
@@ -449,17 +471,17 @@ export default function CustomerDashboardPage() {
                             />
                           </div>
                         </div>
-                      </div>
+                      )}
+                    </div>
 
-                      <div className="flex justify-end">
-                        <Link
-                          href={`/customer/bookings/${booking.id}`}
-                          className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </Link>
-                      </div>
+                    <div className="flex justify-end">
+                      <Link
+                        href={`/customer/bookings/${booking.id}`}
+                        className="flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </Link>
                     </div>
                   </div>
                 </div>
