@@ -14,11 +14,15 @@ import {
   ChevronRight,
   Info,
   Check,
-  ArrowRight
+  ArrowRight,
+  Loader2,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import ImageLightbox from '@/components/common/ImageLightbox';
-import { useBookingStore } from '@/lib/hooks/useBookingContext';
+import UnifiedBookingModal from '@/components/booking/UnifiedBookingModal';
+import toast from '@/lib/toast';
 
 // Defining more specific types
 interface Hotel {
@@ -57,21 +61,25 @@ interface RoomDetailClientProps {
   hotel: Hotel;
   room: Room;
   relatedRooms: Room[];
+  isLoggedIn?: boolean;
+  customerId?: string | null;
 }
 
 export default function RoomDetailClient({ 
   hotel, 
   room,
-  relatedRooms
+  relatedRooms,
+  isLoggedIn = false,
+  customerId = null
 }: RoomDetailClientProps) {
   const router = useRouter();
-  const addBooking = useBookingStore((state) => state.addBooking);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
-  const [guests, setGuests] = useState(2); // Aligned default to 2
+  const [guests, setGuests] = useState(2);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   
   // Get today's date and tomorrow's date
   const today = new Date();
@@ -105,39 +113,31 @@ export default function RoomDetailClient({
   };
   
   const handleReservation = () => {
+    // Validate form data
     if (!checkInDate || !checkOutDate || !guests) {
-      alert('Please select check-in date, check-out date and number of guests');
+      toast.error('Please select check-in date, check-out date and number of guests', {
+        title: 'Missing Information'
+      });
       return;
     }
+    
     if (new Date(checkOutDate) <= new Date(checkInDate)) {
-      alert('Check-out date must be after check-in date');
+      toast.error('Check-out date must be after check-in date', {
+        title: 'Invalid Dates'
+      });
       return;
     }
 
-    // Add booking to store
-    const bookingId = `${room.id}-${Date.now()}`;
-    addBooking({
-      id: bookingId,
-      roomId: room.id,
-      roomName: room.name,
-      hotelId: hotel.id,
-      hotelName: hotel.name,
-      checkInDate,
-      checkOutDate,
-      guests,
-      price: room.discountedPrice || room.pricePerNight,
-      bookedAt: new Date().toISOString(),
-    });
+    // Check if guest count exceeds room capacity
+    if (guests > room.capacity) {
+      toast.error(`This room can accommodate maximum ${room.capacity} guests`, {
+        title: 'Too Many Guests'
+      });
+      return;
+    }
 
-    const params = new URLSearchParams({
-      checkInDate,
-      checkOutDate,
-      guests: guests.toString(),
-    });
-
-    router.push(
-      `/hotels/${hotel.id}/book/${room.id}?${params.toString()}`
-    );
+    // Open the unified booking modal
+    setBookingModalOpen(true);
   };
 
   
@@ -432,7 +432,7 @@ export default function RoomDetailClient({
                 onClick={handleReservation}
                 className="flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-center font-medium text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
-                Reserve Now
+                Continue to Book
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               
@@ -457,6 +457,19 @@ export default function RoomDetailClient({
           title={room.name}
         />
       )}
+
+      {/* Unified Booking Modal */}
+      <UnifiedBookingModal
+        isOpen={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        hotel={hotel}
+        room={room}
+        initialCheckInDate={checkInDate}
+        initialCheckOutDate={checkOutDate}
+        initialGuests={guests}
+        isLoggedIn={isLoggedIn}
+        customerId={customerId}
+      />
     </div>
   );
 }

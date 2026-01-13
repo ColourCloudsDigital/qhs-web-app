@@ -280,11 +280,15 @@ export async function POST(request: NextRequest) {
       }
       
       return NextResponse.json({
-        bookingId,
-        totalAmount,
-        paymentRequired: paymentMethod !== 'PAY_AT_HOTEL',
-        nights: priceInfo.nights,
-        message: 'Booking created successfully'
+        success: true,
+        id: bookingId,
+        message: 'Booking created successfully',
+        bookingDetails: {
+          bookingId,
+          totalAmount,
+          nights: priceInfo.nights,
+          paymentRequired: paymentMethod !== 'PAY_AT_HOTEL'
+        }
       });
     } catch (error) {
       await connection.rollback();

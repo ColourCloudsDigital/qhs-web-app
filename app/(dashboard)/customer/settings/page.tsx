@@ -149,19 +149,19 @@ export default function CustomerSettingsPage() {
       }
       
       // Load notification settings
-      const notificationResponse = await fetch('/api/settings/notifications');
+      const notificationResponse = await fetch('/api/notifications');
       if (notificationResponse.ok) {
         const notificationData = await notificationResponse.json();
         setNotifications(prev => ({ ...prev, ...notificationData }));
       }
       
-      // Load privacy settings
+       // Load privacy settings
       const privacyResponse = await fetch('/api/settings/privacy');
-      if (privacyResponse.ok) {
-        const privacyData = await privacyResponse.json();
-        setPrivacy(prev => ({ ...prev, ...privacyData }));
+       if (privacyResponse.ok) {
+         const privacyData = await privacyResponse.json();
+         setPrivacy(prev => ({ ...prev, ...privacyData }));
       }
-      
+
     } catch (error) {
       console.error('Error loading user data:', error);
       setErrorMessage('Failed to load settings. Please refresh the page.');
