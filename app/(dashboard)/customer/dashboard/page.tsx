@@ -24,6 +24,7 @@ import {
   Hotel
 } from 'lucide-react';
 import Image from 'next/image';
+import { Toaster } from 'react-hot-toast';
 
 type Room = {
   id: string;  // Changed from roomId to id to match API response
@@ -721,13 +722,17 @@ export default function CustomerDashboardPage() {
         </Dialog>
       </Transition>
       {/* Success Notification Banner */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-[1000] bg-green-500 text-white p-4 text-center transform transition-transform duration-300 ease-in-out ${
-          showSuccessBanner ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        }}
+      />
         Booking successful!
-        </div>
     </div>
   );
 }

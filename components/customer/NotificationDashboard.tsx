@@ -167,22 +167,6 @@ export default function NotificationDashboard() {
         </div>
       </div>
 
-      {/* Notification Types Breakdown */}
-      <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
-        <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-white">Notifications by Type</h3>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {Object.entries(stats.byType).map(([type, count]) => (
-            <div key={type} className="text-center">
-              <div className={`mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full ${getTypeColor(type as NotificationType)}`}>
-                {getTypeIcon(type as NotificationType)}
-              </div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{count}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{type.toLowerCase()}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Recent Notifications */}
       <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
         <div className="mb-4 flex items-center justify-between">

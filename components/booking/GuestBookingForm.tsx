@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar, CreditCard, Users, AlertCircle, Check, Mail, Phone, User, ChevronRight, Clock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import toast from '@/lib/toast';
 
 // Helper functions
 const isValidEmail = (email: string): boolean => {
@@ -48,8 +49,8 @@ export default function GuestBookingForm({
   const [phone, setPhone] = useState('');
   
   // Booking details
-  const [checkInDate, setCheckInDate] = useState(searchParams?.get('checkIn') || '');
-  const [checkOutDate, setCheckOutDate] = useState(searchParams?.get('checkOut') || '');
+  const [checkInDate, setCheckInDate] = useState('');
+  const [checkOutDate, setCheckOutDate] = useState('');
   const [numberOfGuests, setNumberOfGuests] = useState(initialGuests);
   const [specialRequests, setSpecialRequests] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('PAY_AT_HOTEL');
@@ -65,23 +66,39 @@ export default function GuestBookingForm({
     totalPrice: number;
   } | null>(null);
 
-  // Set dates from URL parameters on component mount
+  // Set dates and booking details from URL parameters on component mount
   useEffect(() => {
     if (searchParams) {
-      const checkIn = searchParams.get('checkIn');
-      const checkOut = searchParams.get('checkOut');
+      const checkIn = searchParams.get('checkInDate');
+      const checkOut = searchParams.get('checkOutDate');
       const guests = searchParams.get('guests');
+      const totalAmount = searchParams.get('totalAmount');
+      const nights = searchParams.get('nights');
+      const urlPricePerNight = searchParams.get('pricePerNight');
+      const urlDiscountedPrice = searchParams.get('discountedPrice');
       
       if (checkIn) setCheckInDate(checkIn);
       if (checkOut) setCheckOutDate(checkOut);
       if (guests) setNumberOfGuests(parseInt(guests, 10));
+      
+      // If we have pre-calculated booking details from the room page, use them
+      if (totalAmount && nights && urlPricePerNight) {
+        setBookingSummary({
+          nights: parseInt(nights, 10),
+          pricePerNight: parseFloat(urlPricePerNight),
+          totalPrice: parseFloat(totalAmount),
+        });
+      }
     }
   }, [searchParams]);
 
   // Calculate booking details when component loads or dates change
   useEffect(() => {
-    calculateBookingDetails();
-  }, [checkInDate, checkOutDate]);
+    // Only calculate if we don't already have pre-calculated summary from URL params
+    if (!bookingSummary && checkInDate && checkOutDate) {
+      calculateBookingDetails();
+    }
+  }, [checkInDate, checkOutDate, bookingSummary]);
 
   // Calculate date ranges and validate dates
   const today = new Date();
@@ -153,10 +170,14 @@ export default function GuestBookingForm({
     if (checkOutDate && new Date(e.target.value) >= new Date(checkOutDate)) {
       setCheckOutDate('');
     }
+    // Clear pre-calculated summary since dates changed
+    setBookingSummary(null);
   };
 
   const handleCheckOutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCheckOutDate(e.target.value);
+    // Clear pre-calculated summary since dates changed
+    setBookingSummary(null);
   };
 
   const validateForm = () => {
@@ -228,6 +249,12 @@ export default function GuestBookingForm({
       setSuccess(true);
       setBookingId(result.id);
       
+      // Show success toast
+      toast.success('Your booking has been confirmed!', {
+        title: 'Booking Successful',
+        description: `Booking reference: ${result.id.substring(0, 8).toUpperCase()}`
+      });
+      
       // Redirect to success page with booking details
       const successParams = new URLSearchParams({
         bookingId: result.id,
@@ -247,7 +274,13 @@ export default function GuestBookingForm({
       
     } catch (err: any) {
       console.error('Error creating booking:', err);
-      setError(err.message || 'Failed to complete booking. Please try again.');
+      const errorMessage = err.message || 'Failed to complete booking. Please try again.';
+      setError(errorMessage);
+      
+      // Show error toast
+      toast.error(errorMessage, {
+        title: 'Booking Failed'
+      });
     } finally {
       setIsLoading(false);
     }
