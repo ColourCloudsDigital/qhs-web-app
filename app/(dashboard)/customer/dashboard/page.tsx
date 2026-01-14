@@ -164,9 +164,9 @@ export default function CustomerDashboardPage() {
 
     return {
       hasAvailability: roomCount > 0,
-      text: roomCount > 0
-        ? `${roomCount} room unit${roomCount !== 1 ? 's' : ''} available • ${capacity} bedspace${capacity !== 1 ? 's' : ''}`
-        : 'No rooms available'
+      roomCount,
+      capacity,
+      text: roomCount > 0 ? 'Available' : 'No rooms available'
     };
   };
 
@@ -500,7 +500,7 @@ export default function CustomerDashboardPage() {
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {hotels.map((hotel) => {
-            const { hasAvailability, text } = getAvailabilityMeta(hotel);
+            const { hasAvailability, roomCount, capacity, text } = getAvailabilityMeta(hotel);
             return (
               <div key={hotel.id} className="rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800">
                 <div className="h-48 w-full overflow-hidden rounded-t-lg bg-gray-300">
@@ -524,24 +524,32 @@ export default function CustomerDashboardPage() {
                     </div>
                     {/* <span className="ml-1 text-sm text-gray-500">{hotel.rating ?? ''}/5</span> */}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-700 dark:text-gray-400">
-                      {text}
-                      {hasAvailability && (
-                        <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                          ✓ Available for booking
-                        </div>
-                      )}
+                  
+                  {/* Availability Info */}
+                  <div className="mb-3 space-y-1">
+                    <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                      <Bed className="mr-1 h-3.5 w-3.5" />
+                      <span>{roomCount} room{roomCount !== 1 ? 's' : ''}</span>
+                      <span className="mx-1">•</span>
+                      <Users className="mr-1 h-3.5 w-3.5" />
+                      <span>{capacity} bed{capacity !== 1 ? 's' : ''}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-primary shadow-none"
-                      onClick={() => handleOpenBooking(hotel.id)}
-                      disabled={!hasAvailability}
-                    >
-                      Book Now
-                    </button>
+                    {hasAvailability && (
+                      <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                        ✓ Available for booking
+                      </div>
+                    )}
                   </div>
+
+                  {/* Book Now Button */}
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary shadow-none w-full"
+                    onClick={() => handleOpenBooking(hotel.id)}
+                    disabled={!hasAvailability}
+                  >
+                    Book Now
+                  </button>
                 </div>
               </div>
             );
@@ -705,9 +713,8 @@ export default function CustomerDashboardPage() {
 
                           <button
                             type="button"
-                            className="btn btn-primary"
+                            className="btn rounded-md bg-primary px-4 py-2 text-center font-medium text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                             onClick={handleCreateBooking}
-                            disabled={bookingSubmitting}
                           >
                             {bookingSubmitting ? 'Booking...' : 'Book Now'}
                           </button>
