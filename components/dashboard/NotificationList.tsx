@@ -101,14 +101,32 @@ export default function NotificationList() {
       }
       
       const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch notifications');
+      }
+      
       const data = await response.json();
       
-      setNotifications(data.notifications);
-      setPagination(data.pagination);
+      setNotifications(data.notifications || []);
+      setPagination({
+        total: data.pagination?.total || 0,
+        page: data.pagination?.page || pageToUse,
+        limit: data.pagination?.limit || pagination.limit,
+        pages: data.pagination?.totalPages || 1
+      });
       setSelectedIds([]);
       setSelectAll(false);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      // Set empty state on error
+      setNotifications([]);
+      setPagination({
+        total: 0,
+        page: 1,
+        limit: pagination.limit,
+        pages: 1
+      });
     } finally {
       setIsLoading(false);
     }
@@ -125,7 +143,7 @@ export default function NotificationList() {
     // and fetch page 1 of results directly to avoid layout/middleware redirects.
     setSelectedStatus(status);
     try {
-      const newUrl = `/dashboard/notifications?page=1&status=${status}&type=${selectedType}`;
+      const newUrl = `/customer/notifications?page=1&status=${status}&type=${selectedType}`;
       window.history.replaceState(null, '', newUrl);
     } catch (e) {
       // ignore history errors in non-browser env (safe-guard)
@@ -139,7 +157,7 @@ export default function NotificationList() {
     // and fetch page 1 of results directly to avoid layout/middleware redirects.
     setSelectedType(type);
     try {
-      const newUrl = `/dashboard/notifications?page=1&status=${selectedStatus}&type=${type}`;
+      const newUrl = `/customer/notifications?page=1&status=${selectedStatus}&type=${type}`;
       window.history.replaceState(null, '', newUrl);
     } catch (e) {
       // ignore history errors in non-browser env (safe-guard)
@@ -149,7 +167,12 @@ export default function NotificationList() {
 
   // Handle pagination
   const handlePageChange = (page: number) => {
-    router.push(`/dashboard/notifications?page=${page}&status=${selectedStatus}&type=${selectedType}`);
+    // Update URL without full page reload
+    const newUrl = `/customer/notifications?page=${page}&status=${selectedStatus}&type=${selectedType}`;
+    window.history.pushState(null, '', newUrl);
+    
+    // Fetch notifications for the new page directly
+    fetchNotifications(page);
   };
 
   // Toggle select all

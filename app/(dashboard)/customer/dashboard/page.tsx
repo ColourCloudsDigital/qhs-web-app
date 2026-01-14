@@ -502,7 +502,7 @@ export default function CustomerDashboardPage() {
           {hotels.map((hotel) => {
             const { hasAvailability, roomCount, capacity, text } = getAvailabilityMeta(hotel);
             return (
-              <div key={hotel.id} className="rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800">
+              <div key={hotel.id} className="flex flex-col rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800">
                 <div className="h-48 w-full overflow-hidden rounded-t-lg bg-gray-300">
                   <img
                     src={hotel.images?.[0] || '/assets/images/hotel-placeholder.jpg'}
@@ -510,41 +510,43 @@ export default function CustomerDashboardPage() {
                     className="h-full w-full object-cover"
                   />
                 </div>
-                <div className="p-4">
-                  <h3 className="mb-1 text-lg font-semibold text-black dark:text-white">{hotel.name}</h3>
-                  <div className="mb-2 flex items-center text-sm text-black dark:text-gray-400">
-                    <IconHome className="mr-1 h-4 w-4" />
-                    {[hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') || 'N/A'}
-                  </div>
-                  <div className="mb-3 flex items-center">
-                    <div className="flex text-yellow-400 dark:text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={i < Math.floor(hotel.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
-                      ))}
+                <div className="flex flex-col flex-grow p-4">
+                  <div className="flex-grow">
+                    <h3 className="mb-1 text-lg font-semibold text-black dark:text-white">{hotel.name}</h3>
+                    <div className="mb-2 flex items-center text-sm text-black dark:text-gray-400">
+                      <IconHome className="mr-1 h-4 w-4" />
+                      {[hotel.city, hotel.state, hotel.country].filter(Boolean).join(', ') || 'N/A'}
                     </div>
-                    {/* <span className="ml-1 text-sm text-gray-500">{hotel.rating ?? ''}/5</span> */}
-                  </div>
-                  
-                  {/* Availability Info */}
-                  <div className="mb-3 space-y-1">
-                    <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
-                      <Bed className="mr-1 h-3.5 w-3.5" />
-                      <span>{roomCount} room{roomCount !== 1 ? 's' : ''}</span>
-                      <span className="mx-1">•</span>
-                      <Users className="mr-1 h-3.5 w-3.5" />
-                      <span>{capacity} bed{capacity !== 1 ? 's' : ''}</span>
-                    </div>
-                    {hasAvailability && (
-                      <div className="text-xs font-medium text-green-600 dark:text-green-400">
-                        ✓ Available for booking
+                    <div className="mb-3 flex items-center">
+                      <div className="flex text-yellow-400 dark:text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className={i < Math.floor(hotel.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
+                        ))}
                       </div>
-                    )}
+                      {/* <span className="ml-1 text-sm text-gray-500">{hotel.rating ?? ''}/5</span> */}
+                    </div>
+                    
+                    {/* Availability Info */}
+                    <div className="mb-3 space-y-1">
+                      <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                        <Bed className="mr-1 h-3.5 w-3.5" />
+                        <span>{roomCount} room{roomCount !== 1 ? 's' : ''}</span>
+                        <span className="mx-1">•</span>
+                        <Users className="mr-1 h-3.5 w-3.5" />
+                        <span>{capacity} bed{capacity !== 1 ? 's' : ''}</span>
+                      </div>
+                      {hasAvailability && (
+                        <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                          ✓ Available for booking
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Book Now Button */}
+                  {/* Book Now Button - Always at bottom */}
                   <button
                     type="button"
-                    className="btn btn-sm btn-primary shadow-none w-full"
+                    className="btn btn-sm btn-primary shadow-none w-full mt-auto"
                     onClick={() => handleOpenBooking(hotel.id)}
                     disabled={!hasAvailability}
                   >
