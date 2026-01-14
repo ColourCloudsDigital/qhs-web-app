@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import { useDispatch, useSelector } from 'react-redux';
 import Link from 'next/link';
@@ -82,6 +82,13 @@ const Sidebar = () => {
         selector?.classList.add('active');
     };
 
+    const handleLinkClick = () => {
+        // Close sidebar on mobile when a link is clicked
+        if (window.innerWidth < 1024 && themeConfig.sidebar) {
+            dispatch(toggleSidebar());
+        }
+    };
+
     return (
         <div className={semidark ? 'dark' : ''}>
             <nav
@@ -119,16 +126,16 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'dashboard' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/">{t('sales')}</Link>
+                                            <Link href="/" onClick={handleLinkClick}>{t('sales')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/analytics">{t('analytics')}</Link>
+                                            <Link href="/analytics" onClick={handleLinkClick}>{t('analytics')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/finance">{t('finance')}</Link>
+                                            <Link href="/finance" onClick={handleLinkClick}>{t('finance')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/crypto">{t('crypto')}</Link>
+                                            <Link href="/crypto" onClick={handleLinkClick}>{t('crypto')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
@@ -142,7 +149,7 @@ const Sidebar = () => {
                             <li className="nav-item">
                                 <ul>
                                     <li className="nav-item">
-                                        <Link href="/apps/chat" className="group">
+                                        <Link href="/apps/chat" className="group" onClick={handleLinkClick}>
                                             <div className="flex items-center">
                                                 <IconMenuChat className="shrink-0 group-hover:!text-primary" />
                                                 <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('chat')}</span>
@@ -150,7 +157,7 @@ const Sidebar = () => {
                                         </Link>
                                     </li>
                                     <li className="nav-item">
-                                        <Link href="/apps/mailbox" className="group">
+                                        <Link href="/apps/mailbox" className="group" onClick={handleLinkClick}>
                                             <div className="flex items-center">
                                                 <IconMenuMailbox className="shrink-0 group-hover:!text-primary" />
                                                 <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('mailbox')}</span>
@@ -158,7 +165,7 @@ const Sidebar = () => {
                                         </Link>
                                     </li>
                                     <li className="nav-item">
-                                        <Link href="/apps/todolist" className="group">
+                                        <Link href="/apps/todolist" className="group" onClick={handleLinkClick}>
                                             <div className="flex items-center">
                                                 <IconMenuTodo className="shrink-0 group-hover:!text-primary" />
                                                 <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('todo_list')}</span>
@@ -166,7 +173,7 @@ const Sidebar = () => {
                                         </Link>
                                     </li>
                                     <li className="nav-item">
-                                        <Link href="/apps/notes" className="group">
+                                        <Link href="/apps/notes" className="group" onClick={handleLinkClick}>
                                             <div className="flex items-center">
                                                 <IconMenuNotes className="shrink-0 group-hover:!text-primary" />
                                                 <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('notes')}</span>
@@ -174,7 +181,7 @@ const Sidebar = () => {
                                         </Link>
                                     </li>
                                     <li className="nav-item">
-                                        <Link href="/apps/scrumboard" className="group">
+                                        <Link href="/apps/scrumboard" className="group" onClick={handleLinkClick}>
                                             <div className="flex items-center">
                                                 <IconMenuScrumboard className="shrink-0 group-hover:!text-primary" />
                                                 <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('scrumboard')}</span>
@@ -182,7 +189,7 @@ const Sidebar = () => {
                                         </Link>
                                     </li>
                                     <li className="nav-item">
-                                        <Link href="/apps/contacts" className="group">
+                                        <Link href="/apps/contacts" className="group" onClick={handleLinkClick}>
                                             <div className="flex items-center">
                                                 <IconMenuContacts className="shrink-0 group-hover:!text-primary" />
                                                 <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('contacts')}</span>
@@ -205,23 +212,23 @@ const Sidebar = () => {
                                         <AnimateHeight duration={300} height={currentMenu === 'invoice' ? 'auto' : 0}>
                                             <ul className="sub-menu text-gray-500">
                                                 <li>
-                                                    <Link href="/apps/invoice/list">{t('list')}</Link>
+                                                    <Link href="/apps/invoice/list" onClick={handleLinkClick}>{t('list')}</Link>
                                                 </li>
                                                 <li>
-                                                    <Link href="/apps/invoice/preview">{t('preview')}</Link>
+                                                    <Link href="/apps/invoice/preview" onClick={handleLinkClick}>{t('preview')}</Link>
                                                 </li>
                                                 <li>
-                                                    <Link href="/apps/invoice/add">{t('add')}</Link>
+                                                    <Link href="/apps/invoice/add" onClick={handleLinkClick}>{t('add')}</Link>
                                                 </li>
                                                 <li>
-                                                    <Link href="/apps/invoice/edit">{t('edit')}</Link>
+                                                    <Link href="/apps/invoice/edit" onClick={handleLinkClick}>{t('edit')}</Link>
                                                 </li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>
 
                                     <li className="nav-item">
-                                        <Link href="/apps/calendar" className="group">
+                                        <Link href="/apps/calendar" className="group" onClick={handleLinkClick}>
                                             <div className="flex items-center">
                                                 <IconMenuCalendar className="shrink-0 group-hover:!text-primary" />
                                                 <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('calendar')}</span>
@@ -251,46 +258,46 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'component' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/components/tabs">{t('tabs')}</Link>
+                                            <Link href="/components/tabs" onClick={handleLinkClick}>{t('tabs')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/accordions">{t('accordions')}</Link>
+                                            <Link href="/components/accordions" onClick={handleLinkClick}>{t('accordions')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/modals">{t('modals')}</Link>
+                                            <Link href="/components/modals" onClick={handleLinkClick}>{t('modals')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/cards">{t('cards')}</Link>
+                                            <Link href="/components/cards" onClick={handleLinkClick}>{t('cards')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/carousel">{t('carousel')}</Link>
+                                            <Link href="/components/carousel" onClick={handleLinkClick}>{t('carousel')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/countdown">{t('countdown')}</Link>
+                                            <Link href="/components/countdown" onClick={handleLinkClick}>{t('countdown')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/counter">{t('counter')}</Link>
+                                            <Link href="/components/counter" onClick={handleLinkClick}>{t('counter')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/sweetalert">{t('sweet_alerts')}</Link>
+                                            <Link href="/components/sweetalert" onClick={handleLinkClick}>{t('sweet_alerts')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/timeline">{t('timeline')}</Link>
+                                            <Link href="/components/timeline" onClick={handleLinkClick}>{t('timeline')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/notifications">{t('notifications')}</Link>
+                                            <Link href="/components/notifications" onClick={handleLinkClick}>{t('notifications')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/media-object">{t('media_object')}</Link>
+                                            <Link href="/components/media-object" onClick={handleLinkClick}>{t('media_object')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/list-group">{t('list_group')}</Link>
+                                            <Link href="/components/list-group" onClick={handleLinkClick}>{t('list_group')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/pricing-table">{t('pricing_tables')}</Link>
+                                            <Link href="/components/pricing-table" onClick={handleLinkClick}>{t('pricing_tables')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/components/lightbox">{t('lightbox')}</Link>
+                                            <Link href="/components/lightbox" onClick={handleLinkClick}>{t('lightbox')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
@@ -311,65 +318,65 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'element' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/elements/alerts">{t('alerts')}</Link>
+                                            <Link href="/elements/alerts" onClick={handleLinkClick}>{t('alerts')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/avatar">{t('avatar')}</Link>
+                                            <Link href="/elements/avatar" onClick={handleLinkClick}>{t('avatar')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/badges">{t('badges')}</Link>
+                                            <Link href="/elements/badges" onClick={handleLinkClick}>{t('badges')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/breadcrumbs">{t('breadcrumbs')}</Link>
+                                            <Link href="/elements/breadcrumbs" onClick={handleLinkClick}>{t('breadcrumbs')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/buttons">{t('buttons')}</Link>
+                                            <Link href="/elements/buttons" onClick={handleLinkClick}>{t('buttons')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/buttons-group">{t('button_groups')}</Link>
+                                            <Link href="/elements/buttons-group" onClick={handleLinkClick}>{t('button_groups')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/color-library">{t('color_library')}</Link>
+                                            <Link href="/elements/color-library" onClick={handleLinkClick}>{t('color_library')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/dropdown">{t('dropdown')}</Link>
+                                            <Link href="/elements/dropdown" onClick={handleLinkClick}>{t('dropdown')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/infobox">{t('infobox')}</Link>
+                                            <Link href="/elements/infobox" onClick={handleLinkClick}>{t('infobox')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/jumbotron">{t('jumbotron')}</Link>
+                                            <Link href="/elements/jumbotron" onClick={handleLinkClick}>{t('jumbotron')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/loader">{t('loader')}</Link>
+                                            <Link href="/elements/loader" onClick={handleLinkClick}>{t('loader')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/pagination">{t('pagination')}</Link>
+                                            <Link href="/elements/pagination" onClick={handleLinkClick}>{t('pagination')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/popovers">{t('popovers')}</Link>
+                                            <Link href="/elements/popovers" onClick={handleLinkClick}>{t('popovers')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/progress-bar">{t('progress_bar')}</Link>
+                                            <Link href="/elements/progress-bar" onClick={handleLinkClick}>{t('progress_bar')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/search">{t('search')}</Link>
+                                            <Link href="/elements/search" onClick={handleLinkClick}>{t('search')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/tooltips">{t('tooltips')}</Link>
+                                            <Link href="/elements/tooltips" onClick={handleLinkClick}>{t('tooltips')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/treeview">{t('treeview')}</Link>
+                                            <Link href="/elements/treeview" onClick={handleLinkClick}>{t('treeview')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/elements/typography">{t('typography')}</Link>
+                                            <Link href="/elements/typography" onClick={handleLinkClick}>{t('typography')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
                             </li>
 
                             <li className="menu nav-item">
-                                <Link href="/charts" className="group">
+                                <Link href="/charts" className="group" onClick={handleLinkClick}>
                                     <div className="flex items-center">
                                         <IconMenuCharts className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('charts')}</span>
@@ -378,7 +385,7 @@ const Sidebar = () => {
                             </li>
 
                             <li className="menu nav-item">
-                                <Link href="/widgets" className="group">
+                                <Link href="/widgets" className="group" onClick={handleLinkClick}>
                                     <div className="flex items-center">
                                         <IconMenuWidgets className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('widgets')}</span>
@@ -387,7 +394,7 @@ const Sidebar = () => {
                             </li>
 
                             <li className="menu nav-item">
-                                <Link href="/font-icons" className="group">
+                                <Link href="/font-icons" className="group" onClick={handleLinkClick}>
                                     <div className="flex items-center">
                                         <IconMenuFontIcons className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('font_icons')}</span>
@@ -396,7 +403,7 @@ const Sidebar = () => {
                             </li>
 
                             <li className="menu nav-item">
-                                <Link href="/dragndrop" className="group">
+                                <Link href="/dragndrop" className="group" onClick={handleLinkClick}>
                                     <div className="flex items-center">
                                         <IconMenuDragAndDrop className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('drag_and_drop')}</span>
@@ -410,7 +417,7 @@ const Sidebar = () => {
                             </h2>
 
                             <li className="menu nav-item">
-                                <Link href="/tables" className="group">
+                                <Link href="/tables" className="group" onClick={handleLinkClick}>
                                     <div className="flex items-center">
                                         <IconMenuTables className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('tables')}</span>
@@ -433,37 +440,37 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'datalabel' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/datatables/basic">{t('basic')}</Link>
+                                            <Link href="/datatables/basic" onClick={handleLinkClick}>{t('basic')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/advanced">{t('advanced')}</Link>
+                                            <Link href="/datatables/advanced" onClick={handleLinkClick}>{t('advanced')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/skin">{t('skin')}</Link>
+                                            <Link href="/datatables/skin" onClick={handleLinkClick}>{t('skin')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/order-sorting">{t('order_sorting')}</Link>
+                                            <Link href="/datatables/order-sorting" onClick={handleLinkClick}>{t('order_sorting')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/multi-column">{t('multi_column')}</Link>
+                                            <Link href="/datatables/multi-column" onClick={handleLinkClick}>{t('multi_column')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/multiple-tables">{t('multiple_tables')}</Link>
+                                            <Link href="/datatables/multiple-tables" onClick={handleLinkClick}>{t('multiple_tables')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/alt-pagination">{t('alt_pagination')}</Link>
+                                            <Link href="/datatables/alt-pagination" onClick={handleLinkClick}>{t('alt_pagination')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/checkbox">{t('checkbox')}</Link>
+                                            <Link href="/datatables/checkbox" onClick={handleLinkClick}>{t('checkbox')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/range-search">{t('range_search')}</Link>
+                                            <Link href="/datatables/range-search" onClick={handleLinkClick}>{t('range_search')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/export">{t('export')}</Link>
+                                            <Link href="/datatables/export" onClick={handleLinkClick}>{t('export')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/datatables/column-chooser">{t('column_chooser')}</Link>
+                                            <Link href="/datatables/column-chooser" onClick={handleLinkClick}>{t('column_chooser')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
@@ -484,49 +491,49 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'forms' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/forms/basic">{t('basic')}</Link>
+                                            <Link href="/forms/basic" onClick={handleLinkClick}>{t('basic')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/input-group">{t('input_group')}</Link>
+                                            <Link href="/forms/input-group" onClick={handleLinkClick}>{t('input_group')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/layouts">{t('layouts')}</Link>
+                                            <Link href="/forms/layouts" onClick={handleLinkClick}>{t('layouts')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/validation">{t('validation')}</Link>
+                                            <Link href="/forms/validation" onClick={handleLinkClick}>{t('validation')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/input-mask">{t('input_mask')}</Link>
+                                            <Link href="/forms/input-mask" onClick={handleLinkClick}>{t('input_mask')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/select2">{t('select2')}</Link>
+                                            <Link href="/forms/select2" onClick={handleLinkClick}>{t('select2')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/touchspin">{t('touchspin')}</Link>
+                                            <Link href="/forms/touchspin" onClick={handleLinkClick}>{t('touchspin')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/checkbox-radio">{t('checkbox_and_radio')}</Link>
+                                            <Link href="/forms/checkbox-radio" onClick={handleLinkClick}>{t('checkbox_and_radio')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/switches">{t('switches')}</Link>
+                                            <Link href="/forms/switches" onClick={handleLinkClick}>{t('switches')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/wizards">{t('wizards')}</Link>
+                                            <Link href="/forms/wizards" onClick={handleLinkClick}>{t('wizards')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/file-upload">{t('file_upload')}</Link>
+                                            <Link href="/forms/file-upload" onClick={handleLinkClick}>{t('file_upload')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/quill-editor">{t('quill_editor')}</Link>
+                                            <Link href="/forms/quill-editor" onClick={handleLinkClick}>{t('quill_editor')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/markdown-editor">{t('markdown_editor')}</Link>
+                                            <Link href="/forms/markdown-editor" onClick={handleLinkClick}>{t('markdown_editor')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/date-picker">{t('date_and_range_picker')}</Link>
+                                            <Link href="/forms/date-picker" onClick={handleLinkClick}>{t('date_and_range_picker')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/forms/clipboard">{t('clipboard')}</Link>
+                                            <Link href="/forms/clipboard" onClick={handleLinkClick}>{t('clipboard')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
@@ -552,10 +559,10 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'users' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/users/profile">{t('profile')}</Link>
+                                            <Link href="/users/profile" onClick={handleLinkClick}>{t('profile')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/users/user-account-settings">{t('account_settings')}</Link>
+                                            <Link href="/users/user-account-settings" onClick={handleLinkClick}>{t('account_settings')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
@@ -576,7 +583,7 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'page' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/pages/knowledge-base">{t('knowledge_base')}</Link>
+                                            <Link href="/pages/knowledge-base" onClick={handleLinkClick}>{t('knowledge_base')}</Link>
                                         </li>
                                         <li>
                                             <Link href="/pages/contact-us-boxed" target="_blank">
@@ -589,7 +596,7 @@ const Sidebar = () => {
                                             </Link>
                                         </li>
                                         <li>
-                                            <Link href="/pages/faq">{t('faq')}</Link>
+                                            <Link href="/pages/faq" onClick={handleLinkClick}>{t('faq')}</Link>
                                         </li>
                                         <li>
                                             <Link href="/pages/coming-soon-boxed" target="_blank">
@@ -708,7 +715,7 @@ const Sidebar = () => {
                             </h2>
 
                             <li className="menu nav-item">
-                                <Link href="https://vristo.sbthemes.com" target="_blank" className="nav-link group">
+                                <Link href="https://vristo.sbthemes.com" target="_blank" className="nav-link group" onClick={handleLinkClick}>
                                     <div className="flex items-center">
                                         <IconMenuDocumentation className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('documentation')}</span>
