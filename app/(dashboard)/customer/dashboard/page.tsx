@@ -721,18 +721,6 @@ export default function CustomerDashboardPage() {
           </div>
         </Dialog>
       </Transition>
-      {/* Success Notification Banner */}
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#10B981',
-            color: '#fff',
-          },
-        }}
-      />
-        Booking successful!
     </div>
   );
 }

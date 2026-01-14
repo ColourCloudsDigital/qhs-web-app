@@ -175,18 +175,7 @@ export default function NotificationCenter() {
     
     // Navigate based on notification type and metadata
     if (notification.metadata) {
-      if (notification.type === NotificationType.BOOKING && notification.metadata.bookingId) {
-        router.push(`/dashboard/bookings/${notification.metadata.bookingId}`);
-      } else if (notification.type === NotificationType.PAYMENT && notification.metadata.paymentId) {
-        router.push(`/dashboard/payments/${notification.metadata.paymentId}`);
-      } else if (notification.type === NotificationType.SUBSCRIPTION && notification.metadata.subscriptionId) {
-        router.push(`/dashboard/subscription`);
-      } else {
-        // Default action for other types
-        router.push(getViewAllPath());
-      }
-    } else {
-      router.push(getViewAllPath());
+      router.push(`${getViewAllPath()}?notificationId=${notification.id}`);
     }
     
     setIsOpen(false);
