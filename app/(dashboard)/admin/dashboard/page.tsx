@@ -19,6 +19,7 @@ import PerformanceList from '@/components/admin/PerformanceList';
 import DataTable from '@/components/admin/DataTable';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import dynamic from 'next/dynamic';
+import AutomatedCheckoutPanel from '@/components/dashboard/AutomatedCheckoutPanel';
 
 // Dynamically import ApexCharts with no SSR to prevent window errors
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
@@ -343,6 +344,12 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Check-out Panel */}
+    <div className="space-y-6">
+      {/* Other dashboard components */}
+      <AutomatedCheckoutPanel />
+    </div>
 
       {/* Chart and Top Performing Hotels */}
       <div className="grid gap-6 lg:grid-cols-3">

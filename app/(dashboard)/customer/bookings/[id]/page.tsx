@@ -29,6 +29,7 @@ interface Booking {
   checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
+  numberOfRooms: number; // Added to track multiple room bookings
   totalAmount: number;
   status: string;
   paymentStatus: string;
@@ -361,12 +362,14 @@ export default function BookingDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">{booking.numberOfGuests} guest{booking.numberOfGuests !== 1 ? 's' : ''}</span>
+                  <Bed className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">
+                    {booking.numberOfRooms || 1} room{(booking.numberOfRooms || 1) !== 1 ? 's' : ''} • {nights} night{nights !== 1 ? 's' : ''}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Bed className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">{nights} night{nights !== 1 ? 's' : ''}</span>
+                  <Users className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">{booking.numberOfGuests} guest{booking.numberOfGuests !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             </div>
@@ -386,14 +389,34 @@ export default function BookingDetailPage() {
           <div className="flex-1">
             <h4 className="text-xl font-medium text-gray-900 mb-1">{booking.room.name}</h4>
             <p className="text-gray-600 mb-2">{booking.room.type}</p>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
               <span>Capacity: {booking.room.capacity} guest{booking.room.capacity !== 1 ? 's' : ''}</span>
               <span>{formatCurrency(booking.room.pricePerNight)} / night</span>
             </div>
+            
+            {/* Show breakdown if multiple rooms */}
+            {booking.numberOfRooms && booking.numberOfRooms > 1 && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between text-gray-700">
+                    <span>{booking.numberOfRooms} rooms × {nights} night{nights !== 1 ? 's' : ''}</span>
+                    <span className="font-medium">{formatCurrency(booking.room.pricePerNight * nights * booking.numberOfRooms)}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    ({formatCurrency(booking.room.pricePerNight)}/night per room)
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-primary">{formatCurrency(booking.totalAmount)}</div>
             <div className="text-sm text-gray-500">Total amount</div>
+            {booking.numberOfRooms && booking.numberOfRooms > 1 && (
+              <div className="text-xs text-gray-400 mt-1">
+                for {booking.numberOfRooms} room{booking.numberOfRooms !== 1 ? 's' : ''}
+              </div>
+            )}
           </div>
         </div>
       </div>

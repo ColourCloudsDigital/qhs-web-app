@@ -288,6 +288,11 @@ export default function CustomerBookingsList({
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Room</p>
                       <p className="font-medium text-gray-900 dark:text-white">
                         {booking.room.name} ({booking.room.type})
+                        {booking.numberOfRooms && booking.numberOfRooms > 1 && (
+                          <span className="ml-2 text-sm text-primary">
+                            × {booking.numberOfRooms} rooms
+                          </span>
+                        )}
                       </p>
                     </div>
                     
