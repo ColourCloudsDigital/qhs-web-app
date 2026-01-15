@@ -24,7 +24,7 @@ import {
   Hotel
 } from 'lucide-react';
 import Image from 'next/image';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 
 type Room = {
   id: string;  // Changed from roomId to id to match API response
@@ -79,7 +79,6 @@ export default function CustomerDashboardPage() {
   const [roomCount, setRoomCount] = useState(1);
   const [specialRequests, setSpecialRequests] = useState('');
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -97,15 +96,6 @@ export default function CustomerDashboardPage() {
       loadHotelsAndBookings();
     }
   }, [refreshTrigger, status, isMounted]);
-
-  useEffect(() => {
-    if (showSuccessBanner) {
-      const timer = setTimeout(() => {
-        setShowSuccessBanner(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccessBanner]);
 
   const loadHotelsAndBookings = async () => {
     try {
@@ -235,6 +225,10 @@ export default function CustomerDashboardPage() {
 
     try {
       setBookingSubmitting(true);
+      
+      // Show loading toast
+      const loadingToast = toast.loading('Creating your booking...');
+      
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -253,24 +247,43 @@ export default function CustomerDashboardPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Booking failed');
+        toast.error(error.error || 'Booking failed. Please try again.', {
+          id: loadingToast,
+          duration: 5000,
+        });
         return;
       }
 
       const successData = await response.json();
+      
+      // Show success toast
+      toast.success(
+        `Booking confirmed! Your booking ID is #${successData.id?.slice(0, 8).toUpperCase()}`,
+        {
+          id: loadingToast,
+          duration: 6000,
+          icon: '🎉',
+        }
+      );
 
-
+      // Close modal and reset form
       setModalOpen(false);
       setSpecialRequests('');
       setCheckInDate('');
       setCheckOutDate('');
       setGuests(1);
       setRoomCount(1);
+      
+      // Reload bookings
       await loadHotelsAndBookings();
-      setShowSuccessBanner(true);
-    } catch (err) {
-      console.error(err);
-      alert('An error occurred while booking');
+    } catch (err: any) {
+      console.error('Booking error:', err);
+      toast.error(
+        err.message || 'An unexpected error occurred while booking. Please try again.',
+        {
+          duration: 5000,
+        }
+      );
     } finally {
       setBookingSubmitting(false);
     }
@@ -280,7 +293,32 @@ export default function CustomerDashboardPage() {
   if (!session) return <div>Please log in to view your dashboard.</div>;
 
   return ( 
-    <div className="space-y-6">
+    <>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 5000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 5000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name}</h1>
@@ -670,11 +708,24 @@ export default function CustomerDashboardPage() {
                             className="form-select"
                             value={guests}
                             onChange={(e) => setGuests(Number(e.target.value))}
+                            disabled={!selectedRoomObj}
                           >
-                            {[1, 2, 3, 4, 5].map((n) => (
-                              <option key={n} value={n}>{n} Guest{n > 1 ? 's' : ''}</option>
-                            ))}
+                            {!selectedRoomObj ? (
+                              <option value={1}>Select a room first</option>
+                            ) : (
+                              Array.from({ length: selectedRoomObj.capacity * (roomCount || 1) }, (_, i) => i + 1).map((n) => (
+                                <option key={n} value={n}>
+                                  {n} Guest{n > 1 ? 's' : ''}
+                                </option>
+                              ))
+                            )}
                           </select>
+                          {selectedRoomObj && (
+                            <p className="mt-1 text-xs text-gray-500">
+                              Max capacity: {selectedRoomObj.capacity * (roomCount || 1)} guest{selectedRoomObj.capacity * (roomCount || 1) > 1 ? 's' : ''} 
+                              {roomCount > 1 && ` (${selectedRoomObj.capacity} per room)`}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label htmlFor="roomCount">Number of Rooms</label>
@@ -682,15 +733,32 @@ export default function CustomerDashboardPage() {
                             id="roomCount"
                             className="form-select"
                             value={roomCount}
-                            onChange={(e) => setRoomCount(Number(e.target.value))}
+                            onChange={(e) => {
+                              const newRoomCount = Number(e.target.value);
+                              setRoomCount(newRoomCount);
+                              // Adjust guests if they exceed new capacity
+                              if (selectedRoomObj && guests > selectedRoomObj.capacity * newRoomCount) {
+                                setGuests(selectedRoomObj.capacity * newRoomCount);
+                              }
+                            }}
+                            disabled={!selectedRoomObj}
                           >
-                            {Array.from(
-                              { length: Math.min(5, selectedRoomObj?.availableUnits ?? 1) },
-                              (_, i) => i + 1
-                            ).map((n) => (
-                              <option key={n} value={n}>{n} Room{n > 1 ? 's' : ''}</option>
-                            ))}
+                            {!selectedRoomObj ? (
+                              <option value={1}>Select a room first</option>
+                            ) : (
+                              Array.from(
+                                { length: Math.min(5, selectedRoomObj?.availableUnits ?? 1) },
+                                (_, i) => i + 1
+                              ).map((n) => (
+                                <option key={n} value={n}>{n} Room{n > 1 ? 's' : ''}</option>
+                              ))
+                            )}
                           </select>
+                          {selectedRoomObj && (
+                            <p className="mt-1 text-xs text-gray-500">
+                              {selectedRoomObj.availableUnits ?? 0} room{(selectedRoomObj.availableUnits ?? 0) !== 1 ? 's' : ''} available
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="mb-5">
@@ -730,6 +798,7 @@ export default function CustomerDashboardPage() {
           </div>
         </Dialog>
       </Transition>
-    </div>
+      </div>
+    </>
   );
 }

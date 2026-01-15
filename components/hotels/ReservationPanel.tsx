@@ -32,6 +32,7 @@ export default function ReservationPanel({
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [guests, setGuests] = useState<number>(2);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [selectedRoomPrice, setSelectedRoomPrice] = useState<number | undefined>(undefined);
   const [selectedRoomDiscountedPrice, setSelectedRoomDiscountedPrice] = useState<number | null>(null);
   const [nights, setNights] = useState<number>(0);
@@ -78,16 +79,23 @@ export default function ReservationPanel({
     if (rooms && rooms.length > 0) {
       const room = selectedRoomId ? rooms.find((r: any) => r.id === selectedRoomId) : rooms[0];
       if (room) {
+        setSelectedRoom(room);
         setSelectedRoomPrice(room.pricePerNight ?? undefined);
         setSelectedRoomDiscountedPrice(room.discountedPrice ?? null);
+        
+        // Adjust guests if they exceed room capacity
+        if (guests > room.capacity) {
+          setGuests(room.capacity);
+        }
         return;
       }
     }
 
     // Fallback to provided prop prices when no rooms available
+    setSelectedRoom(null);
     setSelectedRoomPrice(undefined);
     setSelectedRoomDiscountedPrice(discountedPrice ?? null);
-  }, [rooms, selectedRoomId, discountedPrice]);
+  }, [rooms, selectedRoomId, discountedPrice, guests]);
   
   const handleDateChange = (newRange: DateRange) => {
     setDateRange(newRange);
@@ -242,17 +250,27 @@ export default function ReservationPanel({
                   value={guests}
                   onChange={(e) => setGuests(Number(e.target.value))}
                   className="w-full appearance-none border-0 bg-transparent py-1 text-sm font-medium text-gray-900 focus:outline-none dark:text-white"
+                  disabled={!selectedRoom}
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                    <option key={num} value={num}>
-                      {num} {num === 1 ? 'Guest' : 'Guests'}
-                    </option>
-                  ))}
+                  {!selectedRoom ? (
+                    <option value={2}>Select a room first</option>
+                  ) : (
+                    Array.from({ length: selectedRoom.capacity }, (_, i) => i + 1).map((num) => (
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? 'Guest' : 'Guests'}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
                   <User className="h-4 w-4 text-gray-400" />
                 </div>
               </div>
+              {selectedRoom && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Max capacity: {selectedRoom.capacity} guest{selectedRoom.capacity > 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           </div>
         </div>
