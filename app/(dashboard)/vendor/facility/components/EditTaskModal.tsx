@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { TaskStatus, TaskPriority, TaskCategory, MaintenanceType } from '@/lib/types/enums';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,20 +31,63 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
+import { isBoolean } from 'lodash';
 
-interface Task {
-  taskId: string;
-  title: string;
-  description: string;
-  category: string;
-  priority: string;
-  status: string;
-  due_date: string;
-  maintenance_type: string;
-  estimated_hours?: number;
-  cost_estimate?: number;
-  is_recurring: boolean;
-  hotelId: string;
+// Utility function to clean up modal overlays
+const cleanupModalOverlays = () => {
+  try {
+    // Remove all dialog overlays
+    const overlays = document.querySelectorAll('[data-radix-dialog-overlay]');
+    overlays.forEach(overlay => {
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    });
+    
+    // Remove all dialog contents
+    const contents = document.querySelectorAll('[data-radix-dialog-content]');
+    contents.forEach(content => {
+      if (content.parentNode) {
+        content.parentNode.removeChild(content);
+      }
+    });
+    
+    // Clean up any radix portals that are empty
+    const portals = document.querySelectorAll('[data-radix-portal]');
+    portals.forEach(portal => {
+      if (!portal.hasChildNodes() && portal.parentNode) {
+        portal.parentNode.removeChild(portal);
+      }
+    });
+    
+    // Reset body styles that might be stuck
+    document.body.style.pointerEvents = '';
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    // Remove any lingering backdrop classes
+    document.body.classList.remove('overflow-hidden');
+  } catch (error) {
+    // Silently handle cleanup errors
+    console.warn('Modal cleanup warning:', error);
+  }
+};
+
+interface Staff {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface Room {
+  id: string;
+  name: string;
+  roomNumber?: string;
+  roomId?: string;
+  roomName?: string;
 }
 
 interface EditTaskModalProps {
@@ -64,70 +106,125 @@ export default function EditTaskModal({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const fetchedTaskIdRef = useRef<string | null>(null);
   
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [priority, setPriority] = useState('');
+  const [status, setStatus] = useState('');
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [estimatedHours, setEstimatedHours] = useState<number | undefined>();
   const [maintenanceType, setMaintenanceType] = useState('');
-  const [isRecurring, setIsRecurring] = useState(false);
+  const [isRecurring, setIsRecurring] = useState<boolean>(false);
   const [costEstimate, setCostEstimate] = useState<number | undefined>();
+  const [assignedToId, setAssignedToId] = useState<string>('');
+  const [roomUnitId, setRoomUnitId] = useState<string>('');
+  
+  // Data for dropdowns
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
 
   const handleClose = () => {
     if (!isSubmitting && !isLoading) {
+      cleanupModalOverlays();
       onClose();
+      setTimeout(cleanupModalOverlays, 100);
+    }
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open && !isSubmitting && !isLoading) {
+      handleClose();
     }
   };
 
   // Reset form state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      // Reset form state when modal is closed
-      setTitle('');
-      setDescription('');
-      setCategory('');
-      setPriority('');
-      setDueDate(undefined);
-      setEstimatedHours(undefined);
-      setMaintenanceType('');
-      setIsRecurring(false);
-      setCostEstimate(undefined);
-      setIsLoading(false);
+      const timer = setTimeout(() => {
+        setTitle('');
+        setDescription('');
+        setCategory('');
+        setPriority('');
+        setStatus('');
+        setDueDate(undefined);
+        setEstimatedHours(undefined);
+        setMaintenanceType('');
+        setIsRecurring(false);
+        setCostEstimate(undefined);
+        setAssignedToId('unassigned');
+        setRoomUnitId('no-room');
+        setStaff([]);
+        setRooms([]);
+        setIsLoading(false);
+        fetchedTaskIdRef.current = null;
+      }, 150);
+      
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupModalOverlays();
+      setTimeout(cleanupModalOverlays, 200);
+    };
+  }, []);
+
   // Fetch task data when modal opens
   useEffect(() => {
-    if (isOpen && taskId) {
+    if (isOpen && taskId && fetchedTaskIdRef.current !== taskId) {
       const fetchTaskData = async () => {
         setIsLoading(true);
+        fetchedTaskIdRef.current = taskId;
+        
         try {
-          const response = await fetch(`/api/tasks/${taskId}`);
-          if (!response.ok) {
+          // Fetch task data
+          const taskResponse = await fetch(`/api/tasks/${taskId}`);
+          if (!taskResponse.ok) {
             throw new Error('Failed to fetch task');
           }
-          const task = await response.json();
+          const task = await taskResponse.json();
           
           // Populate form with task data
           setTitle(task.title);
           setDescription(task.description);
           setCategory(task.category);
           setPriority(task.priority);
-          setDueDate(new Date(task.dueDate));
+          setStatus(task.status);
+          setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
           setEstimatedHours(task.estimatedHours);
           setMaintenanceType(task.maintenanceType);
           setIsRecurring(task.isRecurring);
           setCostEstimate(task.costEstimate);
+          setAssignedToId(task.assignedToId || 'unassigned');
+          setRoomUnitId(task.roomUnitId || 'no-room');
+          
+          // Fetch staff and room units for the hotel
+          const [staffResponse, roomUnitsResponse] = await Promise.all([
+            fetch(`/api/hotels/${task.hotelId}/staff`),
+            fetch(`/api/hotels/${task.hotelId}/room-units`)
+          ]);
+          
+          if (staffResponse.ok) {
+            const staffData = await staffResponse.json();
+            setStaff(staffData || []);
+          }
+          
+          if (roomUnitsResponse.ok) {
+            const roomUnitsData = await roomUnitsResponse.json();
+            setRooms(roomUnitsData || []);
+          }
+          
         } catch (error) {
           console.error('Error fetching task:', error);
           toast({
             title: 'Error',
             description: 'Failed to load task data',
           });
-          onClose();
         } finally {
           setIsLoading(false);
         }
@@ -135,7 +232,7 @@ export default function EditTaskModal({
       
       fetchTaskData();
     }
-  }, [isOpen, taskId, onClose, toast]);
+  }, [isOpen, taskId, toast]);
 
   const handleSubmit = async () => {
     if (!title || !description) {
@@ -148,6 +245,8 @@ export default function EditTaskModal({
 
     setIsSubmitting(true);
 
+    console.log("Is recurring: ", isRecurring, ".\n Type: ", typeof(isRecurring))
+
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'PUT',
@@ -159,11 +258,14 @@ export default function EditTaskModal({
           description,
           category,
           priority,
-          dueDate: dueDate?.toISOString(),
-          estimatedHours: estimatedHours || null,
+          status,
+          dueDate: dueDate?.toISOString().split('T')[0], // Format as YYYY-MM-DD
+          estimatedHours: isNaN(Number(estimatedHours)) ?  null : Number(estimatedHours),
           maintenanceType,
-          isRecurring,
-          costEstimate: costEstimate || null,
+          isRecurring: isBoolean(isRecurring) ? isRecurring : false,
+          costEstimate: isNaN(Number(costEstimate)) ? null : Number(costEstimate),
+          assignedToId: assignedToId === 'unassigned' ? null : assignedToId,
+          roomUnitId: roomUnitId === 'no-room' ? null : roomUnitId,
         }),
       });
 
@@ -178,7 +280,7 @@ export default function EditTaskModal({
       });
 
       onTaskUpdated();
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('Error updating task:', error);
       toast({
@@ -191,8 +293,8 @@ export default function EditTaskModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Task</DialogTitle>
           <DialogDescription>
@@ -205,8 +307,14 @@ export default function EditTaskModal({
             <div className="space-y-4">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
             </div>
           ) : (
           <>
@@ -282,33 +390,93 @@ export default function EditTaskModal({
             </div>
           </div>
 
-          {/* Due Date */}
-          <div className="grid gap-2">
-            <label htmlFor="dueDate" className="text-sm font-medium">
-              Due Date
-            </label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !dueDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={dueDate}
-                  onSelect={setDueDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+          {/* Status and Assigned To */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <label htmlFor="status" className="text-sm font-medium">
+                Status
+              </label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="ON_HOLD">On Hold</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <label htmlFor="assignedTo" className="text-sm font-medium">
+                Assign To
+              </label>
+              <Select value={assignedToId} onValueChange={setAssignedToId}>
+                <SelectTrigger id="assignedTo">
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {staff.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.user.name} ({member.user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Room and Due Date */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <label htmlFor="room" className="text-sm font-medium">
+                Room Unit
+              </label>
+              <Select value={roomUnitId} onValueChange={setRoomUnitId}>
+                <SelectTrigger id="room">
+                  <SelectValue placeholder="Select room" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-room">No specific room</SelectItem>
+                  {rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <label htmlFor="dueDate" className="text-sm font-medium">
+                Due Date
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dueDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           {/* Maintenance Type and Hours */}
@@ -370,7 +538,7 @@ export default function EditTaskModal({
             <Checkbox
               id="isRecurring"
               checked={isRecurring}
-              onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
+              onCheckedChange={(checked) => setIsRecurring(checked === true)}
             />
             <label
               htmlFor="isRecurring"

@@ -3,9 +3,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import pool from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { BookingStatus, PaymentStatus, PaymentMethod, UserRole } from '@/lib/types/enums';
+import { BookingStatus, PaymentStatus, PaymentMethod, UserRole, NotificationType } from '@/lib/types/enums';
 import { emailService } from '@/lib/services/email.service';
 import * as bcrypt from 'bcrypt';
+import NotificationService from '@/lib/services/notification.service';
 import { getUserVendorId } from '@/lib/utils/vendor';
 
 export async function POST(request: NextRequest) {
@@ -46,26 +47,32 @@ export async function POST(request: NextRequest) {
     
     const { 
       hotelId, 
-      roomId,
-      guestName,
+      roomUnitId, // Changed from roomId to roomUnitId
+      customerId,
+      guestFirstName, // Changed from guestName to separate fields
+      guestLastName,
       guestEmail,
       guestPhone,
+      guestNationality,
+      guestIdType,
+      guestIdNumber,
       checkInDate,
       checkOutDate,
       numberOfGuests,
       specialRequests,
       paymentMethod,
       totalAmount,
+      amountPaid,
       depositAmount,
       discountAmount = 0,
-      taxAmount = 0,
+      taxAmount = 0
     } = body;
     
     // Validate required fields
-    if (!hotelId || !roomId || !guestName || !checkInDate || !checkOutDate || !paymentMethod || !totalAmount) {
+    if (!hotelId || !roomUnitId || !checkInDate || !checkOutDate || !paymentMethod || !totalAmount) {
       console.log('[API] Missing required fields');
       return NextResponse.json(
-        { error: 'Missing required fields', details: { hotelId, roomId, guestName, checkInDate, checkOutDate, paymentMethod, totalAmount } },
+        { error: 'Missing required fields', details: { hotelId, roomUnitId, checkInDate, checkOutDate, paymentMethod, totalAmount } },
         { status: 400 }
       );
     }
@@ -84,44 +91,36 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Verify room exists and is available
-    const [roomRows] = await pool.query(
-      `SELECT r.* FROM rooms r WHERE r.id = ? AND r.hotelId = ?`,
-      [roomId, hotelId]
+    // Verify room unit exists and get room details
+    const [roomUnitRows] = await pool.query(
+      `SELECT ru.*, r.* FROM room_units ru 
+       JOIN rooms r ON ru.roomId = r.id 
+       WHERE ru.id = ? AND r.hotelId = ?`,
+      [roomUnitId, hotelId]
     );
     
-    const rooms = roomRows as any[];
-    if (rooms.length === 0) {
-      console.log('[API] Room not found or does not belong to this hotel');
+    const roomUnits = roomUnitRows as any[];
+    if (roomUnits.length === 0) {
+      console.log('[API] Room unit not found or does not belong to this hotel');
       return NextResponse.json(
-        { error: 'Room not found or does not belong to this hotel' },
+        { error: 'Room unit not found or does not belong to this hotel' },
         { status: 404 }
       );
     }
     
-    const room = rooms[0];
+    const roomUnit = roomUnits[0];
+    const room = {
+      id: roomUnit.roomId,
+      pricePerNight: roomUnit.pricePerNight
+    };
     
     // Check if the room unit is available
-    const [roomUnitRows] = await pool.query(
-      `SELECT ru.* FROM room_units ru WHERE ru.id = ? AND ru.status = 'available'`,
-      [roomId]
-    );
-    
-    // If we're booking at the room unit level, ensure it's available
-    if (roomUnitRows && (roomUnitRows as any[]).length === 0) {
-      console.log('[API] Room unit is not available');
-      // Let's check if there are any available units for this room type
-      const [availableUnitRows] = await pool.query(
-        `SELECT ru.* FROM room_units ru WHERE ru.roomId = ? AND ru.status = 'available' LIMIT 1`,
-        [room.id]
+    if (roomUnit.status !== 'available') {
+      console.log('[API] Room unit is not available, status:', roomUnit.status);
+      return NextResponse.json(
+        { error: 'Room unit is not available' },
+        { status: 400 }
       );
-      
-      if ((availableUnitRows as any[]).length === 0) {
-        return NextResponse.json(
-          { error: 'No available units for this room' },
-          { status: 400 }
-        );
-      }
     }
     
     // Parse dates
@@ -137,55 +136,77 @@ export async function POST(request: NextRequest) {
     
     console.log(`[API] Room price per night: ${pricePerNight}, Nights: ${nights}, Total: ${calculatedTotalAmount}`);
     
-    // Create customer entry if needed
-    let customerId = uuidv4();
+    // Use provided customerId if available, otherwise create new customer
+    let finalCustomerId = customerId;
     
-    try {
-      // Try to find customer by name and contact details
-      const [existingCustomers] = await pool.query(
-        `SELECT c.id FROM customers c 
-         JOIN users u ON c.userId = u.id 
-         WHERE u.name = ? OR c.phone = ?`,
-        [guestName, guestPhone]
-      );
+    if (!finalCustomerId) {
+      // Create customer entry if needed
+      finalCustomerId = uuidv4();
       
-      if ((existingCustomers as any[]).length > 0) {
-        customerId = (existingCustomers as any[])[0].id;
-        console.log(`[API] Found existing customer: ${customerId}`);
-      } else {
-        // Create new customer
-        const userId = uuidv4();
-        
-        console.log('[API] Creating new user and customer');
-        
-        // Create user
-        await pool.query(
-          `INSERT INTO users (id, name, email, password, role) 
-           VALUES (?, ?, ?, ?, ?)`,
-          [
-            userId, 
-            guestName, 
-            guestEmail || `guest_${Date.now()}@example.com`, 
-            'NOT_A_REAL_PASSWORD', // This should be hashed in production
-            UserRole.CUSTOMER
-          ]
+      try {
+        // Try to find customer by name and contact details
+        const [existingCustomers] = await pool.query(
+          `SELECT c.id FROM customers c 
+           WHERE (c.firstName = ? OR CONCAT(c.firstName, ' ', c.lastName) = ?) AND c.phone = ? AND c.hotelId = ?`,
+          [guestFirstName || '', `${guestFirstName || ''} ${guestLastName || ''}`.trim(), guestPhone || '', hotelId]
         );
         
-        // Create customer
-        await pool.query(
-          `INSERT INTO customers (id, userId, phone, address) 
-           VALUES (?, ?, ?, ?)`,
-          [customerId, userId, guestPhone || '', '']
+        if ((existingCustomers as any[]).length > 0) {
+          finalCustomerId = (existingCustomers as any[])[0].id;
+          console.log(`[API] Found existing customer: ${finalCustomerId}`);
+        } else {
+          // Create new customer
+          const userId = uuidv4();
+          const firstName = guestFirstName || '';
+          const lastName = guestLastName || '';
+          const fullName = `${firstName} ${lastName}`.trim();
+          
+          console.log('[API] Creating new user and customer');
+          
+          // Create user if email is provided
+          if (guestEmail) {
+            await pool.query(
+              `INSERT INTO users (id, name, firstName, lastName, email, password, role) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [
+                userId, 
+                fullName, 
+                firstName,
+                lastName || null,
+                guestEmail, 
+                'NOT_SET', // Password will be set when user registers
+                UserRole.CUSTOMER
+              ]
+            );
+          }
+          
+          // Create customer
+          await pool.query(
+            `INSERT INTO customers (id, firstName, lastName, userId, hotelId, phone, address, nationality, idType, idNumber) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              finalCustomerId, 
+              firstName, 
+              lastName || null, 
+              guestEmail ? userId : null, 
+              hotelId, 
+              guestPhone || '', 
+              '', 
+              guestNationality || null,
+              guestIdType || null,
+              guestIdNumber || null
+            ]
+          );
+          
+          console.log(`[API] Created new customer with ID: ${finalCustomerId}`);
+        }
+      } catch (error) {
+        console.error('[API] Error creating/finding customer:', error);
+        return NextResponse.json(
+          { error: 'Failed to create customer record' },
+          { status: 500 }
         );
-        
-        console.log(`[API] Created new customer with ID: ${customerId}`);
       }
-    } catch (error) {
-      console.error('[API] Error creating/finding customer:', error);
-      return NextResponse.json(
-        { error: 'Failed to create customer record' },
-        { status: 500 }
-      );
     }
     
     // Create booking
@@ -203,93 +224,71 @@ export async function POST(request: NextRequest) {
         // Create booking
         await connection.query(
           `INSERT INTO bookings (
+            id,
             hotelId,
-            roomId,
-            guestName,
-            guestEmail,
-            guestPhone,
+            roomUnitId,
+            customerId,
             checkInDate,
             checkOutDate,
             numberOfGuests,
-            specialRequests,
-            status,
             totalAmount,
-            depositAmount,
-            discountAmount,
-            taxAmount,
-            bookingType,
-            createdBy
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            status,
+            paymentStatus,
+            specialRequests,
+            createdAt,
+            updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            bookingId,
             hotelId,
-            roomId,
-            guestName,
-            guestEmail || null,
-            guestPhone || null,
+            roomUnitId,
+            finalCustomerId,
             checkInDateObj,
             checkOutDateObj,
             numberOfGuests || 1,
-            specialRequests || null,
-            BookingStatus.CONFIRMED,
             calculatedTotalAmount,
-            depositAmount || 0,
-            discountAmount,
-            taxAmount,
-            'WALK_IN',
-            session.user.id
+            BookingStatus.CONFIRMED,
+            PaymentStatus.COMPLETED,
+            specialRequests || null,
+            now,
+            now
           ]
         );
         
         console.log(`[API] Created booking with ID: ${bookingId}`);
         
         // Create payment record
+        const paymentId = uuidv4();
         await connection.query(
           `INSERT INTO payments (
+            id,
             bookingId,
             amount,
             paymentMethod,
             status,
-            createdBy
-          ) VALUES (?, ?, ?, ?, ?)`,
+            createdAt,
+            updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
+            paymentId,
             bookingId,
-            depositAmount || calculatedTotalAmount,
+            amountPaid || calculatedTotalAmount,
             paymentMethod,
             PaymentStatus.COMPLETED,
-            session.user.id
+            now,
+            now
           ]
         );
         
         console.log(`[API] Created payment record with ID: ${bookingId}`);
         
-        // Update room unit status if applicable
-        if (roomUnitRows && (roomUnitRows as any[]).length > 0) {
-          const roomUnit = (roomUnitRows as any[])[0];
-          
-          await connection.query(
-            `UPDATE room_units SET status = 'occupied', currentBookingId = ? WHERE id = ?`,
-            [bookingId, roomUnit.id]
-          );
-          
-          console.log(`[API] Updated room unit status to occupied: ${roomUnit.id}`);
-        } else {
-          // Find an available room unit and update it
-          const [availableUnitRows] = await pool.query(
-            `SELECT ru.* FROM room_units ru WHERE ru.roomId = ? AND ru.status = 'available' LIMIT 1`,
-            [room.id]
-          );
-          
-          if ((availableUnitRows as any[]).length > 0) {
-            const roomUnit = (availableUnitRows as any[])[0];
-            
-            await connection.query(
-              `UPDATE room_units SET status = 'occupied', currentBookingId = ? WHERE id = ?`,
-              [bookingId, roomUnit.id]
-            );
-            
-            console.log(`[API] Updated room unit status to occupied: ${roomUnit.id}`);
-          }
-        }
+        // Update room unit status
+        await connection.query(
+          `UPDATE room_units SET status = 'occupied', currentBookingId = ? WHERE id = ?`,
+          [bookingId, roomUnitId]
+        );
+        
+        console.log(`[API] Updated room unit status to occupied: ${roomUnitId}`);
         
         // Issue keycard if requested
         if (specialRequests && specialRequests.includes('issueKeycard')) {
@@ -316,7 +315,7 @@ export async function POST(request: NextRequest) {
           try {
             await emailService.sendBookingConfirmation({
               to: guestEmail,
-              guestName: guestName,
+              guestName: `${guestFirstName} ${guestLastName}`.trim(),
               bookingDetails: {
                 id: bookingId,
                 checkInDate: checkInDateObj,
@@ -336,6 +335,43 @@ export async function POST(request: NextRequest) {
         // Commit transaction
         await connection.commit();
         
+        // Create notification for new booking
+        try {
+          const customerName = `${guestFirstName} ${guestLastName || ''}`.trim();
+          await NotificationService.notifyBookingCreated(
+            session.user.id,
+            bookingId,
+            customerName,
+            hotelRows[0].name,
+            roomUnit.roomNumber,
+            session.user.id
+          );
+          
+          // Also notify hotel staff if this is a vendor booking
+          if (session.user.role === UserRole.VENDOR) {
+            const hotelStaff = await NotificationService.getHotelStaff(hotelId);
+            if (hotelStaff.length > 0) {
+              await NotificationService.createBulkNotifications(
+                hotelStaff,
+                {
+                  title: 'New Walk-in Booking',
+                  content: `New walk-in booking created for ${customerName} in room ${roomUnit.roomNumber}`,
+                  type: 'BOOKING',
+                  senderId: session.user.id,
+                  metadata: {
+                    bookingId,
+                    action: 'created',
+                    entityType: 'booking'
+                  }
+                }
+              );
+            }
+          }
+        } catch (notificationError) {
+          console.error('[API] Failed to create booking notification:', notificationError);
+          // Don't fail the booking if notification fails
+        }
+        
         // Return success response
         return NextResponse.json({
           success: true,
@@ -344,15 +380,15 @@ export async function POST(request: NextRequest) {
           booking: {
             id: bookingId,
             hotelId,
-            roomId: room.id,
-            customerId,
+            roomUnitId: roomUnitId,
+            customerId: finalCustomerId,
             checkInDate: checkInDateObj,
             checkOutDate: checkOutDateObj,
             numberOfGuests: numberOfGuests || 1,
             totalAmount: calculatedTotalAmount,
             status: BookingStatus.CONFIRMED,
             paymentStatus: PaymentStatus.COMPLETED,
-            amountPaid: depositAmount || calculatedTotalAmount
+            amountPaid: amountPaid || calculatedTotalAmount
           }
         });
       } catch (error) {

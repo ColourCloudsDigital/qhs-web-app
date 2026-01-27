@@ -45,15 +45,14 @@ export async function GET(
     let query = `
       SELECT 
         r.*,
-        rt.name as roomTypeName,
-        rt.description as roomTypeDescription,
-        rt.basePrice as roomTypeBasePrice,
+        r.type as roomTypeName,
+        r.description as roomTypeDescription,
+        r.pricePerNight as roomTypeBasePrice,
         COUNT(ru.id) as totalUnits,
         SUM(CASE WHEN ru.status = 'available' THEN 1 ELSE 0 END) as availableUnits
       FROM rooms r
-      LEFT JOIN room_types rt ON r.roomTypeId = rt.id
       LEFT JOIN room_units ru ON r.id = ru.roomId
-      WHERE r.hotelId = ? AND r.isActive = 1
+      WHERE r.hotelId = ? AND r.status = 'active'
     `;
 
     const queryParams = [hotelId];
@@ -63,9 +62,9 @@ export async function GET(
       query = `
         SELECT 
           r.*,
-          rt.name as roomTypeName,
-          rt.description as roomTypeDescription,
-          rt.basePrice as roomTypeBasePrice,
+          r.type as roomTypeName,
+          r.description as roomTypeDescription,
+          r.pricePerNight as roomTypeBasePrice,
           COUNT(ru.id) as totalUnits,
           COUNT(ru.id) - COALESCE(
             (
@@ -79,9 +78,8 @@ export async function GET(
             ), 0
           ) as availableUnits
         FROM rooms r
-        LEFT JOIN room_types rt ON r.roomTypeId = rt.id
         LEFT JOIN room_units ru ON r.id = ru.roomId
-        WHERE r.hotelId = ? AND r.isActive = 1
+        WHERE r.hotelId = ? AND r.status = 'active'
       `;
 
       // placeholders correspond to the overlap check: desiredCheckOut, desiredCheckIn, hotelId

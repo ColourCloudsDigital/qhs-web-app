@@ -133,7 +133,14 @@ const DashboardSidebar = ({
   }, [effectiveRole, session]);
   
   // Get menu items based on effective role and modules
-  const menuItems = useMemo(() => getMenuItems(effectiveRole, modules), [effectiveRole, modules]);
+  const menuItems = useMemo(() => {
+    if (effectiveRole === UserRole.STAFF) {
+      // For staff, we need to get permissions from context
+      // This will be handled by the StaffSidebar component
+      return [];
+    }
+    return getMenuItems(effectiveRole, modules);
+  }, [effectiveRole, modules]);
   
   // Get logo based on effective role and theme
   const logoPath = useMemo(() => getLogoBySite(effectiveRole, isDarkMode), [effectiveRole, isDarkMode]);

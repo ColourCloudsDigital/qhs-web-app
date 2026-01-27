@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { bookingService } from '@/services/booking.service';
+import { getUserVendorId } from '@/lib/utils/vendor';
 
 export async function GET(
   request: NextRequest,
@@ -19,10 +20,19 @@ export async function GET(
     const vendorId = params.vendorId;
 
     // Only allow if the user is a vendor with this ID or a super admin
-    if (
-      session.user.role !== 'SUPER_ADMIN' && 
-      (session.user.role !== 'VENDOR' || session.user.vendorId !== vendorId)
-    ) {
+    if (session.user.role === 'VENDOR') {
+      // Use the vendor utility to get vendor ID
+      const { vendorId: userVendorId } = await getUserVendorId(session);
+      
+      if (!userVendorId) {
+        console.error('No vendor ID found for user:', session.user.id);
+        return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
+      }
+      
+      if (userVendorId !== vendorId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    } else if (session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

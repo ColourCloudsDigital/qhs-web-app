@@ -175,7 +175,54 @@ export default function NotificationCenter() {
     
     // Navigate based on notification type and metadata
     if (notification.metadata) {
-      router.push(`${getViewAllPath()}?notificationId=${notification.id}`);
+      if (notification.type === 'BOOKING' && notification.metadata.bookingId) {
+        if (session?.user?.role === 'STAFF') {
+          router.push(`/staff/bookings/${notification.metadata.bookingId}`);
+        } else if (session?.user?.role === 'VENDOR') {
+          router.push(`/vendor/bookings/${notification.metadata.bookingId}`);
+        } else {
+          router.push(`/dashboard/bookings/${notification.metadata.bookingId}`);
+        }
+      } else if (notification.type === 'PAYMENT' && notification.metadata.paymentId) {
+        if (session?.user?.role === 'STAFF') {
+          router.push(`/staff/payments/${notification.metadata.paymentId}`);
+        } else if (session?.user?.role === 'VENDOR') {
+          router.push(`/vendor/payments/${notification.metadata.paymentId}`);
+        } else {
+          router.push(`/dashboard/payments/${notification.metadata.paymentId}`);
+        }
+      } else if (notification.type === 'MAINTENANCE' && notification.metadata.taskId) {
+        if (session?.user?.role === 'STAFF') {
+          router.push(`/staff/tasks/${notification.metadata.taskId}`);
+        } else if (session?.user?.role === 'VENDOR') {
+          router.push(`/vendor/facility/tasks/${notification.metadata.taskId}`);
+        } else {
+          router.push(`/admin/tasks/${notification.metadata.taskId}`);
+        }
+      } else if (notification.type === 'SUBSCRIPTION' && notification.metadata.subscriptionId) {
+        if (session?.user?.role === 'VENDOR') {
+          router.push(`/vendor/subscription`);
+        } else {
+          router.push(`/dashboard/subscription`);
+        }
+      } else {
+        // Default action for other types
+        if (session?.user?.role === 'STAFF') {
+          router.push(`/staff/notifications`);
+        } else if (session?.user?.role === 'VENDOR') {
+          router.push(`/vendor/notifications`);
+        } else {
+          router.push(`/admin/notifications`);
+        }
+      }
+    } else {
+      if (session?.user?.role === 'STAFF') {
+        router.push(`/staff/notifications`);
+      } else if (session?.user?.role === 'VENDOR') {
+        router.push(`/vendor/notifications`);
+      } else {
+        router.push(`/admin/notifications`);
+      }
     }
     
     setIsOpen(false);
@@ -363,15 +410,23 @@ export default function NotificationCenter() {
           <div className="border-t border-gray-200 p-2 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <Link
-                href={getViewAllPath()}
+                href={
+                  session?.user?.role === 'STAFF' ? '/staff/notifications' : 
+                  session?.user?.role === 'VENDOR' ? '/vendor/notifications' : 
+                  '/admin/notifications'
+                }
                 className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                 onClick={() => setIsOpen(false)}
               >
                 View all notifications
                 <ChevronDown className="ml-1 inline h-3 w-3 transform rotate-270" />
               </Link>
-              <button
-                onClick={() => setIsSettingsOpen(true)}
+              <Link
+                href={
+                  session?.user?.role === 'STAFF' ? '/staff/notifications/settings' : 
+                  session?.user?.role === 'VENDOR' ? '/vendor/notifications/settings' : 
+                  '/admin/notifications/settings'
+                }
                 className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
               >
                 <Settings className="h-3 w-3" />

@@ -5,6 +5,7 @@ import { HotelService } from '@/services/hotels';
 import { UserRole } from '@/lib/types/enums';
 import pool from '@/lib/db';
 import { getUserVendorId } from '@/lib/utils/vendor';
+import NotificationService from '@/lib/services/notification.service';
 
 export async function GET(
   request: Request,
@@ -19,8 +20,9 @@ export async function GET(
     
     // Get vendor id
     const { vendorId } = await getUserVendorId(session);
-      if (!vendorId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!vendorId) {
+      console.error('No vendor ID found for user:', session.user.id);
+      return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
     }
 
     const { hotelId } = params;
@@ -31,7 +33,7 @@ export async function GET(
         h.*,
         COUNT(DISTINCT r.id) as totalRooms,
         COUNT(DISTINCT ru.id) as totalUnits,
-        SUM(CASE WHEN ru.status = 'available' THEN 1 ELSE 0 END) as availableUnits
+        COUNT(DISTINCT CASE WHEN ru.status = 'available' THEN ru.id END) as availableUnits
       FROM hotels h
       LEFT JOIN rooms r ON h.id = r.hotelId
       LEFT JOIN room_units ru ON r.id = ru.roomId
@@ -62,31 +64,17 @@ export async function GET(
         [hotelId]
       );
       
-    // Fetch policies for the hotel
-    const [policyRows]: any = await pool.query(
-      `SELECT 
-        id,
-        type,
-        description,
-        isActive
-      FROM hotel_policies
-      WHERE hotelId = ?
-      ORDER BY type ASC`,
-        [hotelId]
-      );
-      
-    // Fetch room types for the hotel
+    // Fetch room types for the hotel - using rooms table directly since room_types doesn't exist
     const [roomTypeRows]: any = await pool.query(
       `SELECT DISTINCT
-        rt.id,
-        rt.name,
-        rt.description,
-        rt.basePrice,
+        r.type as id,
+        r.type as name,
+        r.description,
+        r.pricePerNight as basePrice,
         COUNT(r.id) as roomCount
-      FROM room_types rt
-      JOIN rooms r ON r.roomTypeId = rt.id
+      FROM rooms r
       WHERE r.hotelId = ?
-      GROUP BY rt.id`,
+      GROUP BY r.type`,
       [hotelId]
     );
 
@@ -100,17 +88,19 @@ export async function GET(
       FROM hotels h
       LEFT JOIN rooms r ON h.id = r.hotelId
       LEFT JOIN room_units ru ON r.id = ru.roomId
-      LEFT JOIN bookings b ON ru.currentBookingId = b.id
-      WHERE h.id = ? AND b.status NOT IN ('CANCELED', 'COMPLETED')`,
+      LEFT JOIN bookings b ON ru.id = b.roomUnitId AND b.status IN ('CONFIRMED', 'CHECKED_IN')
+      WHERE h.id = ?`,
       [hotelId]
     );
 
-      return NextResponse.json({ 
-      ...hotel,
-      amenities: amenityRows,
-      policies: policyRows,
-      roomTypes: roomTypeRows,
-      stats: statsRows[0]
+    return NextResponse.json({ 
+      hotel: {
+        ...hotel,
+        amenities: amenityRows,
+        policies: [], // Empty array since hotel_policies table doesn't exist
+        roomTypes: roomTypeRows,
+        stats: statsRows[0]
+      }
     });
   } catch (error) {
     console.error('Error fetching hotel details:', error);
@@ -189,6 +179,42 @@ export async function PUT(
     
     // Update hotel
     const updatedHotel = await HotelService.updateHotel(hotelId, data);
+    
+    // Create notification for hotel update
+    try {
+      const hotel = (hotels as any[])[0];
+      const changes = Object.keys(data).filter(key => key !== 'amenities' && key !== 'images').join(', ');
+      
+      await NotificationService.notifyHotelUpdated(
+        session.user.id,
+        hotelId,
+        hotel.name,
+        changes || 'hotel information',
+        session.user.id
+      );
+      
+      // Notify hotel staff if any
+      const staffUsers = await NotificationService.getHotelStaff(hotelId);
+      if (staffUsers.length > 0) {
+        await NotificationService.createBulkNotifications(
+          staffUsers.filter(id => id !== session.user.id), // Don't notify the user who made the change
+          {
+            title: 'Hotel Information Updated',
+            content: `${hotel.name} information has been updated: ${changes || 'hotel information'}`,
+            type: 'SYSTEM' as any,
+            senderId: session.user.id,
+            metadata: {
+              hotelId,
+              action: 'updated',
+              entityType: 'hotel'
+            }
+          }
+        );
+      }
+    } catch (notificationError) {
+      console.error('Error creating hotel update notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
     
     return NextResponse.json({ hotel: updatedHotel });
   } catch (error) {
@@ -269,6 +295,46 @@ export async function DELETE(
     
     // Delete the hotel using HotelService
     await HotelService.deleteHotel(hotelId);
+    
+    // Create notification for hotel deletion
+    try {
+      const hotel = (hotels as any[])[0];
+      
+      await NotificationService.createNotification({
+        title: 'Hotel Deleted',
+        content: `Hotel "${hotel.name}" has been deleted`,
+        type: 'SYSTEM' as any,
+        userId: session.user.id,
+        senderId: session.user.id,
+        metadata: {
+          hotelId,
+          action: 'deleted',
+          entityType: 'hotel'
+        }
+      });
+      
+      // Notify hotel staff if any
+      const staffUsers = await NotificationService.getHotelStaff(hotelId);
+      if (staffUsers.length > 0) {
+        await NotificationService.createBulkNotifications(
+          staffUsers.filter(id => id !== session.user.id),
+          {
+            title: 'Hotel Deleted',
+            content: `Hotel "${hotel.name}" has been deleted`,
+            type: 'SYSTEM' as any,
+            senderId: session.user.id,
+            metadata: {
+              hotelId,
+              action: 'deleted',
+              entityType: 'hotel'
+            }
+          }
+        );
+      }
+    } catch (notificationError) {
+      console.error('Error creating hotel deletion notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {

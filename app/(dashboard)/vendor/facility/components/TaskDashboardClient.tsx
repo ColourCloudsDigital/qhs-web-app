@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TaskStatus, TaskPriority, TaskCategory } from '@/lib/types/enums';
 import { ChevronDown, Plus, Filter, RefreshCw } from 'lucide-react';
@@ -52,17 +52,22 @@ export default function TaskDashboardClient({
   const searchParams = useSearchParams();
   
   // Get hotelId from query params or use the first hotel
-  const initialHotelId = searchParams.get('hotelId') || hotels[0]?.id;
+  const currentHotelIdFromParams = useMemo(() => {
+    return searchParams.get('hotelId') || hotels[0]?.id;
+  }, [searchParams, hotels]);
   
-  const [selectedHotelId, setSelectedHotelId] = useState<string>(initialHotelId);
+  const [selectedHotelId, setSelectedHotelId] = useState<string>(currentHotelIdFromParams);
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(
-    hotels.find(h => h.id === initialHotelId) || null
+    hotels.find(h => h.id === currentHotelIdFromParams) || null
   );
   
   const [stats, setStats] = useState<TaskStats>(initialStats);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  
+  // Ref to track URL updates to prevent infinite loops
+  const lastUrlUpdateRef = useRef<string | null>(null);
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState<TaskStatus | null>(null);
@@ -87,13 +92,40 @@ export default function TaskDashboardClient({
     }
   }, [selectedHotelId]);
   
+  // Effect to fetch stats when hotel changes
   useEffect(() => {
     if (selectedHotelId) {
-      fetchTaskStats();
-      // Update URL
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('hotelId', selectedHotelId);
-      router.push(`/vendor/facility/tasks?${params.toString()}`);
+      const fetchStats = async () => {
+        setIsLoading(true);
+        try {
+          const response = await fetch(`/api/tasks/stats?hotelId=${selectedHotelId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setStats(data);
+          }
+        } catch (error) {
+          console.error('Error fetching task stats:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      fetchStats();
+    }
+  }, [selectedHotelId]);
+  
+  // Effect to update URL when hotel changes (separate from stats fetching)
+  useEffect(() => {
+    if (selectedHotelId && lastUrlUpdateRef.current !== selectedHotelId) {
+      lastUrlUpdateRef.current = selectedHotelId;
+      
+      // Update URL without causing re-render
+      const currentParams = new URLSearchParams(window.location.search);
+      currentParams.set('hotelId', selectedHotelId);
+      const newUrl = `/vendor/facility/tasks?${currentParams.toString()}`;
+      
+      // Use replace to avoid adding to history
+      window.history.replaceState({}, '', newUrl);
       
       // Update selected hotel object
       const hotel = hotels.find(h => h.id === selectedHotelId);
@@ -101,7 +133,7 @@ export default function TaskDashboardClient({
         setSelectedHotel(hotel);
       }
     }
-  }, [selectedHotelId, fetchTaskStats, hotels, router, searchParams]);
+  }, [selectedHotelId, hotels]);
   
   const handleHotelChange = (hotelId: string) => {
     setSelectedHotelId(hotelId);

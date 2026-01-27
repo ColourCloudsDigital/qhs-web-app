@@ -31,12 +31,41 @@ import DeleteTaskModal from './DeleteTaskModal';
 import ViewTaskModal from './ViewTaskModal';
 import EditTaskModal from './EditTaskModal';
 
+// Utility function to clean up modal overlays
+const cleanupModalOverlays = () => {
+  // Remove all dialog overlays
+  const overlays = document.querySelectorAll('[data-radix-dialog-overlay]');
+  overlays.forEach(overlay => overlay.remove());
+  
+  // Remove all dialog contents
+  const contents = document.querySelectorAll('[data-radix-dialog-content]');
+  contents.forEach(content => content.remove());
+  
+  // Clean up any radix portals that are empty
+  const portals = document.querySelectorAll('[data-radix-portal]');
+  portals.forEach(portal => {
+    if (!portal.hasChildNodes()) {
+      portal.remove();
+    }
+  });
+  
+  // Reset body styles that might be stuck
+  document.body.style.pointerEvents = '';
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  
+  // Remove any lingering backdrop classes
+  document.body.classList.remove('overflow-hidden');
+};
+
 interface TaskActionsMenuProps {
   taskId: string;
   taskStatus: TaskStatus;
   taskTitle: string;
   onTaskUpdate: () => void;
 }
+
+type ModalType = 'view' | 'edit' | 'status' | 'assign' | 'delete' | null;
 
 export default function TaskActionsMenu({
   taskId,
@@ -46,14 +75,28 @@ export default function TaskActionsMenu({
 }: TaskActionsMenuProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+  // Single modal state to prevent conflicts
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
+  
+  const closeAllModals = () => {
+    setActiveModal(null);
+    // Force cleanup of any lingering overlays
+    cleanupModalOverlays();
+    setTimeout(cleanupModalOverlays, 100);
+  };
+  
+  const openModal = (modalType: ModalType) => {
+    // Close any existing modal first
+    closeAllModals();
+    // Small delay to ensure previous modal is fully closed
+    setTimeout(() => {
+      setActiveModal(modalType);
+    }, 150);
+  };
   
   const handleDelete = () => {
-    setIsDeleteModalOpen(true);
+    openModal('delete');
   };
   
   const handleDuplicate = async () => {
@@ -85,18 +128,9 @@ export default function TaskActionsMenu({
     }
   };
   
-  const handleStatusUpdate = (success: boolean) => {
-    setIsStatusDialogOpen(false);
-    if (success) {
-      onTaskUpdate();
-    }
-  };
-  
-  const handleAssignmentUpdate = (success: boolean) => {
-    setIsAssignDialogOpen(false);
-    if (success) {
-      onTaskUpdate();
-    }
+  const handleModalSuccess = () => {
+    closeAllModals();
+    onTaskUpdate();
   };
   
   return (
@@ -111,24 +145,24 @@ export default function TaskActionsMenu({
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           
-          <DropdownMenuItem onClick={() => setIsViewModalOpen(true)}>
+          <DropdownMenuItem onClick={() => openModal('view')}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </DropdownMenuItem>
           
-          <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
+          <DropdownMenuItem onClick={() => openModal('edit')}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit Task
           </DropdownMenuItem>
           
           <DropdownMenuSeparator />
           
-          <DropdownMenuItem onClick={() => setIsStatusDialogOpen(true)}>
+          <DropdownMenuItem onClick={() => openModal('status')}>
             <Clock className="mr-2 h-4 w-4" />
             Update Status
           </DropdownMenuItem>
           
-          <DropdownMenuItem onClick={() => setIsAssignDialogOpen(true)}>
+          <DropdownMenuItem onClick={() => openModal('assign')}>
             <User className="mr-2 h-4 w-4" />
             Assign Task
           </DropdownMenuItem>
@@ -148,57 +182,48 @@ export default function TaskActionsMenu({
       </DropdownMenu>
       
       <UpdateTaskStatusDialog
-        isOpen={isStatusDialogOpen}
-        onClose={() => setIsStatusDialogOpen(false)}
+        isOpen={activeModal === 'status'}
+        onClose={closeAllModals}
         taskId={taskId}
         currentStatus={taskStatus}
-        onStatusUpdate={handleStatusUpdate}
+        onStatusUpdate={(success) => {
+          if (success) handleModalSuccess();
+          else closeAllModals();
+        }}
       />
       
       <AssignTaskDialog
-        isOpen={isAssignDialogOpen}
-        onClose={() => setIsAssignDialogOpen(false)}
+        isOpen={activeModal === 'assign'}
+        onClose={closeAllModals}
         taskId={taskId}
-        onAssigned={handleAssignmentUpdate}
+        onAssigned={(success) => {
+          if (success) handleModalSuccess();
+          else closeAllModals();
+        }}
       />
       
       <DeleteTaskModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        isOpen={activeModal === 'delete'}
+        onClose={closeAllModals}
         taskId={taskId}
         taskTitle={taskTitle}
-        onTaskDeleted={() => {
-          setIsDeleteModalOpen(false);
-          onTaskUpdate();
-        }}
+        onTaskDeleted={handleModalSuccess}
       />
 
       <ViewTaskModal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
+        isOpen={activeModal === 'view'}
+        onClose={closeAllModals}
         taskId={taskId}
-        onEdit={() => {
-          setIsViewModalOpen(false);
-          setIsEditModalOpen(true);
-        }}
-        onUpdateStatus={() => {
-          setIsViewModalOpen(false);
-          setIsStatusDialogOpen(true);
-        }}
-        onAssign={() => {
-          setIsViewModalOpen(false);
-          setIsAssignDialogOpen(true);
-        }}
+        onEdit={() => openModal('edit')}
+        onUpdateStatus={() => openModal('status')}
+        onAssign={() => openModal('assign')}
       />
 
       <EditTaskModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        isOpen={activeModal === 'edit'}
+        onClose={closeAllModals}
         taskId={taskId}
-        onTaskUpdated={() => {
-          setIsEditModalOpen(false);
-          onTaskUpdate();
-        }}
+        onTaskUpdated={handleModalSuccess}
       />
     </>
   );

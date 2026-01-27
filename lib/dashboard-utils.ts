@@ -38,10 +38,184 @@ export function getDashboardPath(role?: string, isImpersonating: boolean = false
 }
 
 /**
+ * Returns staff menu items based on permissions
+ * This function should be called with the staff's permissions array
+ */
+export function getStaffMenuItems(permissions: string[] = []): MenuItem[] {
+  const menuItems: MenuItem[] = [];
+
+  // Dashboard is always available
+  menuItems.push({
+    title: 'Dashboard',
+    path: '/staff/dashboard',
+    iconName: 'ChartBarIcon'
+  });
+
+  // Tasks permission
+  if (permissions.includes('tasks')) {
+    menuItems.push({
+      title: 'My Tasks',
+      path: '/staff/tasks',
+      iconName: 'WrenchScrewdriverIcon',
+      expandable: true,
+      children: [
+        {
+          title: 'All Tasks',
+          path: '/staff/tasks',
+          iconName: 'ClipboardDocumentListIcon'
+        }
+      ]
+    });
+  }
+
+  // Bookings permission
+  if (permissions.includes('bookings')) {
+    menuItems.push({
+      title: 'Bookings',
+      path: '/staff/bookings',
+      iconName: 'CalendarIcon',
+      expandable: true,
+      children: [
+        {
+          title: 'All Bookings',
+          path: '/staff/bookings',
+          iconName: 'CalendarIcon'
+        },
+        {
+          title: 'New Booking',
+          path: '/staff/bookings/new',
+          iconName: 'PlusCircleIcon'
+        }
+      ]
+    });
+  }
+
+  // Rooms permission
+  if (permissions.includes('rooms')) {
+    menuItems.push({
+      title: 'Rooms',
+      path: '/staff/rooms',
+      iconName: 'BuildingOfficeIcon'
+    });
+  }
+
+  // Customers permission
+  if (permissions.includes('customers')) {
+    menuItems.push({
+      title: 'Customers',
+      path: '/staff/customers',
+      iconName: 'UserGroupIcon'
+    });
+  }
+
+  // Payments permission
+  if (permissions.includes('payments')) {
+    menuItems.push({
+      title: 'Payments',
+      path: '/staff/payments',
+      iconName: 'CreditCardIcon',
+      expandable: true,
+      children: [
+        {
+          title: 'All Payments',
+          path: '/staff/payments',
+          iconName: 'CreditCardIcon'
+        },
+        {
+          title: 'Process Payment',
+          path: '/staff/payments/new',
+          iconName: 'PlusCircleIcon'
+        }
+      ]
+    });
+  }
+
+  // Reports permission
+  if (permissions.includes('reports')) {
+    menuItems.push({
+      title: 'Reports',
+      path: '/staff/reports',
+      iconName: 'ChartBarIcon',
+      expandable: true,
+      children: [
+        {
+          title: 'Booking Reports',
+          path: '/staff/reports/bookings',
+          iconName: 'CalendarIcon'
+        },
+        {
+          title: 'Revenue Reports',
+          path: '/staff/reports/revenue',
+          iconName: 'CreditCardIcon'
+        },
+        {
+          title: 'Occupancy Reports',
+          path: '/staff/reports/occupancy',
+          iconName: 'BuildingOfficeIcon'
+        }
+      ]
+    });
+  }
+
+  // Staff permission (for managing other staff)
+  if (permissions.includes('staff')) {
+    menuItems.push({
+      title: 'Staff Management',
+      path: '/staff/staff-management',
+      iconName: 'UserGroupIcon'
+    });
+  }
+
+  // Notifications are always available for staff
+  menuItems.push({
+    title: 'Notifications',
+    path: '/staff/notifications',
+    iconName: 'BellIcon'
+  });
+
+  // Settings permission
+  if (permissions.includes('settings')) {
+    menuItems.push({
+      title: 'Settings',
+      path: '/staff/settings',
+      iconName: 'Cog6ToothIcon',
+      expandable: true,
+      children: [
+        {
+          title: 'General',
+          path: '/staff/settings',
+          iconName: 'Cog6ToothIcon'
+        },
+        {
+          title: 'Hotel Settings',
+          path: '/staff/settings/hotel',
+          iconName: 'BuildingOfficeIcon'
+        },
+        {
+          title: 'Notifications',
+          path: '/staff/settings/notifications',
+          iconName: 'BellIcon'
+        }
+      ]
+    });
+  }
+
+  // Profile is always available
+  menuItems.push({
+    title: 'My Profile',
+    path: '/staff/profile',
+    iconName: 'UserGroupIcon'
+  });
+
+  return menuItems;
+}
+
+/**
  * Returns menu items based on the user role and subscription plan
  * For vendors, we only show modules they have access to based on their plan
+ * For staff, we filter based on their permissions
  */
-export function getMenuItems(role?: UserRole, modules: string[] = []): MenuItem[] {
+export function getMenuItems(role?: UserRole, modules: string[] = [], permissions: string[] = []): MenuItem[] {
   // Always show these items for vendors regardless of plan
   const baseVendorModules = ['dashboard', 'hotels', 'bookings', 'subscription'];
   
@@ -302,6 +476,11 @@ export function getMenuItems(role?: UserRole, modules: string[] = []): MenuItem[
               iconName: 'ClipboardDocumentCheckIcon'
             },
             {
+              title: 'Staff & Roles',
+              path: '/vendor/facility/staff-roles',
+              iconName: 'UserGroupIcon'
+            },
+            {
               title: 'Keycards',
               path: '/vendor/facility/keycards',
               iconName: 'KeyIcon'
@@ -405,23 +584,7 @@ export function getMenuItems(role?: UserRole, modules: string[] = []): MenuItem[
           ];
       
     case UserRole.STAFF:
-      return [
-        { 
-          title: 'Dashboard', 
-          path: '/staff/dashboard', 
-          iconName: 'ChartBarIcon'
-        },
-        { 
-          title: 'Tasks', 
-          path: '/staff/tasks', 
-          iconName: 'WrenchScrewdriverIcon'
-        },
-        { 
-          title: 'Settings', 
-          path: '/staff/settings', 
-          iconName: 'Cog6ToothIcon'
-        },
-      ];
+      return getStaffMenuItems(permissions);
       
     default:
       return [];

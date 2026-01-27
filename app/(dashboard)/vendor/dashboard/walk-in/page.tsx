@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { getUserVendorId } from '@/lib/utils/vendor';
 import pool from '@/lib/db';
-import WalkInBookingForm from '../../components/WalkInBookingForm';
+import WalkInBookingClient from '../../components/WalkInBookingClient';
 
 export const metadata: Metadata = {
   title: 'Walk-in Booking | Vendor Dashboard',
@@ -34,13 +34,11 @@ export default async function WalkInBookingPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create Walk-in Booking</h1>
-        <p className="text-gray-500 dark:text-gray-400">Create a new booking for walk-in guests</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Walk-in Booking</h1>
+        <p className="text-gray-500 dark:text-gray-400">Manage walk-in bookings for your hotels</p>
       </div>
 
-      <div className="mx-auto max-w-4xl">
-        <WalkInBookingForm hotels={rows} vendorId={vendorId} />
-      </div>
+      <WalkInBookingClient hotels={rows} vendorId={vendorId} />
     </div>
   );
 } 

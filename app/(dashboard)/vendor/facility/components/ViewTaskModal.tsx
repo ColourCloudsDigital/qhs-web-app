@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { TaskStatus, TaskPriority, TaskCategory, MaintenanceType } from '@/lib/types/enums';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,33 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
-import { X } from 'lucide-react';
+
+// Utility function to clean up modal overlays
+const cleanupModalOverlays = () => {
+  // Remove all dialog overlays
+  const overlays = document.querySelectorAll('[data-radix-dialog-overlay]');
+  overlays.forEach(overlay => overlay.remove());
+  
+  // Remove all dialog contents
+  const contents = document.querySelectorAll('[data-radix-dialog-content]');
+  contents.forEach(content => content.remove());
+  
+  // Clean up any radix portals that are empty
+  const portals = document.querySelectorAll('[data-radix-portal]');
+  portals.forEach(portal => {
+    if (!portal.hasChildNodes()) {
+      portal.remove();
+    }
+  });
+  
+  // Reset body styles that might be stuck
+  document.body.style.pointerEvents = '';
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  
+  // Remove any lingering backdrop classes
+  document.body.classList.remove('overflow-hidden');
+};
 
 interface Task {
   id: string;
@@ -80,26 +105,70 @@ export default function ViewTaskModal({
   const { toast } = useToast();
   const [task, setTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const fetchedTaskIdRef = useRef<string | null>(null);
 
   const handleClose = () => {
     if (!isLoading) {
+      setTask(null);
+      setIsLoading(false);
+      fetchedTaskIdRef.current = null;
+      
+      // Clean up overlays before calling onClose
+      cleanupModalOverlays();
       onClose();
+      
+      // Additional cleanup after a delay
+      setTimeout(cleanupModalOverlays, 100);
+    }
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open && !isLoading) {
+      handleClose();
     }
   };
 
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setTask(null);
-      setIsLoading(false);
+      // Small delay to ensure modal animation completes
+      const timer = setTimeout(() => {
+        setTask(null);
+        setIsLoading(false);
+        fetchedTaskIdRef.current = null;
+      }, 150);
+      
+      return () => clearTimeout(timer);
     }
+  }, [isOpen]);
+
+  // Cleanup on unmount and handle escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        handleClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      cleanupModalOverlays();
+      // Additional cleanup after delay
+      setTimeout(cleanupModalOverlays, 200);
+    };
   }, [isOpen]);
 
   // Fetch task data when modal opens
   useEffect(() => {
-    if (isOpen && taskId) {
+    if (isOpen && taskId && fetchedTaskIdRef.current !== taskId) {
       const fetchTaskData = async () => {
         setIsLoading(true);
+        fetchedTaskIdRef.current = taskId;
+        
         try {
           const response = await fetch(`/api/tasks/${taskId}`);
           if (!response.ok) {
@@ -113,7 +182,7 @@ export default function ViewTaskModal({
             title: 'Error',
             description: 'Failed to load task data',
           });
-          onClose();
+          // Don't close the modal automatically, let user decide
         } finally {
           setIsLoading(false);
         }
@@ -121,10 +190,10 @@ export default function ViewTaskModal({
       
       fetchTaskData();
     }
-  }, [isOpen, taskId, onClose, toast]);
+  }, [isOpen, taskId, toast]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">

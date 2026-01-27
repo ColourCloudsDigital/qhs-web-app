@@ -752,9 +752,11 @@ export class HotelService {
           [room.id]
         );
         
-        // Delete room bookings
+        // Delete room bookings through room_units
         await pool.query(
-          'DELETE FROM bookings WHERE roomId = ?',
+          `DELETE b FROM bookings b
+           JOIN room_units ru ON b.roomUnitId = ru.id
+           WHERE ru.roomId = ?`,
           [room.id]
         );
       }

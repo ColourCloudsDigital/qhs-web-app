@@ -231,12 +231,13 @@ export class RoomService {
       
       console.log(`[RoomService] Found ${(amenityRows as any[]).length} amenities for room`);
       
-      // Query recent bookings
+      // Query recent bookings - Fix: use roomUnitId and join with room_units
       console.log(`[RoomService] Fetching recent bookings for roomId: ${roomId}`);
       const [bookingRows] = await pool.query(
         `SELECT b.* 
          FROM bookings b
-         WHERE b.roomId = ? 
+         JOIN room_units ru ON b.roomUnitId = ru.id
+         WHERE ru.roomId = ? 
          ORDER BY b.createdAt DESC 
          LIMIT 5`,
         [roomId]
@@ -682,8 +683,17 @@ export class RoomService {
       [roomId]
     );
     
+    // Delete bookings through room_units relationship
     await pool.query(
-      `DELETE FROM bookings WHERE roomId = ?`,
+      `DELETE b FROM bookings b
+       JOIN room_units ru ON b.roomUnitId = ru.id
+       WHERE ru.roomId = ?`,
+      [roomId]
+    );
+    
+    // Delete room_units for this room
+    await pool.query(
+      `DELETE FROM room_units WHERE roomId = ?`,
       [roomId]
     );
     

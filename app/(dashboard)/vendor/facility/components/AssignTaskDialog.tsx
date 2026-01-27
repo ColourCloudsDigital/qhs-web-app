@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -48,50 +48,61 @@ export default function AssignTaskDialog({
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const fetchStaff = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/staff?includeHotelDetails=true');
-      if (response.ok) {
-        const data = await response.json();
-        setStaffList(data);
-      } else {
-        throw new Error('Failed to load staff members');
-      }
-    } catch (error) {
-      console.error('Error fetching staff:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load staff members',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-  
-  const fetchCurrentAssignee = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/tasks/${taskId}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.assignedToId) {
-          setSelectedStaffId(data.assignedToId);
-        } else {
-          setSelectedStaffId('');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching current assignee:', error);
-    }
-  }, [taskId]);
+  const [hotelId, setHotelId] = useState<string>('');
   
   useEffect(() => {
-    if (isOpen) {
-      fetchStaff();
-      fetchCurrentAssignee();
+    if (!isOpen) return;
+    
+    const fetchTaskAndStaff = async () => {
+      setIsLoading(true);
+      try {
+        // First, fetch the task to get hotel ID and current assignee
+        const taskResponse = await fetch(`/api/tasks/${taskId}`);
+        if (!taskResponse.ok) {
+          throw new Error('Failed to load task details');
+        }
+        
+        const taskData = await taskResponse.json();
+        setHotelId(taskData.hotelId);
+        
+        // Set current assignee
+        if (taskData.assignedToId) {
+          setSelectedStaffId(taskData.assignedToId);
+        } else {
+          setSelectedStaffId('unassigned');
+        }
+        
+        // Then fetch staff for the hotel
+        const staffResponse = await fetch(`/api/hotels/${taskData.hotelId}/staff`);
+        if (staffResponse.ok) {
+          const staffData = await staffResponse.json();
+          setStaffList(staffData);
+        } else {
+          throw new Error('Failed to load staff members');
+        }
+      } catch (error) {
+        console.error('Error fetching task and staff:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load task details and staff members',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTaskAndStaff();
+  }, [isOpen, taskId]); // Removed toast from dependencies
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setStaffList([]);
+      setSelectedStaffId('');
+      setHotelId('');
+      setIsLoading(false);
     }
-  }, [isOpen, taskId, fetchStaff, fetchCurrentAssignee]);
+  }, [isOpen]);
   
   const handleAssign = async () => {
     setIsSubmitting(true);
@@ -103,7 +114,7 @@ export default function AssignTaskDialog({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          assignedToId: selectedStaffId || null, // null means unassigned
+          assignedToId: selectedStaffId === 'unassigned' ? null : selectedStaffId,
         }),
       });
       
@@ -114,7 +125,7 @@ export default function AssignTaskDialog({
       
       toast({
         title: 'Task assigned',
-        description: selectedStaffId 
+        description: selectedStaffId !== 'unassigned'
           ? `Task has been assigned successfully` 
           : 'Task has been unassigned',
       });
@@ -187,7 +198,7 @@ export default function AssignTaskDialog({
             ) : (
               <>
                 <User className="mr-2 h-4 w-4" />
-                {selectedStaffId ? 'Assign Task' : 'Unassign Task'}
+                {selectedStaffId !== 'unassigned' ? 'Assign Task' : 'Unassign Task'}
               </>
             )}
           </Button>

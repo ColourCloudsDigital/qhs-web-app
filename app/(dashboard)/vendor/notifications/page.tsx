@@ -1,20 +1,23 @@
 import { Metadata } from 'next';
-import NotificationList from '@/components/dashboard/NotificationList';
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { UserRole } from '@/lib/types/enums';
+import VendorNotificationsClient from './client';
 
 export const metadata: Metadata = {
-  title: 'Your Notifications | Qaras Hotels',
-  description: 'Manage and view notifications in the vendor dashboard',
+  title: 'Notifications | Vendor Dashboard',
+  description: 'View and manage your notifications',
 };
 
-export default function VendorNotificationsPage() {
-  return (
-    <div className="container mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
-        <p className="text-gray-600 dark:text-gray-300">View and manage your notifications</p>
-      </div>
-      
-      <NotificationList />
-    </div>
-  );
+export default async function VendorNotificationsPage() {
+  // Get the authenticated session
+  const session = await getServerSession(authOptions);
+  
+  // Check if user is authenticated and is a vendor
+  if (!session || (session.user.role !== UserRole.VENDOR && session.user.role !== UserRole.SUPER_ADMIN)) {
+    redirect('/login?callbackUrl=/vendor/notifications');
+  }
+  
+  return <VendorNotificationsClient />;
 }
