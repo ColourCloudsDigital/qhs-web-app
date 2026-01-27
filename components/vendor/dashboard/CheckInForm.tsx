@@ -24,6 +24,11 @@ interface Booking {
   roomNumber: string;
   totalAmount: number;
   status: string;
+  paymentStatus: string;
+  specialRequests?: string;
+  createdAt: string;
+  phone?: string;
+  email?: string;
 }
 
 interface CheckInFormProps {
@@ -39,10 +44,9 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // ID verification
+  // ID information
   const [idType, setIdType] = useState('NIN');
   const [idNumber, setIdNumber] = useState('');
-  const [idVerified, setIdVerified] = useState(false);
   
   // Additional options
   const [issueKeycard, setIssueKeycard] = useState(true);
@@ -102,9 +106,9 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
       return;
     }
     
-    if (!idVerified) {
-      toast.error("Please verify the guest's ID before checking in", {
-        title: "ID verification required"
+    if (!idNumber.trim()) {
+      toast.error("Please enter the guest's ID number", {
+        title: "ID number required"
       });
       return;
     }
@@ -140,7 +144,6 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
       setSelectedBooking(null);
       setIdType('NIN');
       setIdNumber('');
-      setIdVerified(false);
       setIssueKeycard(true);
       setSendWelcomeEmail(true);
       setNotes('');
@@ -157,23 +160,6 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Verify ID
-  const handleVerifyId = () => {
-    if (!idNumber || idNumber.length < 5) {
-      toast.error('Please enter a valid ID number', {
-            title: "Invalid ID"
-          });
-      return;
-    }
-    
-    // In a real system, you would verify the ID with an external API
-    // For now, we'll just simulate verification
-    setIdVerified(true);
-    toast.success("Guest ID has been verified", {
-      title: "ID verification successful"
-    });
   };
 
   return (
@@ -209,14 +195,33 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
                     onClick={() => handleSelectBooking(booking)}
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium text-gray-900 dark:text-white">{booking.customerName}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-900 dark:text-white">{booking.customerName}</span>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          booking.paymentStatus === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                          booking.paymentStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                          'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        }`}>
+                          {booking.paymentStatus}
+                        </span>
+                      </div>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         Room {booking.roomNumber} | {formatDate(booking.checkInDate)}
                         {' → '}{formatDate(booking.checkOutDate)}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Booking ID: {booking.id}
-                      </span>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Booking ID: {booking.id}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Booked: {formatDate(booking.createdAt)}
+                        </span>
+                      </div>
+                      {booking.specialRequests && (
+                        <span className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          Special requests: {booking.specialRequests}
+                        </span>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -234,16 +239,40 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
         <div className="space-y-4">
           <div className="rounded-md bg-blue-50 p-3 dark:bg-blue-900/20">
             <div className="flex flex-col">
-              <span className="font-medium text-blue-800 dark:text-blue-300">
-                {selectedBooking.customerName}
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-blue-800 dark:text-blue-300">
+                  {selectedBooking.customerName}
+                </span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  selectedBooking.paymentStatus === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                  selectedBooking.paymentStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                  'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                }`}>
+                  {selectedBooking.paymentStatus}
+                </span>
+              </div>
               <span className="text-sm text-blue-600 dark:text-blue-400">
                 Room {selectedBooking.roomNumber} | {formatDate(selectedBooking.checkInDate)}
                 {' → '}{formatDate(selectedBooking.checkOutDate)}
               </span>
-              <span className="text-xs text-blue-600 dark:text-blue-400">
-                Booking ID: {selectedBooking.id}
-              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-xs text-blue-600 dark:text-blue-400">
+                  Booking ID: {selectedBooking.id}
+                </span>
+                <span className="text-xs text-blue-600 dark:text-blue-400">
+                  Total: ₦{selectedBooking.totalAmount?.toLocaleString()}
+                </span>
+              </div>
+              {selectedBooking.phone && (
+                <span className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Phone: {selectedBooking.phone}
+                </span>
+              )}
+              {selectedBooking.specialRequests && (
+                <span className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Special requests: {selectedBooking.specialRequests}
+                </span>
+              )}
               <div className="mt-2">
                 <Button 
                   variant="ghost" 
@@ -274,25 +303,12 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
           
           <div className="space-y-2">
             <Label htmlFor="id-number">ID Number</Label>
-            <div className="flex gap-2">
-              <Input
-                id="id-number"
-                placeholder="Enter ID number"
-                value={idNumber}
-                onChange={(e) => {
-                  setIdNumber(e.target.value);
-                  setIdVerified(false);
-                }}
-                disabled={idVerified}
-              />
-              <Button
-                variant={idVerified ? "outline" : "default"}
-                onClick={handleVerifyId}
-                disabled={idVerified || !idNumber}
-              >
-                {idVerified ? "Verified" : "Verify"}
-              </Button>
-            </div>
+            <Input
+              id="id-number"
+              placeholder="Enter ID number"
+              value={idNumber}
+              onChange={(e) => setIdNumber(e.target.value)}
+            />
           </div>
           
           <div className="space-y-3 border-t border-gray-200 pt-3 dark:border-gray-700">
@@ -342,7 +358,7 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
         </Button>
         <Button 
           onClick={handleCheckIn}
-          disabled={!selectedBooking || !idVerified || loading}
+          disabled={!selectedBooking || !idNumber.trim() || loading}
         >
           {loading ? (
             <>

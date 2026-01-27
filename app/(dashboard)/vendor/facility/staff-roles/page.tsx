@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import dynamic from 'next/dynamic';
-import { useHotel } from '@/contexts/HotelContext';
 import { getUserVendorId } from '@/lib/utils/vendor';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -33,12 +32,6 @@ async function getVendorHotels() {
   return data.hotels || [];
 }
 
-// Fetch roles/permissions (stubbed for now)
-async function getRolesPermissions(hotelId: string) {
-  // TODO: Implement real API call
-  return [];
-}
-
 // Dynamically load TabsClient (client-only)
 const TabsClient = dynamic(() => import('../components/TabsClient'), { ssr: false });
 
@@ -51,10 +44,10 @@ export default async function UserRolesPage() {
   }
 
   // Get vendor id
-    const { vendorId } = await getUserVendorId(session);
-    if (!vendorId) {
-      redirect('/login');
-    }
+  const { vendorId } = await getUserVendorId(session);
+  if (!vendorId) {
+    redirect('/login');
+  }
 
   const hotels = await getVendorHotels();
 

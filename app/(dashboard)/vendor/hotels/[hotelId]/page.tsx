@@ -54,7 +54,7 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
         setLoading(true);
         setError(null);
         
-        // Fetch hotel data
+        // Fetch hotel data (includes stats)
         const response = await fetch(`/api/vendor/hotels/${hotelId}`);
         if (!response.ok) {
           const errorData = await response.json();
@@ -71,16 +71,11 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
         
         setHotel(data.hotel);
         
-        // Fetch hotel stats
-        const statsResponse = await fetch(`/api/vendor/hotels/${hotelId}/stats`);
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData);
-        } else {
-          const statsErrorData = await statsResponse.json();
-          console.error('Failed to fetch hotel stats:', statsErrorData);
-          // Don't throw here, just log - we can still show the hotel without stats
+        // Stats are already included in the hotel data
+        if (data.hotel.stats) {
+          setStats(data.hotel.stats);
         }
+        
       } catch (err) {
         console.error('Error fetching hotel data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load hotel data');

@@ -24,7 +24,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import toast from '@/lib/toast';
 import {
   Carousel,
@@ -75,7 +75,6 @@ interface RoomData {
 const ROOM_TYPE_NAMES: Record<string, string> = {
   'standard': 'Standard Room',
   'deluxe': 'Deluxe Room',
-  import { formatDate } from '@/lib/utils';
   'suite': 'Suite',
   'executive': 'Executive Room',
   'family': 'Family Room',
@@ -94,9 +93,9 @@ const getAmenityIcon = (amenityName: string) => {
   const name = (amenityName || '').toLowerCase();
   
   // Match WiFi-related amenities
-                    <p className="text-sm text-gray-500">
-                      {formatDate(booking.checkIn)} to {formatDate(booking.checkOut)}
-                    </p>
+  if (name.includes('wifi') || name.includes('internet') || name.includes('wireless')) 
+    return <WifiIcon className="h-4 w-4 text-green-500" />;
+  
   // Match TV and entertainment amenities
   if (name.includes('tv') || name.includes('television') || name.includes('entertainment')) 
     return <TvIcon className="h-4 w-4 text-green-500" />;

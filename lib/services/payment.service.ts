@@ -226,13 +226,14 @@ export const paymentService = {
              h.phone AS hotelPhone, h.email AS hotelEmail,
              u.name AS customerName, u.email AS customerEmail,
              b.checkInDate AS checkInDate, b.checkOutDate AS checkOutDate,
-             b.roomId AS roomId, r.name AS roomName
+             ru.id AS roomUnitId, r.name AS roomName
       FROM payments p
       LEFT JOIN bookings b ON p.bookingId = b.id
       LEFT JOIN hotels h ON b.hotelId = h.id
       LEFT JOIN customers c ON b.customerId = c.id
       LEFT JOIN users u ON c.userId = u.id
-      LEFT JOIN rooms r ON b.roomId = r.id
+      LEFT JOIN room_units ru ON b.roomUnitId = ru.id
+      LEFT JOIN rooms r ON ru.roomId = r.id
       WHERE p.transactionId = ?
     `, [reference]);
     
@@ -403,11 +404,12 @@ export const paymentService = {
     const [paymentRows] = await pool.query<PaymentRow[]>(`
       SELECT p.*, b.id AS bookingId, b.checkInDate AS checkInDate, b.checkOutDate AS checkOutDate,
              b.numberOfGuests AS numberOfGuests, b.totalAmount AS totalAmount, b.status AS paymentStatus,
-             h.id AS hotelId, h.name AS hotelName, r.id AS roomId, r.name AS roomName, r.type AS roomType
+             h.id AS hotelId, h.name AS hotelName, ru.id AS roomUnitId, r.name AS roomName, r.type AS roomType
       FROM payments p
       LEFT JOIN bookings b ON p.bookingId = b.id
       LEFT JOIN hotels h ON b.hotelId = h.id
-      LEFT JOIN rooms r ON b.roomId = r.id
+      LEFT JOIN room_units ru ON b.roomUnitId = ru.id
+      LEFT JOIN rooms r ON ru.roomId = r.id
       WHERE p.id = ?
     `, [id]);
 

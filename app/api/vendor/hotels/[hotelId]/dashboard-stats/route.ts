@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import pool from '@/lib/db';
 import { BookingStatus } from '@/lib/types/enums';
+import { getUserVendorId } from '@/lib/utils/vendor';
 
 export async function GET(
   request: NextRequest,
@@ -23,12 +24,21 @@ export async function GET(
     
     // Check if hotel belongs to the vendor
     if (session.user.role === 'VENDOR') {
+      // Use the vendor utility to get vendor ID
+      const { vendorId } = await getUserVendorId(session);
+      
+      if (!vendorId) {
+        console.error('No vendor ID found for user:', session.user.id);
+        return NextResponse.json(
+          { error: 'Vendor not found' },
+          { status: 404 }
+        );
+      }
+      
       const [hotelRows] = await pool.query(`
         SELECT h.* FROM hotels h
-        JOIN vendors v ON h.vendorId = v.id
-        JOIN users u ON v.userId = u.id
-        WHERE h.id = ? AND u.id = ?
-      `, [hotelId, session.user.id]);
+        WHERE h.id = ? AND h.vendorId = ?
+      `, [hotelId, vendorId]);
       
       if ((hotelRows as any[]).length === 0) {
         return NextResponse.json(
@@ -113,7 +123,8 @@ export async function GET(
     // Get active bookings (checked in but not checked out)
     const [occupiedRows] = await pool.query(`
       SELECT COUNT(*) as count FROM bookings b
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       WHERE r.hotelId = ? AND b.status = ?
     `, [hotelId, BookingStatus.CHECKED_IN]);
     
@@ -122,7 +133,8 @@ export async function GET(
     // Get total bookings
     const [totalBookingRows] = await pool.query(`
       SELECT COUNT(*) as count FROM bookings b
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       WHERE r.hotelId = ?
     `, [hotelId]);
     
@@ -131,7 +143,8 @@ export async function GET(
     // Get today's check-ins
     const [checkInRows] = await pool.query(`
       SELECT COUNT(*) as count FROM bookings b
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       WHERE r.hotelId = ? 
       AND DATE(b.checkInDate) = ?
       AND b.status IN (?, ?)
@@ -142,7 +155,8 @@ export async function GET(
     // Get today's check-outs
     const [checkOutRows] = await pool.query(`
       SELECT COUNT(*) as count FROM bookings b
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       WHERE r.hotelId = ?
       AND DATE(b.checkOutDate) = ?
       AND b.status = ?
@@ -155,7 +169,8 @@ export async function GET(
       SELECT SUM(p.amount) as totalRevenue
       FROM payments p
       JOIN bookings b ON p.bookingId = b.id
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       WHERE r.hotelId = ?
     `, [hotelId]);
     

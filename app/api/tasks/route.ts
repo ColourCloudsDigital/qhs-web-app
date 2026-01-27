@@ -7,17 +7,22 @@ import { ModuleType } from '@/lib/types/enums';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { RowDataPacket } from 'mysql2';
+import NotificationService from '@/lib/services/notification.service';
 
 const taskSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(5, 'Description must be at least 5 characters'),
   assignedToId: z.string().optional().nullable(),
-  hotelId: z.string().uuid('Invalid hotel ID'),
-  roomId: z.string().uuid('Invalid room ID').optional().nullable(),
+  hotelId: z.string(),
+  roomUnitId: z.string().optional().nullable(),
   status: z.nativeEnum(TaskStatus).default(TaskStatus.PENDING),
   priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
   category: z.nativeEnum(TaskCategory),
-  dueDate: z.string().transform(str => new Date(str)),
+  dueDate: z.string().transform(str => {
+    const date = new Date(str);
+    // Format as YYYY-MM-DD for MySQL date type
+    return date.toISOString().split('T')[0];
+  }),
   estimatedHours: z.number().positive().optional(),
   costEstimate: z.number().nonnegative().optional(),
   maintenanceType: z.nativeEnum(MaintenanceType).default(MaintenanceType.CORRECTIVE),
@@ -72,18 +77,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // If a roomId is provided, try to find the corresponding room unit
-    let roomUnitId = null;
-    if (taskData.roomId) {
-      const [roomUnitResult] = await pool.query(
-        `SELECT id FROM room_units 
-         WHERE roomId = ? 
-         LIMIT 1`,
-        [taskData.roomId]
-      ) as [RowDataPacket[], any];
-
-      roomUnitId = roomUnitResult?.[0]?.id || null;
-    }
+    // Use the roomUnitId directly from the request
+    const roomUnitId = taskData.roomUnitId || null;
 
     // Generate task ID
     const taskId = require('crypto').randomUUID();
@@ -134,24 +129,55 @@ export async function POST(request: Request) {
       }
     }
 
-    // If task is assigned to someone, create a notification
+    // If task is assigned to someone, create a notification using NotificationService
     if (taskData.assignedToId) {
-      const notificationId = require('crypto').randomUUID();
-      const notificationQuery = `
-        INSERT INTO notifications (id, title, content, type, recipient, userId, senderId, metadata, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-      `;
-
-      await pool.query(notificationQuery, [
-        notificationId,
-        `New Task Created: ${taskData.title}`,
-        `You have been assigned a new task: ${taskData.title}`,
-        'TASK',
-        'USER',
-        taskData.assignedToId,
-        session.user.id,
-        JSON.stringify({ taskId }),
-      ]);
+      try {
+        // Get assigned staff user ID
+        const [staffResult] = await pool.query(
+          'SELECT userId FROM staff WHERE id = ?',
+          [taskData.assignedToId]
+        ) as [RowDataPacket[], any];
+        
+        const assignedUserId = staffResult?.[0]?.userId;
+        
+        if (assignedUserId) {
+          await NotificationService.notifyTaskCreated(
+            assignedUserId,
+            taskId,
+            taskData.title,
+            taskData.priority,
+            session.user.id
+          );
+        }
+      } catch (notificationError) {
+        console.error('Error creating task assignment notification:', notificationError);
+        // Don't fail the request if notification fails
+      }
+    }
+    
+    // Notify hotel staff about new task
+    try {
+      const staffUsers = await NotificationService.getHotelStaff(taskData.hotelId);
+      if (staffUsers.length > 0) {
+        await NotificationService.createBulkNotifications(
+          staffUsers.filter(id => id !== session.user.id && id !== taskData.assignedToId),
+          {
+            title: 'New Task Created',
+            content: `New ${taskData.priority.toLowerCase()} priority task: ${taskData.title}`,
+            type: 'MAINTENANCE' as any,
+            senderId: session.user.id,
+            metadata: {
+              taskId,
+              hotelId: taskData.hotelId,
+              action: 'created',
+              entityType: 'task'
+            }
+          }
+        );
+      }
+    } catch (notificationError) {
+      console.error('Error creating task creation notification:', notificationError);
+      // Don't fail the request if notification fails
     }
 
     // Fetch the created task with related data

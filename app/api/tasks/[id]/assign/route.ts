@@ -23,7 +23,7 @@ interface TaskRow extends RowDataPacket {
 }
 
 const assignSchema = z.object({
-  assignedToId: z.string().uuid('Invalid staff ID')
+  assignedToId: z.string().nullable()
 });
 
 export async function POST(
@@ -60,7 +60,7 @@ export async function POST(
 
     // Get the task
     const [taskRows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, hotelId, assignedToId, title FROM facility_tasks WHERE id = ?`,
+      `SELECT taskId as id, hotelId, staffId as assignedToId, title FROM facility_tasks WHERE taskId = ?`,
       [taskId]
     );
 
@@ -69,6 +69,29 @@ export async function POST(
     }
 
     const task = taskRows[0] as TaskRow;
+
+    // Handle unassignment
+    if (!assignedToId || assignedToId === 'unassigned') {
+      // Skip update if already unassigned
+      if (!task.assignedToId) {
+        return NextResponse.json({ message: 'Task is already unassigned' });
+      }
+
+      // Update the task to unassign
+      await pool.query(
+        `UPDATE facility_tasks SET staffId = NULL, updated_at = NOW() WHERE taskId = ?`,
+        [taskId]
+      );
+
+      return NextResponse.json({
+        message: 'Task unassigned successfully',
+        task: {
+          id: task.id,
+          assignedToId: null,
+          assignedTo: null
+        }
+      });
+    }
 
     // Get staff member with user info
     const [staffRows] = await pool.query<RowDataPacket[]>(
@@ -100,8 +123,8 @@ export async function POST(
 
     // Update the task with the new assignee
     await pool.query(
-      `UPDATE facility_tasks SET assignedToId = ?, lastUpdatedById = ?, updatedAt = NOW() WHERE id = ?`,
-      [assignedToId, session.user.id, taskId]
+      `UPDATE facility_tasks SET staffId = ?, updated_at = NOW() WHERE taskId = ?`,
+      [assignedToId, taskId]
     );
 
     // Create a notification for the staff member
@@ -125,31 +148,36 @@ export async function POST(
       console.error('Error creating notification:', notifError);
     }
 
-    // Create a task comment about the assignment
-    try {
-      await pool.query(
-        `INSERT INTO task_comments (taskId, userId, content, createdAt)
-         VALUES (?, ?, ?, NOW())`,
-        [taskId, session.user.id, `Task assigned to ${staff.name}.`]
-      );
-    } catch (commentError) {
-      console.error('Error creating task comment:', commentError);
-    }
-
     // Fetch and return updated task
     const [updatedTaskRows] = await pool.query<RowDataPacket[]>(
       `SELECT 
-        ft.*,
-        s.id as assignedToId,
+        ft.taskId as id,
+        ft.title,
+        ft.description,
+        ft.status,
+        ft.priority,
+        ft.category,
+        ft.hotelId,
+        ft.roomUnitId,
+        ft.staffId as assignedToId,
+        ft.vendorId as createdById,
+        ft.created_at as createdAt,
+        ft.updated_at as updatedAt,
+        ft.due_date as dueDate,
+        ft.estimated_hours as estimatedHours,
+        ft.cost_estimate as costEstimate,
+        ft.maintenance_type as maintenanceType,
+        ft.is_recurring as isRecurring,
+        s.id as assignedToStaffId,
         u.name as assignedToName,
         u.email as assignedToEmail,
         u.id as assignedToUserId,
         st.position as assignedToPosition
        FROM facility_tasks ft
-       LEFT JOIN staff s ON ft.assignedToId = s.id
+       LEFT JOIN staff s ON ft.staffId = s.id
        LEFT JOIN users u ON s.userId = u.id
        LEFT JOIN staff st ON s.id = st.id
-       WHERE ft.id = ?`,
+       WHERE ft.taskId = ?`,
       [taskId]
     );
 
@@ -186,15 +214,9 @@ export async function POST(
         updatedAt: updatedTask.updatedAt,
         dueDate: updatedTask.dueDate,
         estimatedHours: updatedTask.estimatedHours,
-        actualHours: updatedTask.actualHours,
         costEstimate: updatedTask.costEstimate,
-        actualCost: updatedTask.actualCost,
         maintenanceType: updatedTask.maintenanceType,
         isRecurring: updatedTask.isRecurring,
-        recurringPattern: updatedTask.recurringPattern,
-        completedAt: updatedTask.completedAt,
-        lastUpdatedById: updatedTask.lastUpdatedById,
-        attachments: updatedTask.attachments,
       }
     });
   } catch (error) {

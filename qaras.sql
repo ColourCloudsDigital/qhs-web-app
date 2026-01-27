@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost:8889
--- Generation Time: May 23, 2025 at 02:29 AM
--- Server version: 8.0.40
--- PHP Version: 7.4.33
+-- Host: 127.0.0.1
+-- Generation Time: Jan 26, 2026 at 11:35 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -30,13 +30,13 @@ SET time_zone = "+00:00";
 CREATE TABLE `amenities` (
   `id` varchar(36) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `icon` varchar(255) DEFAULT NULL,
   `type` varchar(50) NOT NULL,
-  `isActive` tinyint(1) DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isActive` tinyint(1) DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `amenities`
@@ -84,20 +84,20 @@ INSERT INTO `amenities` (`id`, `name`, `description`, `icon`, `type`, `isActive`
 
 CREATE TABLE `analytics_settings` (
   `id` varchar(36) NOT NULL,
-  `googleAnalyticsEnabled` tinyint(1) NOT NULL DEFAULT '0',
+  `googleAnalyticsEnabled` tinyint(1) NOT NULL DEFAULT 0,
   `googleAnalyticsId` varchar(255) DEFAULT NULL,
-  `googleTagManagerEnabled` tinyint(1) NOT NULL DEFAULT '0',
+  `googleTagManagerEnabled` tinyint(1) NOT NULL DEFAULT 0,
   `googleTagManagerId` varchar(255) DEFAULT NULL,
-  `facebookPixelEnabled` tinyint(1) NOT NULL DEFAULT '0',
+  `facebookPixelEnabled` tinyint(1) NOT NULL DEFAULT 0,
   `facebookPixelId` varchar(255) DEFAULT NULL,
-  `hotjarEnabled` tinyint(1) NOT NULL DEFAULT '0',
+  `hotjarEnabled` tinyint(1) NOT NULL DEFAULT 0,
   `hotjarId` varchar(255) DEFAULT NULL,
-  `customScripts` text,
-  `dataRetentionPeriod` int DEFAULT '365',
-  `anonymizeIp` tinyint(1) NOT NULL DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `customScripts` text DEFAULT NULL,
+  `dataRetentionPeriod` int(11) DEFAULT 365,
+  `anonymizeIp` tinyint(1) NOT NULL DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -108,14 +108,14 @@ CREATE TABLE `analytics_settings` (
 CREATE TABLE `app_settings` (
   `id` varchar(36) NOT NULL,
   `key` varchar(255) NOT NULL,
-  `value` text,
-  `description` text,
+  `value` text DEFAULT NULL,
+  `description` text DEFAULT NULL,
   `type` varchar(50) DEFAULT 'string',
   `group` varchar(100) DEFAULT NULL,
-  `isPublic` tinyint(1) DEFAULT '0',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isPublic` tinyint(1) DEFAULT 0,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `app_settings`
@@ -142,25 +142,26 @@ INSERT INTO `app_settings` (`id`, `key`, `value`, `description`, `type`, `group`
 CREATE TABLE `bookings` (
   `id` varchar(36) NOT NULL,
   `hotelId` varchar(36) NOT NULL,
-  `roomId` varchar(36) NOT NULL,
+  `roomUnitId` varchar(36) NOT NULL,
   `customerId` varchar(36) NOT NULL,
   `checkInDate` date NOT NULL,
   `checkOutDate` date NOT NULL,
-  `numberOfGuests` int NOT NULL,
+  `numberOfGuests` int(11) NOT NULL,
   `totalAmount` decimal(10,2) NOT NULL,
   `status` varchar(50) NOT NULL,
   `paymentStatus` varchar(50) NOT NULL,
-  `specialRequests` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `specialRequests` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `bookings`
 --
 
-INSERT INTO `bookings` (`id`, `hotelId`, `roomId`, `customerId`, `checkInDate`, `checkOutDate`, `numberOfGuests`, `totalAmount`, `status`, `paymentStatus`, `specialRequests`, `createdAt`, `updatedAt`) VALUES
-('d89cbb4c-e1c5-492d-988f-c50eea279c6b', '06a129c4-348f-11f0-b65f-9f7e9986d28a', 'f487851e-3595-11f0-9207-db0ca828cf96', '0c34c864-3e97-4c4b-8680-2c994d8e2999', '2025-05-22', '2025-05-24', 2, 50000.00, 'CONFIRMED', 'PENDING', NULL, '2025-05-22 17:57:34', '2025-05-22 17:57:34');
+INSERT INTO `bookings` (`id`, `hotelId`, `roomUnitId`, `customerId`, `checkInDate`, `checkOutDate`, `numberOfGuests`, `totalAmount`, `status`, `paymentStatus`, `specialRequests`, `createdAt`, `updatedAt`) VALUES
+('988f799b-079d-4a63-9d59-59f34a347ed0', '06a129c4-348f-11f0-b65f-9f7e9986d28a', '978940a4-35b9-11f0-8cf5-f19e416d5e91', '2999a2d9-494a-498b-bea4-c4f1b3ef2a25', '2026-01-23', '2026-01-24', 1, 20000.00, 'CHECKED_OUT', 'PAID', '', '2026-01-23 07:48:32', '2026-01-25 17:34:57'),
+('d89cbb4c-e1c5-492d-988f-c50eea279c6b', '06a129c4-348f-11f0-b65f-9f7e9986d28a', '97893e60-35b9-11f0-8cf5-f19e416d5e91', '0c34c864-3e97-4c4b-8680-2c994d8e2999', '2025-05-22', '2025-05-24', 2, 50000.00, 'CHECKED_OUT', 'PENDING', '', '2025-05-22 17:57:34', '2026-01-25 17:35:52');
 
 -- --------------------------------------------------------
 
@@ -174,9 +175,9 @@ CREATE TABLE `booking_documents` (
   `name` varchar(255) NOT NULL,
   `type` varchar(100) NOT NULL,
   `url` varchar(1000) NOT NULL,
-  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -186,21 +187,21 @@ CREATE TABLE `booking_documents` (
 
 CREATE TABLE `cookie_settings` (
   `id` varchar(36) NOT NULL,
-  `cookieBannerEnabled` tinyint(1) NOT NULL DEFAULT '1',
+  `cookieBannerEnabled` tinyint(1) NOT NULL DEFAULT 1,
   `cookiePolicyUrl` varchar(255) DEFAULT NULL,
-  `necessaryCookiesDesc` text,
-  `preferenceCookiesDesc` text,
-  `statisticsCookiesDesc` text,
-  `marketingCookiesDesc` text,
-  `defaultConsent` json DEFAULT NULL,
+  `necessaryCookiesDesc` text DEFAULT NULL,
+  `preferenceCookiesDesc` text DEFAULT NULL,
+  `statisticsCookiesDesc` text DEFAULT NULL,
+  `marketingCookiesDesc` text DEFAULT NULL,
+  `defaultConsent` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`defaultConsent`)),
   `bannerTitle` varchar(255) DEFAULT 'We use cookies',
-  `bannerDescription` text,
+  `bannerDescription` text DEFAULT NULL,
   `acceptAllButtonText` varchar(255) DEFAULT 'Accept All',
   `rejectAllButtonText` varchar(255) DEFAULT 'Reject All',
   `savePreferencesButtonText` varchar(255) DEFAULT 'Save Preferences',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `cookie_settings`
@@ -222,17 +223,22 @@ CREATE TABLE `customers` (
   `userId` varchar(36) DEFAULT NULL,
   `hotelId` varchar(36) DEFAULT NULL,
   `phone` varchar(50) DEFAULT NULL,
-  `address` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `address` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `nationality` varchar(150) DEFAULT NULL,
+  `idType` varchar(150) DEFAULT NULL,
+  `idNumber` varchar(150) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`id`, `firstName`, `lastName`, `userId`, `hotelId`, `phone`, `address`, `createdAt`, `updatedAt`) VALUES
-('0c34c864-3e97-4c4b-8680-2c994d8e2999', 'Bluxton', 'Hill', NULL, '06a129c4-348f-11f0-b65f-9f7e9986d28a', '+2347059992238', NULL, '2025-05-22 17:57:34', '2025-05-22 17:57:34');
+INSERT INTO `customers` (`id`, `firstName`, `lastName`, `userId`, `hotelId`, `phone`, `address`, `createdAt`, `updatedAt`, `nationality`, `idType`, `idNumber`) VALUES
+('0c34c864-3e97-4c4b-8680-2c994d8e2999', 'Bluxton', 'Hill', NULL, '06a129c4-348f-11f0-b65f-9f7e9986d28a', '+2347059992238', NULL, '2025-05-22 17:57:34', '2025-05-22 17:57:34', NULL, NULL, NULL),
+('2999a2d9-494a-498b-bea4-c4f1b3ef2a25', 'Fortune', 'Precious', '92d4deb3-aa00-4b4b-9568-bf9f319ce67c', NULL, '07015917361', NULL, '2026-01-08 14:03:34', '2026-01-23 07:48:32', NULL, NULL, NULL),
+('c6c1ec07-db39-11f0-9c7c-f0b61e9d0e9e', NULL, NULL, 'c6c181b0-db39-11f0-9c7c-f0b61e9d0e9e', NULL, '07015917361', '4 Wali Close, Off Okporo Road, Mgbuesilaru', '2025-12-17 12:15:50', '2026-01-07 17:04:45', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -247,12 +253,12 @@ CREATE TABLE `email_templates` (
   `name` varchar(255) NOT NULL,
   `subject` varchar(255) NOT NULL,
   `body` text NOT NULL,
-  `bodyText` text,
-  `variables` text COMMENT 'JSON array of available variables',
-  `isActive` tinyint(1) NOT NULL DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `bodyText` text DEFAULT NULL,
+  `variables` text DEFAULT NULL COMMENT 'JSON array of available variables',
+  `isActive` tinyint(1) NOT NULL DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `email_templates`
@@ -262,6 +268,39 @@ INSERT INTO `email_templates` (`id`, `vendorId`, `template_key`, `name`, `subjec
 ('7891c838-3721-11f0-bd42-362101a43314', NULL, 'booking_confirmation', 'Booking Confirmation', 'Your Booking Confirmation - {{booking_reference}}', '<!DOCTYPE html>\r\n<html>\r\n<head>\r\n  <meta charset=\"utf-8\">\r\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n  <title>Booking Confirmation</title>\r\n  <style>\r\n    body {\r\n      font-family: Arial, sans-serif;\r\n      line-height: 1.6;\r\n      color: #333;\r\n      margin: 0;\r\n      padding: 0;\r\n    }\r\n    .container {\r\n      max-width: 600px;\r\n      margin: 0 auto;\r\n      padding: 20px;\r\n    }\r\n    .header {\r\n      background-color: {{primary_color}};\r\n      color: white;\r\n      padding: 20px;\r\n      text-align: center;\r\n    }\r\n    .content {\r\n      padding: 20px;\r\n      background-color: #f9f9f9;\r\n    }\r\n    .booking-details {\r\n      background-color: white;\r\n      padding: 15px;\r\n      margin-bottom: 20px;\r\n      border-radius: 5px;\r\n      border: 1px solid #eee;\r\n    }\r\n    .hotel-details {\r\n      background-color: white;\r\n      padding: 15px;\r\n      border-radius: 5px;\r\n      border: 1px solid #eee;\r\n    }\r\n    .footer {\r\n      text-align: center;\r\n      padding: 20px;\r\n      font-size: 12px;\r\n      color: #777;\r\n    }\r\n    h1, h2, h3 {\r\n      color: {{primary_color}};\r\n    }\r\n    .button {\r\n      display: inline-block;\r\n      background-color: {{primary_color}};\r\n      color: white;\r\n      padding: 10px 20px;\r\n      text-decoration: none;\r\n      border-radius: 5px;\r\n      margin-top: 15px;\r\n    }\r\n    table {\r\n      width: 100%;\r\n      border-collapse: collapse;\r\n    }\r\n    table td {\r\n      padding: 8px;\r\n      border-bottom: 1px solid #eee;\r\n    }\r\n    table td:first-child {\r\n      font-weight: bold;\r\n      width: 40%;\r\n    }\r\n  </style>\r\n</head>\r\n<body>\r\n  <div class=\"container\">\r\n    <div class=\"header\">\r\n      <h1>Booking Confirmation</h1>\r\n    </div>\r\n    \r\n    <div class=\"content\">\r\n      <p>Dear {{guest_name}},</p>\r\n      \r\n      <p>Thank you for choosing to stay at {{hotel_name}}. Your booking has been confirmed.</p>\r\n      \r\n      <div class=\"booking-details\">\r\n        <h2>Your Booking Details</h2>\r\n        <table>\r\n          <tr>\r\n            <td>Booking Reference:</td>\r\n            <td>{{booking_reference}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Check-in Date:</td>\r\n            <td>{{check_in_date}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Check-out Date:</td>\r\n            <td>{{check_out_date}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Room Type:</td>\r\n            <td>{{room_type}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Number of Guests:</td>\r\n            <td>{{guest_count}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Total Amount:</td>\r\n            <td>{{currency_symbol}}{{total_amount}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Payment Status:</td>\r\n            <td>{{payment_status}}</td>\r\n          </tr>\r\n        </table>\r\n        \r\n        <a href=\"{{booking_url}}\" class=\"button\">View Booking</a>\r\n      </div>\r\n      \r\n      <div class=\"hotel-details\">\r\n        <h2>Hotel Information</h2>\r\n        <table>\r\n          <tr>\r\n            <td>Hotel Name:</td>\r\n            <td>{{hotel_name}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Address:</td>\r\n            <td>{{hotel_address}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Phone:</td>\r\n            <td>{{hotel_phone}}</td>\r\n          </tr>\r\n          <tr>\r\n            <td>Email:</td>\r\n            <td>{{hotel_email}}</td>\r\n          </tr>\r\n        </table>\r\n      </div>\r\n      \r\n      <div class=\"policies\">\r\n        <h3>Cancellation Policy</h3>\r\n        <p>{{cancellation_policy}}</p>\r\n      </div>\r\n      \r\n      <p>If you have any questions about your booking, please contact us at {{contact_email}} or call us at {{contact_phone}}.</p>\r\n      \r\n      <p>We look forward to welcoming you to {{hotel_name}}!</p>\r\n      \r\n      <p>Best regards,<br>\r\n      The {{hotel_name}} Team</p>\r\n    </div>\r\n    \r\n    <div class=\"footer\">\r\n      <p>&copy; {{year}} {{hotel_name}}. All rights reserved.</p>\r\n      <p>{{email_footer_text}}</p>\r\n    </div>\r\n  </div>\r\n</body>\r\n</html>', 'Dear {{guest_name}},\r\n\r\nThank you for choosing to stay at {{hotel_name}}. Your booking has been confirmed.\r\n\r\nYOUR BOOKING DETAILS:\r\n--------------------\r\nBooking Reference: {{booking_reference}}\r\nCheck-in Date: {{check_in_date}}\r\nCheck-out Date: {{check_out_date}}\r\nRoom Type: {{room_type}}\r\nNumber of Guests: {{guest_count}}\r\nTotal Amount: {{currency_symbol}}{{total_amount}}\r\nPayment Status: {{payment_status}}\r\n\r\nTo view your booking online, visit: {{booking_url}}\r\n\r\nHOTEL INFORMATION:\r\n----------------\r\nHotel Name: {{hotel_name}}\r\nAddress: {{hotel_address}}\r\nPhone: {{hotel_phone}}\r\nEmail: {{hotel_email}}\r\n\r\nCANCELLATION POLICY:\r\n------------------\r\n{{cancellation_policy}}\r\n\r\nIf you have any questions about your booking, please contact us at {{contact_email}} or call us at {{contact_phone}}.\r\n\r\nWe look forward to welcoming you to {{hotel_name}}!\r\n\r\nBest regards,\r\nThe {{hotel_name}} Team\r\n\r\n© {{year}} {{hotel_name}}. All rights reserved.\r\n{{email_footer_text}}', '[\"guest_name\",\"booking_reference\",\"check_in_date\",\"check_out_date\",\"room_type\",\"guest_count\",\"total_amount\",\"payment_status\",\"booking_url\",\"hotel_name\",\"hotel_address\",\"hotel_phone\",\"hotel_email\",\"cancellation_policy\",\"contact_email\",\"contact_phone\",\"primary_color\",\"currency_symbol\",\"year\",\"email_footer_text\"]', 1, '2025-05-22 16:28:54', '2025-05-22 16:28:54'),
 ('ef82420a-3731-11f0-b953-fa2ced23e514', NULL, 'account_signup', 'Account Signup Confirmation', 'Welcome to Qaras Hotels - Please Confirm Your Email', '<!DOCTYPE html>\r\n<html>\r\n<head>\r\n  <meta charset=\"utf-8\">\r\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n  <title>Welcome to Qaras Hotels</title>\r\n  <style>\r\n    body {\r\n      font-family: Arial, sans-serif;\r\n      line-height: 1.6;\r\n      color: #333;\r\n      margin: 0;\r\n      padding: 0;\r\n    }\r\n    .container {\r\n      max-width: 600px;\r\n      margin: 0 auto;\r\n      padding: 20px;\r\n    }\r\n    .header {\r\n      background-color: {{primary_color}};\r\n      color: white;\r\n      padding: 20px;\r\n      text-align: center;\r\n    }\r\n    .content {\r\n      padding: 20px;\r\n      background-color: #f9f9f9;\r\n    }\r\n    .button {\r\n      display: inline-block;\r\n      background-color: {{primary_color}};\r\n      color: white;\r\n      padding: 10px 20px;\r\n      text-decoration: none;\r\n      border-radius: 5px;\r\n      margin-top: 15px;\r\n    }\r\n    .footer {\r\n      text-align: center;\r\n      padding: 20px;\r\n      font-size: 12px;\r\n      color: #777;\r\n    }\r\n  </style>\r\n</head>\r\n<body>\r\n  <div class=\"container\">\r\n    <div class=\"header\">\r\n      <h1>Welcome to Qaras Hotels!</h1>\r\n    </div>\r\n    \r\n    <div class=\"content\">\r\n      <p>Dear {{first_name}},</p>\r\n      \r\n      <p>Thank you for signing up with Qaras Hotels. We\'re excited to have you on board!</p>\r\n      \r\n      <p>To complete your registration and verify your email address, please click the button below:</p>\r\n      \r\n      <p style=\"text-align: center;\">\r\n        <a href=\"{{verification_link}}\" class=\"button\">Verify Email Address</a>\r\n      </p>\r\n      \r\n      <p>If the button doesn\'t work, you can also copy and paste the following link into your browser:</p>\r\n      \r\n      <p style=\"word-break: break-all;\">{{verification_link}}</p>\r\n      \r\n      <p>This link will expire in 24 hours for security reasons.</p>\r\n      \r\n      <p>If you didn\'t create an account, please ignore this email or contact our support team if you have any concerns.</p>\r\n      \r\n      <p>Best regards,<br>\r\n      The Qaras Hotels Team</p>\r\n    </div>\r\n    \r\n    <div class=\"footer\">\r\n      <p>&copy; {{year}} Qaras Hotels. All rights reserved.</p>\r\n      <p>{{email_footer_text}}</p>\r\n    </div>\r\n  </div>\r\n</body>\r\n</html>', 'Dear {{first_name}},\r\n\r\nThank you for signing up with Qaras Hotels. We\'re excited to have you on board!\r\n\r\nTo complete your registration and verify your email address, please visit the following link:\r\n\r\n{{verification_link}}\r\n\r\nThis link will expire in 24 hours for security reasons.\r\n\r\nIf you didn\'t create an account, please ignore this email or contact our support team if you have any concerns.\r\n\r\nBest regards,\r\nThe Qaras Hotels Team\r\n\r\n© {{year}} Qaras Hotels. All rights reserved.\r\n{{email_footer_text}}', '[\"first_name\",\"last_name\",\"verification_link\",\"primary_color\",\"year\",\"email_footer_text\"]', 1, '2025-05-22 18:26:45', '2025-05-22 18:26:45'),
 ('ef86373e-3731-11f0-b953-fa2ced23e514', NULL, 'password_reset', 'Password Reset Request', 'Qaras Hotels - Password Reset Request', '<!DOCTYPE html>\r\n<html>\r\n<head>\r\n  <meta charset=\"utf-8\">\r\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n  <title>Password Reset Request</title>\r\n  <style>\r\n    body {\r\n      font-family: Arial, sans-serif;\r\n      line-height: 1.6;\r\n      color: #333;\r\n      margin: 0;\r\n      padding: 0;\r\n    }\r\n    .container {\r\n      max-width: 600px;\r\n      margin: 0 auto;\r\n      padding: 20px;\r\n    }\r\n    .header {\r\n      background-color: {{primary_color}};\r\n      color: white;\r\n      padding: 20px;\r\n      text-align: center;\r\n    }\r\n    .content {\r\n      padding: 20px;\r\n      background-color: #f9f9f9;\r\n    }\r\n    .button {\r\n      display: inline-block;\r\n      background-color: {{primary_color}};\r\n      color: white;\r\n      padding: 10px 20px;\r\n      text-decoration: none;\r\n      border-radius: 5px;\r\n      margin-top: 15px;\r\n    }\r\n    .footer {\r\n      text-align: center;\r\n      padding: 20px;\r\n      font-size: 12px;\r\n      color: #777;\r\n    }\r\n    .warning {\r\n      background-color: #fff3cd;\r\n      color: #856404;\r\n      padding: 10px;\r\n      border-radius: 5px;\r\n      margin: 15px 0;\r\n    }\r\n  </style>\r\n</head>\r\n<body>\r\n  <div class=\"container\">\r\n    <div class=\"header\">\r\n      <h1>Password Reset Request</h1>\r\n    </div>\r\n    \r\n    <div class=\"content\">\r\n      <p>Hello,</p>\r\n      \r\n      <p>We received a request to reset the password for your Qaras Hotels account. If you didn\'t make this request, you can safely ignore this email.</p>\r\n      \r\n      <p>To reset your password, please click the button below:</p>\r\n      \r\n      <p style=\"text-align: center;\">\r\n        <a href=\"{{reset_link}}\" class=\"button\">Reset Password</a>\r\n      </p>\r\n      \r\n      <p>If the button doesn\'t work, you can also copy and paste the following link into your browser:</p>\r\n      \r\n      <p style=\"word-break: break-all;\">{{reset_link}}</p>\r\n      \r\n      <div class=\"warning\">\r\n        <p><strong>Important:</strong> This password reset link will expire in 1 hour for security reasons.</p>\r\n      </div>\r\n      \r\n      <p>If you continue having trouble, please contact our support team for assistance.</p>\r\n      \r\n      <p>Best regards,<br>\r\n      The Qaras Hotels Team</p>\r\n    </div>\r\n    \r\n    <div class=\"footer\">\r\n      <p>&copy; {{year}} Qaras Hotels. All rights reserved.</p>\r\n      <p>{{email_footer_text}}</p>\r\n    </div>\r\n  </div>\r\n</body>\r\n</html>', 'Hello,\r\n\r\nWe received a request to reset the password for your Qaras Hotels account. If you didn\'t make this request, you can safely ignore this email.\r\n\r\nTo reset your password, please visit the following link:\r\n\r\n{{reset_link}}\r\n\r\nIMPORTANT: This password reset link will expire in 1 hour for security reasons.\r\n\r\nIf you continue having trouble, please contact our support team for assistance.\r\n\r\nBest regards,\r\nThe Qaras Hotels Team\r\n\r\n© {{year}} Qaras Hotels. All rights reserved.\r\n{{email_footer_text}}', '[\"reset_link\",\"primary_color\",\"year\",\"email_footer_text\"]', 1, '2025-05-22 18:26:45', '2025-05-22 18:26:45');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `facility_tasks`
+--
+
+CREATE TABLE `facility_tasks` (
+  `taskId` varchar(50) NOT NULL,
+  `hotelId` varchar(50) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `category` varchar(100) DEFAULT 'General',
+  `priority` enum('LOW','MEDIUM','HIGH','URGENT','EMERGENCY') DEFAULT 'MEDIUM',
+  `due_date` date NOT NULL,
+  `staffId` varchar(50) DEFAULT NULL,
+  `vendorId` varchar(50) DEFAULT NULL,
+  `roomUnitId` varchar(50) DEFAULT NULL,
+  `maintenance_type` enum('CORRECTIVE','PREVENTIVE','PREDICTIVE','EMERGENCY','OTHER') DEFAULT 'CORRECTIVE',
+  `estimated_hours` decimal(5,2) DEFAULT NULL,
+  `cost_estimate` decimal(15,2) DEFAULT NULL,
+  `is_recurring` tinyint(1) DEFAULT 0,
+  `status` enum('PENDING','IN_PROGRESS','COMPLETED','CANCELLED') DEFAULT 'PENDING',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `facility_tasks`
+--
+
+INSERT INTO `facility_tasks` (`taskId`, `hotelId`, `title`, `description`, `category`, `priority`, `due_date`, `staffId`, `vendorId`, `roomUnitId`, `maintenance_type`, `estimated_hours`, `cost_estimate`, `is_recurring`, `status`, `created_at`, `updated_at`) VALUES
+('500baa0e-d68e-4313-ab16-f1723988582e', '06a129c4-348f-11f0-b65f-9f7e9986d28a', 'Broken Toilet', 'Broken Toilet', 'REPAIR', 'MEDIUM', '2025-12-18', 'e3580441-db39-11f0-9c7c-f0b61e9d0e9e', '327781f0-3558-11f0-808a-f39922e0fe56', '9789413a-35b9-11f0-8cf5-f19e416d5e91', 'CORRECTIVE', 4.00, 2.00, 0, 'COMPLETED', '2026-01-20 13:55:12', '2026-01-20 14:55:14');
 
 -- --------------------------------------------------------
 
@@ -276,13 +315,13 @@ CREATE TABLE `flutterwave_settings` (
   `testPublicKey` varchar(255) DEFAULT NULL,
   `testSecretKey` varchar(255) DEFAULT NULL,
   `encryptionKey` varchar(255) DEFAULT NULL,
-  `isLive` tinyint(1) DEFAULT '0',
+  `isLive` tinyint(1) DEFAULT 0,
   `webhookUrl` varchar(255) DEFAULT NULL,
   `webhookSecret` varchar(255) DEFAULT NULL,
-  `isEnabled` tinyint(1) DEFAULT '1',
-  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isEnabled` tinyint(1) DEFAULT 1,
+  `createdAt` timestamp NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -294,7 +333,7 @@ CREATE TABLE `hotels` (
   `id` varchar(36) NOT NULL,
   `vendorId` varchar(36) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `address` text NOT NULL,
   `city` varchar(100) NOT NULL,
   `state` varchar(100) NOT NULL,
@@ -303,15 +342,15 @@ CREATE TABLE `hotels` (
   `phone` varchar(50) NOT NULL,
   `email` varchar(255) NOT NULL,
   `website` varchar(255) DEFAULT NULL,
-  `images` text,
+  `images` text DEFAULT NULL,
   `rating` float DEFAULT NULL,
-  `isActive` tinyint(1) DEFAULT '1',
-  `whitelabelConfig` text,
-  `wifiConfig` text,
-  `cctvConfig` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isActive` tinyint(1) DEFAULT 1,
+  `whitelabelConfig` text DEFAULT NULL,
+  `wifiConfig` text DEFAULT NULL,
+  `cctvConfig` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `hotels`
@@ -331,9 +370,9 @@ CREATE TABLE `hotel_amenities` (
   `id` varchar(36) NOT NULL,
   `hotelId` varchar(36) NOT NULL,
   `amenityId` varchar(36) NOT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -346,13 +385,13 @@ CREATE TABLE `legal_documents` (
   `type` enum('PRIVACY_POLICY','TERMS_OF_SERVICE','COOKIE_POLICY','REFUND_POLICY','USER_AGREEMENT') NOT NULL,
   `title` varchar(255) NOT NULL,
   `slug` varchar(255) NOT NULL,
-  `content` text,
+  `content` text DEFAULT NULL,
   `version` varchar(50) NOT NULL,
-  `isPublished` tinyint(1) NOT NULL DEFAULT '0',
+  `isPublished` tinyint(1) NOT NULL DEFAULT 0,
   `effectiveDate` datetime NOT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -366,8 +405,8 @@ CREATE TABLE `menu_access_logs` (
   `ip` varchar(50) DEFAULT NULL,
   `userAgent` varchar(255) DEFAULT NULL,
   `referrer` varchar(255) DEFAULT NULL,
-  `accessedAt` datetime DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `accessedAt` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `menu_access_logs`
@@ -393,12 +432,12 @@ CREATE TABLE `menu_categories` (
   `id` varchar(36) NOT NULL,
   `hotelId` varchar(36) NOT NULL,
   `name` varchar(100) NOT NULL,
-  `description` text,
-  `displayOrder` int NOT NULL DEFAULT '0',
-  `isActive` tinyint(1) NOT NULL DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `description` text DEFAULT NULL,
+  `displayOrder` int(11) NOT NULL DEFAULT 0,
+  `isActive` tinyint(1) NOT NULL DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `menu_categories`
@@ -419,24 +458,24 @@ CREATE TABLE `menu_items` (
   `id` varchar(36) NOT NULL,
   `categoryId` varchar(36) NOT NULL,
   `name` varchar(100) NOT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `price` decimal(10,2) NOT NULL,
   `discountedPrice` decimal(10,2) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
-  `ingredients` text,
-  `allergens` text,
-  `isVegetarian` tinyint(1) DEFAULT '0',
-  `isVegan` tinyint(1) DEFAULT '0',
-  `isGlutenFree` tinyint(1) DEFAULT '0',
-  `isSpicy` tinyint(1) DEFAULT '0',
-  `calories` int DEFAULT NULL,
-  `preparationTime` int DEFAULT NULL,
-  `displayOrder` int NOT NULL DEFAULT '0',
-  `isAvailable` tinyint(1) NOT NULL DEFAULT '1',
-  `isFeatured` tinyint(1) NOT NULL DEFAULT '0',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `ingredients` text DEFAULT NULL,
+  `allergens` text DEFAULT NULL,
+  `isVegetarian` tinyint(1) DEFAULT 0,
+  `isVegan` tinyint(1) DEFAULT 0,
+  `isGlutenFree` tinyint(1) DEFAULT 0,
+  `isSpicy` tinyint(1) DEFAULT 0,
+  `calories` int(11) DEFAULT NULL,
+  `preparationTime` int(11) DEFAULT NULL,
+  `displayOrder` int(11) NOT NULL DEFAULT 0,
+  `isAvailable` tinyint(1) NOT NULL DEFAULT 1,
+  `isFeatured` tinyint(1) NOT NULL DEFAULT 0,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `menu_items`
@@ -466,12 +505,12 @@ CREATE TABLE `menu_settings` (
   `logoUrl` varchar(255) DEFAULT NULL,
   `bannerUrl` varchar(255) DEFAULT NULL,
   `currency` varchar(10) DEFAULT 'NGN',
-  `showPrices` tinyint(1) DEFAULT '1',
-  `enableOrdering` tinyint(1) DEFAULT '0',
+  `showPrices` tinyint(1) DEFAULT 1,
+  `enableOrdering` tinyint(1) DEFAULT 0,
   `qrCodeStyle` varchar(20) DEFAULT 'standard',
-  `lastUpdated` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `lastUpdated` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `createdAt` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `menu_settings`
@@ -489,13 +528,13 @@ INSERT INTO `menu_settings` (`id`, `hotelId`, `theme`, `primaryColor`, `secondar
 CREATE TABLE `modules` (
   `id` varchar(36) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `type` varchar(50) NOT NULL,
   `basePrice` decimal(10,2) NOT NULL,
-  `isActive` tinyint(1) DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isActive` tinyint(1) DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `modules`
@@ -529,11 +568,11 @@ CREATE TABLE `notifications` (
   `recipient` varchar(50) NOT NULL,
   `userId` varchar(36) NOT NULL,
   `senderId` varchar(36) DEFAULT NULL,
-  `metadata` text,
+  `metadata` text DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'UNREAD',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -544,14 +583,14 @@ CREATE TABLE `notifications` (
 CREATE TABLE `notification_preferences` (
   `id` varchar(36) NOT NULL,
   `userId` varchar(36) NOT NULL,
-  `emailEnabled` tinyint(1) DEFAULT '1',
-  `pushEnabled` tinyint(1) DEFAULT '1',
-  `inAppEnabled` tinyint(1) DEFAULT '1',
-  `subscribedTypes` text,
-  `unsubscribedTypes` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `emailEnabled` tinyint(1) DEFAULT 1,
+  `pushEnabled` tinyint(1) DEFAULT 1,
+  `inAppEnabled` tinyint(1) DEFAULT 1,
+  `subscribedTypes` text DEFAULT NULL,
+  `unsubscribedTypes` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `notification_preferences`
@@ -575,31 +614,30 @@ CREATE TABLE `payments` (
   `status` varchar(50) NOT NULL,
   `paymentMethod` varchar(50) DEFAULT 'card',
   `transactionId` varchar(255) DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `currency` varchar(10) DEFAULT 'NGN',
   `transaction_reference` varchar(100) DEFAULT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `subscription_plan_id` varchar(36) DEFAULT NULL,
   `vendor_id` varchar(36) DEFAULT NULL,
   `customer_id` varchar(36) DEFAULT NULL,
-  `booking_id` varchar(36) DEFAULT NULL,
-  `payment_method` enum('card','bank_transfer','cash') DEFAULT 'card',
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `payments`
 --
 
-INSERT INTO `payments` (`id`, `bookingId`, `amount`, `status`, `paymentMethod`, `transactionId`, `createdAt`, `updatedAt`, `currency`, `transaction_reference`, `description`, `subscription_plan_id`, `vendor_id`, `customer_id`, `booking_id`, `payment_method`, `created_at`, `updated_at`) VALUES
-('dc42a95e-3561-11f0-808a-f39922e0fe56', NULL, 25000.00, 'completed', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN123456789', 'Premium Plan Subscription Payment', '8252c9fc-34ed-11f0-9f7f-5fe7685262f6', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, NULL, 'card', '2025-05-20 11:04:47', '2025-05-20 11:04:47'),
-('dc42ad78-3561-11f0-808a-f39922e0fe56', NULL, 15000.00, 'completed', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN987654321', 'Basic Plan Subscription Payment', '755e6528-34f5-11f0-9620-d36ca6faf4d8', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, NULL, 'bank_transfer', '2025-05-05 11:04:47', '2025-05-05 11:04:47'),
-('dc42ca2e-3561-11f0-808a-f39922e0fe56', NULL, 35000.00, 'pending', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN456789123', 'Enterprise Plan Subscription Upgrade', '8252c9fc-34ed-11f0-9f7f-5fe7685262f6', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, NULL, 'card', '2025-05-13 11:04:47', '2025-05-13 11:04:47'),
-('dc42cb28-3561-11f0-808a-f39922e0fe56', NULL, 10000.00, 'failed', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN789123456', 'Failed Subscription Payment Attempt', '755e6528-34f5-11f0-9620-d36ca6faf4d8', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, NULL, 'card', '2025-05-17 11:04:47', '2025-05-17 11:04:47'),
-('dc42cbc8-3561-11f0-808a-f39922e0fe56', NULL, 27500.00, 'completed', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN321654987', 'Premium Plan Renewal', '8252c9fc-34ed-11f0-9f7f-5fe7685262f6', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, NULL, 'cash', '2025-05-19 11:04:47', '2025-05-19 11:04:47'),
-('dc42cc5e-3561-11f0-808a-f39922e0fe56', NULL, 18000.00, 'refunded', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN654987321', 'Refunded Subscription Payment', '755e6528-34f5-11f0-9620-d36ca6faf4d8', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, NULL, 'card', '2025-05-10 11:04:47', '2025-05-20 11:04:47');
+INSERT INTO `payments` (`id`, `bookingId`, `amount`, `status`, `paymentMethod`, `transactionId`, `createdAt`, `updatedAt`, `currency`, `transaction_reference`, `description`, `subscription_plan_id`, `vendor_id`, `customer_id`, `created_at`, `updated_at`) VALUES
+('0f7d5281-9962-4d42-88c8-d71bd561a356', '988f799b-079d-4a63-9d59-59f34a347ed0', 20000.00, 'COMPLETED', 'CASH', '99cc2bef', '2026-01-23 07:48:32', '2026-01-23 07:48:32', 'NGN', NULL, NULL, NULL, NULL, NULL, '2026-01-23 07:48:32', '2026-01-23 07:48:32'),
+('dc42a95e-3561-11f0-808a-f39922e0fe56', NULL, 25000.00, 'completed', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN123456789', 'Premium Plan Subscription Payment', '8252c9fc-34ed-11f0-9f7f-5fe7685262f6', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47'),
+('dc42ad78-3561-11f0-808a-f39922e0fe56', NULL, 15000.00, 'completed', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN987654321', 'Basic Plan Subscription Payment', '755e6528-34f5-11f0-9620-d36ca6faf4d8', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, '2025-05-05 11:04:47', '2025-05-05 11:04:47'),
+('dc42ca2e-3561-11f0-808a-f39922e0fe56', NULL, 35000.00, 'pending', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN456789123', 'Enterprise Plan Subscription Upgrade', '8252c9fc-34ed-11f0-9f7f-5fe7685262f6', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, '2025-05-13 11:04:47', '2025-05-13 11:04:47'),
+('dc42cb28-3561-11f0-808a-f39922e0fe56', NULL, 10000.00, 'failed', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN789123456', 'Failed Subscription Payment Attempt', '755e6528-34f5-11f0-9620-d36ca6faf4d8', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, '2025-05-17 11:04:47', '2025-05-17 11:04:47'),
+('dc42cbc8-3561-11f0-808a-f39922e0fe56', NULL, 27500.00, 'completed', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN321654987', 'Premium Plan Renewal', '8252c9fc-34ed-11f0-9f7f-5fe7685262f6', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, '2025-05-19 11:04:47', '2025-05-19 11:04:47'),
+('dc42cc5e-3561-11f0-808a-f39922e0fe56', NULL, 18000.00, 'refunded', 'card', NULL, '2025-05-20 11:04:47', '2025-05-20 11:04:47', 'NGN', 'TXN654987321', 'Refunded Subscription Payment', '755e6528-34f5-11f0-9620-d36ca6faf4d8', '069f261a-348f-11f0-b65f-9f7e9986d28a', NULL, '2025-05-10 11:04:47', '2025-05-20 11:04:47');
 
 -- --------------------------------------------------------
 
@@ -609,13 +647,13 @@ INSERT INTO `payments` (`id`, `bookingId`, `amount`, `status`, `paymentMethod`, 
 
 CREATE TABLE `payment_settings` (
   `id` varchar(36) NOT NULL,
-  `defaultTaxRate` decimal(5,2) DEFAULT '5.00',
-  `defaultCommissionRate` decimal(5,2) DEFAULT '10.00',
+  `defaultTaxRate` decimal(5,2) DEFAULT 5.00,
+  `defaultCommissionRate` decimal(5,2) DEFAULT 10.00,
   `defaultCurrency` varchar(10) DEFAULT 'NGN',
-  `paymentMethods` json DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `paymentMethods` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`paymentMethods`)),
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `payment_settings`
@@ -634,13 +672,13 @@ CREATE TABLE `paystack_configurations` (
   `id` varchar(36) NOT NULL,
   `publicKey` varchar(255) NOT NULL,
   `secretKey` varchar(255) NOT NULL,
-  `isTest` tinyint(1) NOT NULL DEFAULT '1',
-  `isDefault` tinyint(1) NOT NULL DEFAULT '1',
-  `isActive` tinyint(1) NOT NULL DEFAULT '1',
+  `isTest` tinyint(1) NOT NULL DEFAULT 1,
+  `isDefault` tinyint(1) NOT NULL DEFAULT 1,
+  `isActive` tinyint(1) NOT NULL DEFAULT 1,
   `webhookSecret` varchar(255) DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -654,13 +692,13 @@ CREATE TABLE `paystack_settings` (
   `liveSecretKey` varchar(255) DEFAULT NULL,
   `testPublicKey` varchar(255) DEFAULT NULL,
   `testSecretKey` varchar(255) DEFAULT NULL,
-  `isLive` tinyint(1) DEFAULT '0',
+  `isLive` tinyint(1) DEFAULT 0,
   `webhookUrl` varchar(255) DEFAULT NULL,
   `webhookSecret` varchar(255) DEFAULT NULL,
-  `isEnabled` tinyint(1) DEFAULT '1',
-  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isEnabled` tinyint(1) DEFAULT 1,
+  `createdAt` timestamp NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -672,11 +710,11 @@ CREATE TABLE `plan_features` (
   `id` varchar(36) NOT NULL,
   `planId` varchar(36) NOT NULL,
   `moduleId` varchar(36) NOT NULL,
-  `isIncluded` tinyint(1) DEFAULT '0',
-  `limits` text COMMENT 'JSON for any limits (e.g. number of rooms, bookings)',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isIncluded` tinyint(1) DEFAULT 0,
+  `limits` text DEFAULT NULL COMMENT 'JSON for any limits (e.g. number of rooms, bookings)',
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `plan_features`
@@ -735,13 +773,13 @@ CREATE TABLE `push_subscriptions` (
   `id` varchar(36) NOT NULL,
   `userId` varchar(36) NOT NULL,
   `endpoint` varchar(500) NOT NULL,
-  `expirationTime` bigint DEFAULT NULL,
+  `expirationTime` bigint(20) DEFAULT NULL,
   `p256dh` varchar(255) NOT NULL,
   `auth` varchar(255) NOT NULL,
   `userAgent` varchar(500) DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -754,16 +792,16 @@ CREATE TABLE `rooms` (
   `hotelId` varchar(36) NOT NULL,
   `name` varchar(255) NOT NULL,
   `type` varchar(100) NOT NULL,
-  `description` text,
-  `capacity` int NOT NULL,
+  `description` text DEFAULT NULL,
+  `capacity` int(11) NOT NULL,
   `pricePerNight` decimal(10,2) NOT NULL,
   `discountedPrice` decimal(10,2) DEFAULT NULL,
-  `images` text,
+  `images` text DEFAULT NULL,
   `status` varchar(50) NOT NULL,
-  `roomNumbers` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `roomNumbers` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `rooms`
@@ -785,9 +823,9 @@ CREATE TABLE `room_amenities` (
   `id` varchar(36) NOT NULL,
   `roomId` varchar(36) NOT NULL,
   `amenityId` varchar(36) NOT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -802,10 +840,10 @@ CREATE TABLE `room_units` (
   `status` enum('available','occupied','maintenance','reserved','cleaning') DEFAULT 'available',
   `currentBookingId` varchar(36) DEFAULT NULL,
   `lastCleanedAt` datetime DEFAULT NULL,
-  `notes` text,
-  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `notes` text DEFAULT NULL,
+  `createdAt` timestamp NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `room_units`
@@ -825,7 +863,7 @@ INSERT INTO `room_units` (`id`, `roomId`, `roomNumber`, `status`, `currentBookin
 ('97893e60-35b9-11f0-8cf5-f19e416d5e91', 'f4867610-3595-11f0-9207-db0ca828cf96', '204', 'available', NULL, NULL, NULL, '2025-05-20 20:32:47', '2025-05-20 20:32:47'),
 ('97893f3c-35b9-11f0-8cf5-f19e416d5e91', 'f4867610-3595-11f0-9207-db0ca828cf96', '206', 'available', NULL, NULL, NULL, '2025-05-20 20:32:47', '2025-05-20 20:32:47'),
 ('97893ffa-35b9-11f0-8cf5-f19e416d5e91', 'f4867610-3595-11f0-9207-db0ca828cf96', '303', 'available', NULL, NULL, NULL, '2025-05-20 20:32:47', '2025-05-20 20:32:47'),
-('978940a4-35b9-11f0-8cf5-f19e416d5e91', 'f4867610-3595-11f0-9207-db0ca828cf96', '307', 'available', NULL, NULL, NULL, '2025-05-20 20:32:47', '2025-05-20 20:32:47'),
+('978940a4-35b9-11f0-8cf5-f19e416d5e91', 'f4867610-3595-11f0-9207-db0ca828cf96', '307', 'available', NULL, NULL, NULL, '2025-05-20 20:32:47', '2026-01-26 09:58:39'),
 ('9789413a-35b9-11f0-8cf5-f19e416d5e91', 'f4867610-3595-11f0-9207-db0ca828cf96', '309', 'available', NULL, NULL, NULL, '2025-05-20 20:32:47', '2025-05-20 20:32:47'),
 ('978941da-35b9-11f0-8cf5-f19e416d5e91', 'f4867610-3595-11f0-9207-db0ca828cf96', '311', 'available', NULL, NULL, NULL, '2025-05-20 20:32:47', '2025-05-20 20:32:47'),
 ('978a27d0-35b9-11f0-8cf5-f19e416d5e91', 'f487851e-3595-11f0-9207-db0ca828cf96', '306', 'available', NULL, NULL, NULL, '2025-05-20 20:32:47', '2025-05-20 20:32:47'),
@@ -839,19 +877,19 @@ INSERT INTO `room_units` (`id`, `roomId`, `roomNumber`, `status`, `currentBookin
 
 CREATE TABLE `security_settings` (
   `id` varchar(36) NOT NULL,
-  `twoFactorAuthEnabled` tinyint(1) NOT NULL DEFAULT '0',
-  `passwordPolicy` json DEFAULT NULL,
-  `loginAttempts` int DEFAULT '5',
-  `lockoutDuration` int DEFAULT '30',
+  `twoFactorAuthEnabled` tinyint(1) NOT NULL DEFAULT 0,
+  `passwordPolicy` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`passwordPolicy`)),
+  `loginAttempts` int(11) DEFAULT 5,
+  `lockoutDuration` int(11) DEFAULT 30,
   `jwtSecret` varchar(255) DEFAULT NULL,
-  `jwtExpiry` int DEFAULT '86400',
-  `sessionTimeout` int DEFAULT '3600',
-  `allowedIPs` text,
-  `blockedIPs` text,
-  `corsOrigins` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `jwtExpiry` int(11) DEFAULT 86400,
+  `sessionTimeout` int(11) DEFAULT 3600,
+  `allowedIPs` text DEFAULT NULL,
+  `blockedIPs` text DEFAULT NULL,
+  `corsOrigins` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -862,20 +900,20 @@ CREATE TABLE `security_settings` (
 CREATE TABLE `seo_settings` (
   `id` varchar(36) NOT NULL,
   `metaTitle` varchar(255) DEFAULT NULL,
-  `metaDescription` text,
-  `metaKeywords` text,
+  `metaDescription` text DEFAULT NULL,
+  `metaKeywords` text DEFAULT NULL,
   `ogTitle` varchar(255) DEFAULT NULL,
-  `ogDescription` text,
+  `ogDescription` text DEFAULT NULL,
   `ogImage` varchar(255) DEFAULT NULL,
   `twitterHandle` varchar(255) DEFAULT NULL,
   `canonicalUrl` varchar(255) DEFAULT NULL,
-  `robotsTxt` text,
-  `structuredData` text,
+  `robotsTxt` text DEFAULT NULL,
+  `structuredData` text DEFAULT NULL,
   `googleAnalyticsId` varchar(255) DEFAULT NULL,
   `googleTagManagerId` varchar(255) DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `seo_settings`
@@ -893,15 +931,15 @@ INSERT INTO `seo_settings` (`id`, `metaTitle`, `metaDescription`, `metaKeywords`
 CREATE TABLE `site_settings` (
   `id` varchar(36) NOT NULL,
   `siteName` varchar(255) NOT NULL DEFAULT 'Qaras Hotels',
-  `siteDescription` text,
+  `siteDescription` text DEFAULT NULL,
   `defaultLanguage` varchar(10) DEFAULT 'en',
   `timezone` varchar(50) DEFAULT 'UTC',
   `defaultCurrency` varchar(10) DEFAULT 'NGN',
-  `maintenanceMode` tinyint(1) NOT NULL DEFAULT '0',
-  `maintenanceMsg` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `maintenanceMode` tinyint(1) NOT NULL DEFAULT 0,
+  `maintenanceMsg` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `site_settings`
@@ -920,17 +958,17 @@ CREATE TABLE `smtp_settings` (
   `id` varchar(36) NOT NULL,
   `vendorId` varchar(36) DEFAULT NULL,
   `host` varchar(255) NOT NULL,
-  `port` int NOT NULL DEFAULT '587',
+  `port` int(11) NOT NULL DEFAULT 587,
   `username` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `fromEmail` varchar(255) NOT NULL,
   `fromName` varchar(255) NOT NULL,
   `encryption` enum('none','ssl','tls') DEFAULT 'tls',
-  `isDefault` tinyint(1) NOT NULL DEFAULT '1',
-  `isActive` tinyint(1) NOT NULL DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isDefault` tinyint(1) NOT NULL DEFAULT 1,
+  `isActive` tinyint(1) NOT NULL DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -944,10 +982,17 @@ CREATE TABLE `staff` (
   `vendorId` varchar(36) DEFAULT NULL,
   `hotelId` varchar(36) DEFAULT NULL,
   `position` varchar(100) NOT NULL,
-  `permissions` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `permissions` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `staff`
+--
+
+INSERT INTO `staff` (`id`, `userId`, `vendorId`, `hotelId`, `position`, `permissions`, `createdAt`, `updatedAt`) VALUES
+('e3580441-db39-11f0-9c7c-f0b61e9d0e9e', 'e35787ca-db39-11f0-9c7c-f0b61e9d0e9e', '327781f0-3558-11f0-808a-f39922e0fe56', '06a129c4-348f-11f0-b65f-9f7e9986d28a', 'Supervisor', '[\"bookings\",\"rooms\",\"customers\",\"payments\",\"reports\",\"staff\",\"tasks\"]', '2025-12-17 12:16:38', '2026-01-22 13:16:08');
 
 -- --------------------------------------------------------
 
@@ -963,10 +1008,10 @@ CREATE TABLE `subscription_payments` (
   `paymentReference` varchar(255) DEFAULT NULL,
   `status` varchar(50) NOT NULL DEFAULT 'PENDING',
   `paymentDate` datetime DEFAULT NULL,
-  `notes` text,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `notes` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `subscription_payments`
@@ -984,14 +1029,14 @@ INSERT INTO `subscription_payments` (`id`, `vendorId`, `subscriptionPlanId`, `am
 CREATE TABLE `subscription_plans` (
   `id` varchar(36) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `price` decimal(10,2) NOT NULL,
   `billingCycle` varchar(20) NOT NULL,
-  `features` text COMMENT 'JSON field for features',
-  `isActive` tinyint(1) DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `features` text DEFAULT NULL COMMENT 'JSON field for features',
+  `isActive` tinyint(1) DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `subscription_plans`
@@ -1012,9 +1057,9 @@ INSERT INTO `subscription_plans` (`id`, `name`, `description`, `price`, `billing
 CREATE TABLE `super_admins` (
   `id` varchar(36) NOT NULL,
   `userId` varchar(36) NOT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `super_admins`
@@ -1026,23 +1071,45 @@ INSERT INTO `super_admins` (`id`, `userId`, `createdAt`, `updatedAt`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `task_comments`
+--
+
+CREATE TABLE `task_comments` (
+  `commentId` int(11) NOT NULL,
+  `taskId` varchar(50) NOT NULL,
+  `staffId` varchar(50) NOT NULL,
+  `comment_text` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `task_comments`
+--
+
+INSERT INTO `task_comments` (`commentId`, `taskId`, `staffId`, `comment_text`, `created_at`, `updated_at`) VALUES
+(1, '500baa0e-d68e-4313-ab16-f1723988582e', 'e3580441-db39-11f0-9c7c-f0b61e9d0e9e', 'I have fixed the broken toilet. The issue wasn\'t major. But I need 5k to fix the pipes.', '2026-01-19 18:06:08', '2026-01-19 18:06:08');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `theme_settings`
 --
 
 CREATE TABLE `theme_settings` (
   `id` varchar(36) NOT NULL,
-  `colorPalette` text,
-  `typography` text,
-  `buttons` text,
-  `layout` text,
-  `customCSS` text,
+  `colorPalette` text DEFAULT NULL,
+  `typography` text DEFAULT NULL,
+  `buttons` text DEFAULT NULL,
+  `layout` text DEFAULT NULL,
+  `customCSS` text DEFAULT NULL,
   `logoUrl` varchar(255) DEFAULT NULL,
   `faviconUrl` varchar(255) DEFAULT NULL,
   `loginBannerUrl` varchar(255) DEFAULT NULL,
-  `isActive` tinyint(1) DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isActive` tinyint(1) DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `theme_settings`
@@ -1065,22 +1132,25 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `role` varchar(20) NOT NULL,
-  `isActive` tinyint(1) DEFAULT '1',
+  `isActive` tinyint(1) DEFAULT 1,
   `emailVerified` datetime DEFAULT NULL,
   `lastLoginAt` datetime DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`id`, `name`, `firstName`, `lastName`, `email`, `password`, `role`, `isActive`, `emailVerified`, `lastLoginAt`, `createdAt`, `updatedAt`) VALUES
-('069d1848-348f-11f0-b65f-9f7e9986d28a', 'Qaras Admin', NULL, NULL, 'admin@qarashotels.com.ng', '$2b$10$V7GfUL9yyD1WkfH.Ux1mhOmBZMTajSXf6ABQAV.WqCmsbQmAldrS.', 'SUPER_ADMIN', 1, NULL, '2025-05-21 21:52:57', '2025-05-19 09:55:34', '2025-05-21 21:52:57'),
-('327486a8-3558-11f0-808a-f39922e0fe56', 'Qaras Hotels', NULL, NULL, 'vendor@qarashotels.com.ng', '$2b$10$V7GfUL9yyD1WkfH.Ux1mhOmBZMTajSXf6ABQAV.WqCmsbQmAldrS.', 'VENDOR', 1, NULL, '2025-05-23 02:10:08', '2025-05-20 09:55:36', '2025-05-23 02:10:07'),
+('069d1848-348f-11f0-b65f-9f7e9986d28a', 'Qaras Admin', NULL, NULL, 'admin@qarashotels.com.ng', '$2b$10$V7GfUL9yyD1WkfH.Ux1mhOmBZMTajSXf6ABQAV.WqCmsbQmAldrS.', 'SUPER_ADMIN', 1, NULL, '2026-01-15 08:48:01', '2025-05-19 09:55:34', '2026-01-15 08:48:01'),
+('327486a8-3558-11f0-808a-f39922e0fe56', 'Qaras Hotels', NULL, NULL, 'vendor@qarashotels.com.ng', '$2b$10$V7GfUL9yyD1WkfH.Ux1mhOmBZMTajSXf6ABQAV.WqCmsbQmAldrS.', 'VENDOR', 1, NULL, '2026-01-22 13:14:17', '2025-05-20 09:55:36', '2026-01-22 13:14:17'),
 ('8253922e-34ed-11f0-9f7f-5fe7685262f6', 'John Customer', NULL, NULL, 'customer@example.com', '$2b$10$rvQQmuz7QUFt/haqoSdRdeSGTAIVK9bsw8QQJqUcYUQQ3YCKnJv0a', 'CUSTOMER', 1, NULL, NULL, '2025-05-19 21:11:54', '2025-05-19 21:11:54'),
-('8253b6dc-34ed-11f0-9f7f-5fe7685262f6', 'Hotel Staff', NULL, NULL, 'staff@qarashotels.com.ng', '$2b$10$rvQQmuz7QUFt/haqoSdRdeSGTAIVK9bsw8QQJqUcYUQQ3YCKnJv0a', 'STAFF', 1, NULL, NULL, '2025-05-19 21:11:54', '2025-05-19 21:11:54');
+('8253b6dc-34ed-11f0-9f7f-5fe7685262f6', 'Hotel Staff', NULL, NULL, 'staff@qarashotels.com.ng', '$2b$10$rvQQmuz7QUFt/haqoSdRdeSGTAIVK9bsw8QQJqUcYUQQ3YCKnJv0a', 'STAFF', 1, NULL, NULL, '2025-05-19 21:11:54', '2025-05-19 21:11:54'),
+('92d4deb3-aa00-4b4b-9568-bf9f319ce67c', 'Fortune Precious', NULL, NULL, 'fortuneprecious@gmail.com', '$2b$10$GcGIxcwH/fy.zcfvoFuFUu7auZDDK8tlpQUKdkok2UGpAzPbZJ6oW', 'CUSTOMER', 1, NULL, NULL, '2026-01-08 14:03:34', '2026-01-08 14:03:34'),
+('c6c181b0-db39-11f0-9c7c-f0b61e9d0e9e', 'Fortune Precious', NULL, NULL, 'fortuneprecious17@gmail.com', '$2b$10$iS6cinVzi4xy1K5D9S6S/Obh4YhELOAByj4r5C/M36LW2FZCBKkjS', 'CUSTOMER', 1, NULL, '2025-12-22 10:07:15', '2025-12-17 12:15:50', '2025-12-22 10:07:15'),
+('e35787ca-db39-11f0-9c7c-f0b61e9d0e9e', 'Fortune Precious', NULL, NULL, 'fortune123precious@gmail.com', '$2b$10$umWOvK8FhTCaySlOFhKY4uwAo2PavF0nXdVecEYqANigDQbb/2jmC', 'STAFF', 1, NULL, '2026-01-26 09:44:48', '2025-12-17 12:16:38', '2026-01-26 09:44:48');
 
 -- --------------------------------------------------------
 
@@ -1092,10 +1162,10 @@ CREATE TABLE `vapid_keys` (
   `id` varchar(36) NOT NULL,
   `publicKey` varchar(255) NOT NULL,
   `privateKey` varchar(255) NOT NULL,
-  `isDefault` tinyint(1) NOT NULL DEFAULT '0',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isDefault` tinyint(1) NOT NULL DEFAULT 0,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -1107,14 +1177,14 @@ CREATE TABLE `vendors` (
   `id` varchar(36) NOT NULL,
   `userId` varchar(36) NOT NULL,
   `companyName` varchar(255) DEFAULT NULL,
-  `businessAddress` text,
+  `businessAddress` text DEFAULT NULL,
   `businessPhone` varchar(50) DEFAULT NULL,
   `taxId` varchar(50) DEFAULT NULL,
   `subscriptionPlanId` varchar(36) DEFAULT NULL,
   `subscriptionStatus` varchar(20) DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `vendors`
@@ -1138,10 +1208,10 @@ CREATE TABLE `wifi_credentials` (
   `password` varchar(100) NOT NULL,
   `validFrom` datetime NOT NULL,
   `validUntil` datetime DEFAULT NULL,
-  `isActive` tinyint(1) DEFAULT '1',
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `isActive` tinyint(1) DEFAULT 1,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -1154,14 +1224,14 @@ CREATE TABLE `wifi_networks` (
   `hotelId` varchar(36) NOT NULL,
   `networkName` varchar(255) NOT NULL,
   `securityType` varchar(50) NOT NULL DEFAULT 'WPA2',
-  `isPublic` tinyint(1) DEFAULT '0',
-  `isEnabled` tinyint(1) DEFAULT '1',
-  `bandwidthLimit` int DEFAULT NULL,
-  `description` text,
+  `isPublic` tinyint(1) DEFAULT 0,
+  `isEnabled` tinyint(1) DEFAULT 1,
+  `bandwidthLimit` int(11) DEFAULT NULL,
+  `description` text DEFAULT NULL,
   `locationArea` varchar(255) DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Indexes for dumped tables
@@ -1194,7 +1264,7 @@ ALTER TABLE `app_settings`
 ALTER TABLE `bookings`
   ADD PRIMARY KEY (`id`),
   ADD KEY `hotelId` (`hotelId`),
-  ADD KEY `roomId` (`roomId`),
+  ADD KEY `roomId` (`roomUnitId`),
   ADD KEY `customerId` (`customerId`);
 
 --
@@ -1225,6 +1295,16 @@ ALTER TABLE `email_templates`
   ADD PRIMARY KEY (`id`),
   ADD KEY `vendorId` (`vendorId`),
   ADD KEY `template_key` (`template_key`);
+
+--
+-- Indexes for table `facility_tasks`
+--
+ALTER TABLE `facility_tasks`
+  ADD PRIMARY KEY (`taskId`),
+  ADD KEY `fk_hotel_1` (`hotelId`),
+  ADD KEY `fk_staff_1` (`staffId`),
+  ADD KEY `fk_room_unit_1` (`roomUnitId`),
+  ADD KEY `fk_vendor_1` (`vendorId`);
 
 --
 -- Indexes for table `flutterwave_settings`
@@ -1427,6 +1507,14 @@ ALTER TABLE `super_admins`
   ADD UNIQUE KEY `userId` (`userId`);
 
 --
+-- Indexes for table `task_comments`
+--
+ALTER TABLE `task_comments`
+  ADD PRIMARY KEY (`commentId`),
+  ADD KEY `taskId` (`taskId`),
+  ADD KEY `staffId` (`staffId`);
+
+--
 -- Indexes for table `theme_settings`
 --
 ALTER TABLE `theme_settings`
@@ -1468,6 +1556,16 @@ ALTER TABLE `wifi_networks`
   ADD KEY `hotelId` (`hotelId`);
 
 --
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `task_comments`
+--
+ALTER TABLE `task_comments`
+  MODIFY `commentId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- Constraints for dumped tables
 --
 
@@ -1476,7 +1574,7 @@ ALTER TABLE `wifi_networks`
 --
 ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`hotelId`) REFERENCES `hotels` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`roomId`) REFERENCES `rooms` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`roomUnitId`) REFERENCES `room_units` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `bookings_ibfk_3` FOREIGN KEY (`customerId`) REFERENCES `customers` (`id`) ON DELETE CASCADE;
 
 --
@@ -1497,6 +1595,15 @@ ALTER TABLE `customers`
 --
 ALTER TABLE `email_templates`
   ADD CONSTRAINT `email_templates_ibfk_1` FOREIGN KEY (`vendorId`) REFERENCES `vendors` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `facility_tasks`
+--
+ALTER TABLE `facility_tasks`
+  ADD CONSTRAINT `fk_hotel_1` FOREIGN KEY (`hotelId`) REFERENCES `hotels` (`id`),
+  ADD CONSTRAINT `fk_room_unit_1` FOREIGN KEY (`roomUnitId`) REFERENCES `room_units` (`id`),
+  ADD CONSTRAINT `fk_staff_1` FOREIGN KEY (`staffId`) REFERENCES `staff` (`id`),
+  ADD CONSTRAINT `fk_vendor_1` FOREIGN KEY (`vendorId`) REFERENCES `vendors` (`id`);
 
 --
 -- Constraints for table `hotels`
@@ -1607,6 +1714,12 @@ ALTER TABLE `subscription_payments`
 --
 ALTER TABLE `super_admins`
   ADD CONSTRAINT `super_admins_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `task_comments`
+--
+ALTER TABLE `task_comments`
+  ADD CONSTRAINT `fk_comment_task` FOREIGN KEY (`taskId`) REFERENCES `facility_tasks` (`taskId`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `vendors`
