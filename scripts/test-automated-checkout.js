@@ -61,9 +61,9 @@ async function createTestBooking() {
     
     // Create expired test booking
     await connection.query(`
-      INSERT INTO bookings (id, hotelId, roomId, customerId, checkInDate, checkOutDate, numberOfGuests, numberOfRooms, totalAmount, status, paymentStatus, createdAt, updatedAt)
+      INSERT INTO bookings (id, hotelId, roomUnitId, customerId, checkInDate, checkOutDate, numberOfGuests, numberOfRooms, totalAmount, status, paymentStatus, createdAt, updatedAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'CHECKED_IN', 'PENDING', NOW(), NOW())
-    `, [bookingId, hotelId, roomId, customerId, yesterday.toISOString().split('T')[0], yesterday.toISOString().split('T')[0], 2, 1, 200.00]);
+    `, [bookingId, hotelId, roomUnitId, customerId, yesterday.toISOString().split('T')[0], yesterday.toISOString().split('T')[0], 2, 1, 200.00]);
     
     await connection.commit();
     
