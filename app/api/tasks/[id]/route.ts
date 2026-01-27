@@ -6,19 +6,24 @@ import { ModuleType, TaskStatus } from '@/lib/types/enums';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { RowDataPacket } from 'mysql2';
+import NotificationService from '@/lib/services/notification.service';
 
 // Schema for updating a task
 const updateTaskSchema = z.object({
   title: z.string().min(3).optional(),
   description: z.string().min(5).optional(),
-  assignedToId: z.string().uuid().nullable().optional(),
+  assignedToId: z.string().nullable().optional(),
   status: z.nativeEnum(TaskStatus).optional(),
   priority: z.string().optional(),
   category: z.string().optional(),
-  dueDate: z.string().transform(str => new Date(str)).optional(),
+  dueDate: z.string().transform(str => {
+    const date = new Date(str);
+    // Format as YYYY-MM-DD for MySQL date type
+    return date.toISOString().split('T')[0];
+  }).optional(),
   estimatedHours: z.number().positive().optional(),
   costEstimate: z.number().nonnegative().optional(),
-  roomId: z.string().uuid().nullable().optional(),
+  roomUnitId: z.string().nullable().optional(),
   maintenanceType: z.string().optional(),
   isRecurring: z.boolean().optional(),
   attachments: z.string().optional(), // JSON string of URLs
@@ -295,19 +300,12 @@ export async function PUT(
       updateFields.push('cost_estimate = ?');
       updateValues.push(validatedData.costEstimate);
     }
-    if (validatedData.roomId !== undefined) {
-      if (validatedData.roomId === null) {
+    if (validatedData.roomUnitId !== undefined) {
+      if (validatedData.roomUnitId === null) {
         updateFields.push('roomUnitId = NULL');
       } else {
-        // Map roomId to roomUnitId if provided
-        const [roomUnitRows] = await pool.query<RowDataPacket[]>(
-          `SELECT id FROM room_units WHERE id = ? LIMIT 1`,
-          [validatedData.roomId]
-        );
-        if (roomUnitRows.length > 0) {
-          updateFields.push('roomUnitId = ?');
-          updateValues.push(roomUnitRows[0].id);
-        }
+        updateFields.push('roomUnitId = ?');
+        updateValues.push(validatedData.roomUnitId);
       }
     }
     if (validatedData.maintenanceType !== undefined) {
@@ -386,61 +384,88 @@ export async function PUT(
     // Send notifications if assignment changed
     if (assignmentChanged && updatedTask.assignedToId) {
       try {
-        await pool.query(
-          `INSERT INTO notifications 
-           (title, content, type, status, recipient, recipientId, senderId, metadata, createdAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-          [
-            'Task Assigned',
-            `You have been assigned to task: ${updatedTask.title}`,
-            'SYSTEM',
-            'UNREAD',
-            'STAFF',
-            updatedTask.assignedToUserId,
-            session.user.id,
-            JSON.stringify({ taskId: updatedTask.id }),
-          ]
-        );
+        await NotificationService.createNotification({
+          title: 'Task Assigned',
+          content: `You have been assigned to task: ${updatedTask.title}`,
+          type: 'MAINTENANCE' as any,
+          userId: updatedTask.assignedToUserId,
+          senderId: session.user.id,
+          metadata: {
+            taskId: updatedTask.id,
+            action: 'assigned',
+            entityType: 'task'
+          }
+        });
       } catch (notifError) {
-        console.error('Error creating notification:', notifError);
+        console.error('Error creating task assignment notification:', notifError);
       }
     }
 
     // Send notifications if status changed
     if (statusChanged) {
       try {
-        const [createdByRows] = await pool.query<RowDataPacket[]>(
-          `SELECT vendorId as createdById FROM facility_tasks WHERE taskId = ?`,
-          [taskId]
-        );
-
-        if (createdByRows.length > 0 && createdByRows[0].createdById !== session.user.id) {
-          // Get the vendor's user ID
+        // Notify task completion if status is COMPLETED
+        if (validatedData.status === TaskStatus.COMPLETED) {
+          // Get vendor user ID
           const [vendorUserRows] = await pool.query<RowDataPacket[]>(
-            `SELECT userId FROM vendors WHERE id = ?`,
-            [createdByRows[0].createdById]
+            `SELECT u.id FROM users u JOIN vendors v ON u.id = v.userId WHERE v.id = ?`,
+            [updatedTask.createdById]
           );
           
           if (vendorUserRows.length > 0) {
-            await pool.query(
-              `INSERT INTO notifications 
-               (title, content, type, status, recipient, recipientId, senderId, metadata, createdAt)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-              [
-                'Task Status Updated',
-                `Task "${updatedTask.title}" status changed to ${validatedData.status}`,
-                'SYSTEM',
-                'UNREAD',
-                'USER',
-                vendorUserRows[0].userId,
-                session.user.id,
-                JSON.stringify({ taskId: updatedTask.id }),
-              ]
+            await NotificationService.notifyTaskCompleted(
+              vendorUserRows[0].id,
+              updatedTask.id,
+              updatedTask.title,
+              session.user.id
             );
+          }
+          
+          // Notify hotel staff
+          const staffUsers = await NotificationService.getHotelStaff(updatedTask.hotelId);
+          if (staffUsers.length > 0) {
+            await NotificationService.createBulkNotifications(
+              staffUsers.filter(id => id !== session.user.id),
+              {
+                title: 'Task Completed',
+                content: `Task completed: ${updatedTask.title}`,
+                type: 'MAINTENANCE' as any,
+                senderId: session.user.id,
+                metadata: {
+                  taskId: updatedTask.id,
+                  hotelId: updatedTask.hotelId,
+                  action: 'completed',
+                  entityType: 'task'
+                }
+              }
+            );
+          }
+        } else {
+          // General status change notification
+          const [vendorUserRows] = await pool.query<RowDataPacket[]>(
+            `SELECT u.id FROM users u JOIN vendors v ON u.id = v.userId WHERE v.id = ?`,
+            [updatedTask.createdById]
+          );
+          
+          if (vendorUserRows.length > 0 && vendorUserRows[0].id !== session.user.id) {
+            await NotificationService.createNotification({
+              title: 'Task Status Updated',
+              content: `Task "${updatedTask.title}" status changed to ${validatedData.status}`,
+              type: 'MAINTENANCE' as any,
+              userId: vendorUserRows[0].id,
+              senderId: session.user.id,
+              metadata: {
+                taskId: updatedTask.id,
+                action: 'status_changed',
+                entityType: 'task',
+                oldValue: existingTask.status,
+                newValue: validatedData.status
+              }
+            });
           }
         }
       } catch (notifError) {
-        console.error('Error creating notification:', notifError);
+        console.error('Error creating task status notification:', notifError);
       }
     }
 

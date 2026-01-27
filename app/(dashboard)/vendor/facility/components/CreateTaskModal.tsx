@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TaskStatus, TaskPriority, TaskCategory, MaintenanceType } from '@/lib/types/enums';
 import {
   Dialog,
   DialogContent,
@@ -31,10 +30,14 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2, Plus } from 'lucide-react';
+import { MaintenanceType } from '@/lib/types/enums';
 
 interface Room {
   id: string;
   name: string;
+  roomNumber?: string;
+  roomId?: string;
+  roomName?: string;
 }
 
 interface Staff {
@@ -74,7 +77,7 @@ export default function CreateTaskModal({
   const [category, setCategory] = useState<string>('GENERAL');
   const [priority, setPriority] = useState<string>('MEDIUM');
   const [assignedToId, setAssignedToId] = useState<string>('');
-  const [roomId, setRoomId] = useState<string>('');
+  const [roomUnitId, setRoomUnitId] = useState<string>('');
   const [dueDate, setDueDate] = useState<Date | undefined>(
     new Date(new Date().setDate(new Date().getDate() + 1))
   );
@@ -83,31 +86,31 @@ export default function CreateTaskModal({
   const [isRecurring, setIsRecurring] = useState(false);
   const [costEstimate, setCostEstimate] = useState<number | undefined>(undefined);
   
-  // Load rooms when modal is opened
+  // Load room units when modal is opened
   useEffect(() => {
     if (isOpen && hotelId) {
-      const fetchRooms = async () => {
+      const fetchRoomUnits = async () => {
         setIsLoadingRooms(true);
         try {
-          const response = await fetch(`/api/hotels/${hotelId}/rooms`);
+          const response = await fetch(`/api/hotels/${hotelId}/room-units`);
           if (response.ok) {
             const data = await response.json();
             setRooms(data);
           } else {
-            throw new Error('Failed to load rooms');
+            throw new Error('Failed to load room units');
           }
         } catch (error) {
-          console.error('Error fetching rooms:', error);
+          console.error('Error fetching room units:', error);
           toast({
             title: 'Error',
-            description: 'Failed to load rooms',
+            description: 'Failed to load room units',
           });
         } finally {
           setIsLoadingRooms(false);
         }
       };
       
-      fetchRooms();
+      fetchRoomUnits();
     }
   }, [isOpen, hotelId]);
 
@@ -154,7 +157,7 @@ export default function CreateTaskModal({
     setCategory('GENERAL');
     setPriority('MEDIUM');
     setAssignedToId('');
-    setRoomId('');
+    setRoomUnitId('');
     setDueDate(new Date(new Date().setDate(new Date().getDate() + 1)));
     setEstimatedHours(undefined);
     setMaintenanceType('CORRECTIVE');
@@ -195,8 +198,8 @@ export default function CreateTaskModal({
           category,
           priority,
           assignedToId: assignedToId && assignedToId !== 'unassigned' ? assignedToId : null,
-          roomId: roomId && roomId !== 'none' ? roomId : null,
-          dueDate: dueDate.toISOString(),
+          roomUnitId: roomUnitId && roomUnitId !== 'none' ? roomUnitId : null,
+          dueDate: dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
           status: 'PENDING',
           estimatedHours: estimatedHours || null,
           maintenanceType,
@@ -272,7 +275,7 @@ export default function CreateTaskModal({
               <label htmlFor="category" className="text-sm font-medium">
                 Category
               </label>
-              <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
+              <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger id="category">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -296,7 +299,7 @@ export default function CreateTaskModal({
               <label htmlFor="priority" className="text-sm font-medium">
                 Priority
               </label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+              <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger id="priority">
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
@@ -334,7 +337,6 @@ export default function CreateTaskModal({
                   mode="single"
                   selected={dueDate}
                   onSelect={setDueDate}
-                  initialFocus
                   disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                 />
               </PopoverContent>
@@ -355,7 +357,7 @@ export default function CreateTaskModal({
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {staff.map((staffMember) => (
                     <SelectItem key={staffMember.id} value={staffMember.id}>
-                      {staffMember.user.name} ({staffMember.position})
+                      {staffMember.user?.name || 'Unknown'} ({staffMember.user?.email || 'No email'})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -364,14 +366,14 @@ export default function CreateTaskModal({
             
             <div className="grid gap-2">
               <label htmlFor="room" className="text-sm font-medium">
-                Room (Optional)
+                Room Unit (Optional)
               </label>
-              <Select value={roomId} onValueChange={setRoomId} disabled={isLoadingRooms}>
+              <Select value={roomUnitId} onValueChange={setRoomUnitId} disabled={isLoadingRooms}>
                 <SelectTrigger id="room">
-                  <SelectValue placeholder={isLoadingRooms ? "Loading rooms..." : "Select room"} />
+                  <SelectValue placeholder={isLoadingRooms ? "Loading room units..." : "Select room unit"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No specific room</SelectItem>
+                  <SelectItem value="none">No specific room unit</SelectItem>
                   {rooms.map((room) => (
                     <SelectItem key={room.id} value={room.id}>
                       {room.name}
@@ -444,7 +446,7 @@ export default function CreateTaskModal({
             <Checkbox
               id="isRecurring"
               checked={isRecurring}
-              onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
+              onCheckedChange={(checked) => setIsRecurring(checked === true)}
             />
             <label
               htmlFor="isRecurring"

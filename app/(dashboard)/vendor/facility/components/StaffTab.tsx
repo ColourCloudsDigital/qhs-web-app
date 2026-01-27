@@ -3,23 +3,28 @@
 import React, { useState, useEffect } from 'react';
 import { Check, Trash2, Edit2, UserX, UserCheck, RefreshCw } from 'lucide-react';
 import Pagination, { PaginationInfo } from '@/components/ui/pagination';
-import AddStaffModal from '@/components/AddStaffModal';
+import CreateStaffModal from '@/components/CreateStaffModal';
 
 interface User {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
-  roleName: string;
+  position: string;
+  permissions: string[];
   isActive: boolean;
+  userId: string;
+  vendorId: string;
+  hotelId?: string;
+  hotelName?: string;
+  vendorName?: string;
+  createdAt: string;
 }
 
 interface StaffTabProps {
   hotelId: string;
-}
-
-interface Role {
-  id: string;
-  name: string;
+  vendorId?: string;
 }
 
 const statusOptions = ['All', 'Active', 'Inactive'];
@@ -42,37 +47,161 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmTex
   );
 }
 
-function EditRoleModal({ open, onClose, staff, roles, onSave, loading }: any) {
-  const [selectedRole, setSelectedRole] = useState(staff?.roleId || '');
+function EditStaffModal({ open, onClose, staff, onSave, loading, vendorId }: any) {
+  const [position, setPosition] = useState('');
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [hotelId, setHotelId] = useState('');
+  const [hotels, setHotels] = useState<{id: string, name: string}[]>([]);
+  const [loadingHotels, setLoadingHotels] = useState(false);
+  
+  const availablePermissions = [
+    { id: 'bookings', label: 'Manage Bookings' },
+    { id: 'rooms', label: 'Manage Rooms' },
+    { id: 'customers', label: 'Manage Customers' },
+    { id: 'payments', label: 'Process Payments' },
+    { id: 'reports', label: 'View Reports' },
+    { id: 'settings', label: 'Modify Settings' },
+    { id: 'staff', label: 'Manage Staff' },
+    { id: 'tasks', label: 'Manage Tasks' },
+  ];
+
+  // Fetch hotels when modal opens
   useEffect(() => {
-    setSelectedRole(staff?.roleId || '');
+    if (open && vendorId) {
+      const fetchHotels = async () => {
+        setLoadingHotels(true);
+        try {
+          const response = await fetch(`/api/vendor/hotels?simple=true`);
+          if (response.ok) {
+            const data = await response.json();
+            setHotels(data.hotels || []);
+          } else {
+            console.error('Failed to fetch hotels');
+          }
+        } catch (error) {
+          console.error('Error fetching hotels:', error);
+        } finally {
+          setLoadingHotels(false);
+        }
+      };
+
+      fetchHotels();
+    }
+  }, [open, vendorId]);
+
+  useEffect(() => {
+    if (staff) {
+      setPosition(staff.position || '');
+      setPermissions(staff.permissions || []);
+      setHotelId(staff.hotelId || '');
+    }
   }, [staff]);
+
+  const handlePermissionChange = (permission: string, checked: boolean) => {
+    if (checked) {
+      setPermissions(prev => [...prev, permission]);
+    } else {
+      setPermissions(prev => prev.filter(p => p !== permission));
+    }
+  };
+
   if (!open || !staff) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-        <h2 className="text-lg font-semibold mb-4">Edit Staff Role</h2>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Role</label>
-          <select
-            className="w-full px-3 py-2 border rounded"
-            value={selectedRole}
-            onChange={e => setSelectedRole(e.target.value)}
-          >
-            <option value="">Select role</option>
-            {roles.map((role: any) => (
-              <option key={role.id} value={role.id}>{role.name}</option>
-            ))}
-          </select>
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Edit Staff Member</h2>
+          <div className="text-sm text-gray-500">
+            {staff.name} ({staff.email})
+          </div>
         </div>
-        <div className="flex justify-end space-x-2">
-          <button onClick={onClose} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
-          <button
-            onClick={() => onSave(selectedRole)}
-            disabled={loading || !selectedRole || selectedRole === staff.roleId}
-            className="px-4 py-2 rounded bg-primary text-white hover:bg-primary-dark disabled:opacity-50"
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Position</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              value={position}
+              onChange={e => setPosition(e.target.value)}
+              placeholder="e.g., Front Desk Manager, Housekeeper"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Assigned Hotel</label>
+            {loadingHotels ? (
+              <div className="flex items-center space-x-2 p-3 border border-gray-300 rounded-md bg-gray-50">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <span className="text-sm text-gray-500">Loading hotels...</span>
+              </div>
+            ) : (
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                value={hotelId}
+                onChange={e => setHotelId(e.target.value)}
+              >
+                <option value="">Not Assigned</option>
+                {hotels.map((hotel) => (
+                  <option key={hotel.id} value={hotel.id}>
+                    {hotel.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Staff can be assigned to a specific hotel or left unassigned to work across all hotels
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Permissions</label>
+            <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {availablePermissions.map((perm) => (
+                  <div key={perm.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`edit-perm-${perm.id}`}
+                      checked={permissions.includes(perm.id)}
+                      onChange={(e) => handlePermissionChange(perm.id, e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor={`edit-perm-${perm.id}`} className="text-sm">
+                      {perm.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Select the permissions this staff member should have
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2 mt-6 pt-4 border-t border-gray-200">
+          <button 
+            onClick={onClose} 
+            className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+            disabled={loading}
           >
-            {loading ? 'Saving...' : 'Save'}
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave({ position, permissions, hotelId: hotelId || null })}
+            disabled={loading || !position.trim()}
+            className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Saving...</span>
+              </div>
+            ) : (
+              'Save Changes'
+            )}
           </button>
         </div>
       </div>
@@ -80,60 +209,55 @@ function EditRoleModal({ open, onClose, staff, roles, onSave, loading }: any) {
   );
 }
 
-export default function StaffTab({ hotelId }: StaffTabProps) {
+export default function StaffTab({ hotelId, vendorId }: StaffTabProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10); // Remove setPageSize since it's not used
   const [totalItems, setTotalItems] = useState(0);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newStaffEmail, setNewStaffEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [addError, setAddError] = useState('');
-  const [selectedRoleForModal, setSelectedRoleForModal] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ open: boolean; action: string; ids: string[]; single: boolean }>({ open: false, action: '', ids: [], single: false });
   const [actionLoading, setActionLoading] = useState(false);
   const [editModal, setEditModal] = useState<{ open: boolean; staff: any }>({ open: false, staff: null });
   const [editLoading, setEditLoading] = useState(false);
-
-  const fetchRoles = async () => {
-    try {
-      const response = await fetch(`/api/hotels/${hotelId}/roles?pageSize=1000`); // Fetch all roles
-      if (!response.ok) {
-        throw new Error('Failed to fetch roles');
-      }
-      const data = await response.json();
-      setRoles(data.roles || []);
-    } catch (err: any) {
-      console.error(err.message);
-    }
-  };
 
   const fetchStaff = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
-        hotelId,
         page: String(page),
         pageSize: String(pageSize),
-        roleId: selectedRole.toLowerCase(),
         status: selectedStatus.toLowerCase(),
       });
-      const response = await fetch(`/api/staff?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch staff');
+
+      // Prioritize vendorId over hotelId for broader staff view
+      if (vendorId) {
+        params.append('vendorId', vendorId);
+      } else if (hotelId) {
+        params.append('hotelId', hotelId);
+      } else {
+        throw new Error('Either vendor ID or hotel ID is required');
       }
+
+      console.log('Fetching staff with params:', params.toString());
+      const response = await fetch(`/api/staff?${params.toString()}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch staff');
+      }
+      
       const data = await response.json();
-      setUsers(data.data);
-      setTotalItems(data.pagination.totalItems);
+      console.log('Staff data received:', data);
+      setUsers(data.data || []);
+      setTotalItems(data.pagination?.totalItems || 0);
     } catch (err: any) {
+      console.error('Error fetching staff:', err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -141,38 +265,10 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
   };
 
   useEffect(() => {
-    if (hotelId) {
-      fetchRoles();
-    }
-  }, [hotelId]);
-
-  useEffect(() => {
-    if (hotelId) {
+    if (hotelId || vendorId) {
       fetchStaff();
     }
-  }, [hotelId, page, pageSize, selectedRole, selectedStatus]);
-
-  const handleAddStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setAddError('');
-    try {
-      const res = await fetch('/api/staff/invite-staff', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newStaffEmail, roleId: selectedRoleForModal, hotelId }),
-      });
-      if (!res.ok) throw new Error('Failed to invite staff');
-      setShowAddModal(false);
-      setNewStaffEmail('');
-      setSelectedRoleForModal('');
-      fetchStaff();
-    } catch (err: any) {
-      setAddError(err.message || 'Error inviting staff');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  }, [hotelId, vendorId, page, pageSize, selectedStatus]);
 
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
@@ -234,33 +330,44 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
     }
   };
 
-  const handleEditRole = (staff: any) => {
+  const handleEditStaff = (staff: any) => {
     setEditModal({ open: true, staff });
   };
 
-  const saveEditRole = async (roleId: string) => {
+  const saveEditStaff = async (updateData: { position: string; permissions: string[]; hotelId: string | null }) => {
     setEditLoading(true);
     try {
       await fetch(`/api/staff/${editModal.staff.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roleId }),
+        body: JSON.stringify(updateData),
       });
       setEditModal({ open: false, staff: null });
       fetchStaff();
     } catch (err) {
-      alert('Failed to update role');
+      alert('Failed to update staff member');
     } finally {
       setEditLoading(false);
     }
   };
 
+  const handleCreateSuccess = () => {
+    fetchStaff();
+  };
+
   return (
     <div className="space-y-4">
+      {/* Debug info - remove in production */}
+      {/* {process.env.NODE_ENV === 'development' && (
+        <div className="bg-gray-100 p-2 rounded text-xs">
+          <strong>Debug:</strong> vendorId={vendorId}, hotelId={hotelId}, totalItems={totalItems}
+        </div>
+      )} */}
+      
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 rounded-lg bg-white p-4 shadow dark:bg-gray-800">
         <div className="flex w-full sm:w-auto justify-start">
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center rounded-md border border-primary bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary dark:bg-primary dark:hover:bg-primary-dark"
           >
             + Add Staff
@@ -304,21 +411,6 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
           <div className="flex flex-row space-x-4 items-center">
-           
-            <div className="flex items-center space-x-2" style={{ minWidth: 0 }}>
-              <span className="text-gray-500">Role:</span>
-              <select
-                value={selectedRole}
-                onChange={e => setSelectedRole(e.target.value)}
-                className="block rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                style={{ width: 'fit-content', minWidth: '100px' }}
-              >
-                <option value="All">All</option>
-                {roles.map(role => (
-                  <option key={role.id} value={role.id}>{role.name}</option>
-                ))}
-              </select>
-            </div>
             <div className="flex items-center space-x-2">
               <span className="text-gray-500">Status:</span>
               <select
@@ -332,21 +424,16 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
               </select>
             </div>
           </div>
-
         </div>
       </div>
-      <AddStaffModal
-        open={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        email={newStaffEmail}
-        setEmail={setNewStaffEmail}
-        isSubmitting={isSubmitting}
-        error={addError}
-        onSubmit={handleAddStaff}
-        selectedRole={selectedRoleForModal}
-        setSelectedRole={setSelectedRoleForModal}
-        hotelId={hotelId}
+
+      <CreateStaffModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        vendorId={vendorId || ''}
+        onSuccess={handleCreateSuccess}
       />
+
       <div className="rounded-lg bg-white shadow dark:bg-gray-800">
         <div className="overflow-x-auto">
           <table className="w-full table-auto">
@@ -357,7 +444,9 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
                 </th>
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Email</th>
-                <th className="px-4 py-3 text-left">Role</th>
+                <th className="px-4 py-3 text-left">Position</th>
+                <th className="px-4 py-3 text-left">Hotel</th>
+                <th className="px-4 py-3 text-left">Permissions</th>
                 <th className="px-4 py-3 text-left">Active</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -365,20 +454,34 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={8} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
                     Loading staff...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-red-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-red-500">
                     Error: {error}
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
-                    No staff found.
+                  <td colSpan={8} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                    <div className="space-y-2">
+                      <p>No staff found.</p>
+                      {vendorId && (
+                        <p className="text-sm">
+                          Searching for staff in vendor: {vendorId}
+                          {hotelId && ` and hotel: ${hotelId}`}
+                        </p>
+                      )}
+                      <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="text-primary hover:text-primary-dark text-sm underline"
+                      >
+                        Add your first staff member
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -389,7 +492,24 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
                     </td>
                     <td className="px-4 py-4 font-medium">{user.name}</td>
                     <td className="px-4 py-4">{user.email}</td>
-                    <td className="px-4 py-4">{user.roleName}</td>
+                    <td className="px-4 py-4">{user.position}</td>
+                    <td className="px-4 py-4">{user.hotelName || 'Not Assigned'}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {user.permissions.length > 0 ? (
+                          user.permissions.slice(0, 2).map((perm) => (
+                            <span key={perm} className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              {perm}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-500 text-xs">No permissions</span>
+                        )}
+                        {user.permissions.length > 2 && (
+                          <span className="text-xs text-gray-500">+{user.permissions.length - 2} more</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-4">
                       {user.isActive ? (
                         <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
@@ -403,7 +523,7 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button onClick={() => handleEditRole(user)} className="rounded p-1 text-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-300">
+                        <button onClick={() => handleEditStaff(user)} className="rounded p-1 text-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-300">
                           <Edit2 className="h-4 w-4" />
                         </button>
                         {user.isActive ? (
@@ -466,13 +586,13 @@ export default function StaffTab({ hotelId }: StaffTabProps) {
         }
         loading={actionLoading}
       />
-      <EditRoleModal
+      <EditStaffModal
         open={editModal.open}
         onClose={() => setEditModal({ open: false, staff: null })}
         staff={editModal.staff}
-        roles={roles}
-        onSave={saveEditRole}
+        onSave={saveEditStaff}
         loading={editLoading}
+        vendorId={vendorId}
       />
     </div>
   );

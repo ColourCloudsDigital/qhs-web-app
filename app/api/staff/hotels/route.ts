@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
+import { RowDataPacket } from 'mysql2';
 
 /**
  * GET /api/staff/hotels
@@ -17,73 +18,92 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
     
-    const staffId = session.user.staffId;
+    const userId = session.user.id;
     
-    // Verify staff ID exists
-    if (!staffId) {
+    // Get staff record with vendor and hotel information
+    const [staffRows] = await pool.query<RowDataPacket[]>(
+      `SELECT 
+        s.id as staffId,
+        s.vendorId,
+        s.hotelId,
+        s.position,
+        s.permissions
+      FROM staff s
+      WHERE s.userId = ?`,
+      [userId]
+    );
+    
+    if (staffRows.length === 0) {
       return NextResponse.json({ error: 'Staff profile not found' }, { status: 404 });
     }
     
-    // Get staff with related data
-    const staff = await prisma.staff.findUnique({
-      where: { 
-        id: staffId 
-      },
-      include: {
-        hotel: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            city: true,
-            state: true,
-            country: true,
-            images: true,
-            isActive: true,
-          }
-        },
-        vendor: {
-          include: {
-            hotels: {
-              where: {
-                isActive: true,
-              },
-              select: {
-                id: true,
-                name: true,
-                address: true,
-                city: true,
-                state: true,
-                country: true,
-                images: true,
-              },
-              orderBy: {
-                name: 'asc',
-              }
-            }
-          }
-        }
-      }
-    });
-    
-    if (!staff) {
-      return NextResponse.json({ error: 'Staff record not found' }, { status: 404 });
-    }
-    
-    let hotels = [];
+    const staff = staffRows[0];
+    let hotels: any[] = [];
     
     // If staff is assigned to a specific hotel, return only that hotel
-    if (staff.hotel && staff.hotel.isActive) {
-      hotels = [formatHotel(staff.hotel)];
+    if (staff.hotelId) {
+      const [hotelRows] = await pool.query<RowDataPacket[]>(
+        `SELECT 
+          h.id,
+          h.name,
+          h.description,
+          h.address,
+          h.city,
+          h.state,
+          h.country,
+          h.zipCode,
+          h.phone,
+          h.email,
+          h.website,
+          h.images,
+          h.rating,
+          h.isActive
+        FROM hotels h
+        WHERE h.id = ? AND h.isActive = 1`,
+        [staff.hotelId]
+      );
+      
+      if (hotelRows.length > 0) {
+        hotels = hotelRows.map(hotel => formatHotel(hotel));
+      }
     } 
     // Otherwise, return all hotels owned by the vendor
-    else if (staff.vendor) {
-      hotels = staff.vendor.hotels.map(hotel => formatHotel(hotel));
+    else if (staff.vendorId) {
+      const [hotelRows] = await pool.query<RowDataPacket[]>(
+        `SELECT 
+          h.id,
+          h.name,
+          h.description,
+          h.address,
+          h.city,
+          h.state,
+          h.country,
+          h.zipCode,
+          h.phone,
+          h.email,
+          h.website,
+          h.images,
+          h.rating,
+          h.isActive
+        FROM hotels h
+        WHERE h.vendorId = ? AND h.isActive = 1
+        ORDER BY h.name ASC`,
+        [staff.vendorId]
+      );
+      
+      hotels = hotelRows.map(hotel => formatHotel(hotel));
     }
     
     return NextResponse.json({ 
       hotels: hotels,
-      count: hotels.length
+      count: hotels.length,
+      staffInfo: {
+        id: staff.staffId,
+        vendorId: staff.vendorId,
+        hotelId: staff.hotelId,
+        position: staff.position,
+        permissions: staff.permissions ? JSON.parse(staff.permissions) : null
+      }
     });
     
   } catch (error) {
@@ -98,8 +118,20 @@ export async function GET() {
 // Helper function to format hotel data
 function formatHotel(hotel: any) {
   return {
-    ...hotel,
+    id: hotel.id,
+    name: hotel.name,
+    description: hotel.description,
+    address: hotel.address,
+    city: hotel.city,
+    state: hotel.state,
+    country: hotel.country,
+    zipCode: hotel.zipCode,
+    phone: hotel.phone,
+    email: hotel.email,
+    website: hotel.website,
+    rating: hotel.rating,
+    isActive: hotel.isActive,
     // Parse images JSON string to array if stored as string
-    images: typeof hotel.images === 'string' ? JSON.parse(hotel.images) : hotel.images
+    images: hotel.images ? (typeof hotel.images === 'string' ? JSON.parse(hotel.images) : hotel.images) : []
   };
 }

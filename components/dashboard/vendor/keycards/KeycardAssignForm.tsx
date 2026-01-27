@@ -279,7 +279,7 @@ export default function KeycardAssignForm({
                 <SelectContent>
                   {staff.map((staffMember) => (
                     <SelectItem key={staffMember.id} value={staffMember.id}>
-                      {staffMember.user.name} - {staffMember.position}
+                      {staffMember.user?.name || 'Unknown'} - {staffMember.position}
                     </SelectItem>
                   ))}
                 </SelectContent>

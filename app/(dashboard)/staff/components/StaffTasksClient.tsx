@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { formatDate } from '@/lib/utils';
@@ -27,12 +27,11 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
-  Filter,
   Search,
   Wrench,
   HourglassIcon,
   BarChart4,
-  BellRing,
+  Loader2,
 } from 'lucide-react';
 import TaskStatusBadge from '@/app/(dashboard)/vendor/facility/components/TaskStatusBadge';
 import TaskPriorityBadge from '@/app/(dashboard)/vendor/facility/components/TaskPriorityBadge';
@@ -61,26 +60,78 @@ interface TaskStats {
   overdueTasks: number;
   inProgressTasks: number;
   pendingTasks: number;
+  completedTasks: number;
 }
 
 interface StaffTasksClientProps {
-  tasks: Task[];
-  stats: TaskStats;
   staffId: string;
-  hotelId?: string;
-  hotelName?: string;
 }
 
-export default function StaffTasksClient({
-  tasks: initialTasks,
-  stats,
-  staffId,
-  hotelId,
-  hotelName,
-}: StaffTasksClientProps) {
+export default function StaffTasksClient({ staffId }: StaffTasksClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [stats, setStats] = useState<TaskStats>({
+    totalAssigned: 0,
+    overdueTasks: 0,
+    inProgressTasks: 0,
+    pendingTasks: 0,
+    completedTasks: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hotelName, setHotelName] = useState<string>('Your Hotel');
   const [activeTab, setActiveTab] = useState('all');
+
+  // Calculate stats from tasks
+  const calculateStats = (taskList: Task[]): TaskStats => {
+    const now = new Date();
+    
+    return {
+      totalAssigned: taskList.length,
+      pendingTasks: taskList.filter(task => task.status === TaskStatus.PENDING).length,
+      inProgressTasks: taskList.filter(task => task.status === TaskStatus.IN_PROGRESS).length,
+      completedTasks: taskList.filter(task => task.status === TaskStatus.COMPLETED).length,
+      overdueTasks: taskList.filter(task => 
+        new Date(task.dueDate) < now && 
+        task.status !== TaskStatus.COMPLETED && 
+        task.status !== TaskStatus.CANCELLED
+      ).length,
+    };
+  };
+
+  // Fetch tasks from API
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/staff/tasks');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch tasks');
+      }
+      
+      const data = await response.json();
+      
+      setTasks(data.tasks || []);
+      setHotelName(data.staffInfo?.hotelName || 'Your Hotel');
+      
+      // Calculate stats from the fetched tasks
+      const calculatedStats = calculateStats(data.tasks || []);
+      setStats(calculatedStats);
+      
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch tasks on component mount
+  useEffect(() => {
+    fetchTasks();
+  }, []);
   
   // Filter tasks based on search query and active tab
   const filteredTasks = tasks.filter(task => {
@@ -91,14 +142,7 @@ export default function StaffTasksClient({
       task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.room?.name.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Tab filter
-    const matchesTab =
-      activeTab === 'all' ||
-      (activeTab === 'overdue' && new Date(task.dueDate) < new Date()) ||
-      (activeTab === 'inprogress' && task.status === 'IN_PROGRESS') ||
-      (activeTab === 'pending' && task.status === 'PENDING');
-    
-    return matchesSearch && matchesTab;
+    return matchesSearch;
   });
 
   // Format relative time with "ago" suffix
@@ -121,11 +165,11 @@ export default function StaffTasksClient({
     
     // Then sort by priority
     const priorityOrder = {
-      'EMERGENCY': 0,
-      'URGENT': 1,
-      'HIGH': 2,
-      'MEDIUM': 3,
-      'LOW': 4,
+      [TaskPriority.EMERGENCY]: 0,
+      [TaskPriority.URGENT]: 1,
+      [TaskPriority.HIGH]: 2,
+      [TaskPriority.MEDIUM]: 3,
+      [TaskPriority.LOW]: 4,
     };
     
     if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
@@ -135,6 +179,36 @@ export default function StaffTasksClient({
     // Finally sort by due date
     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
   });
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Loading tasks...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Tasks</h3>
+            <p className="text-gray-500 mb-4">{error}</p>
+            <Button onClick={fetchTasks} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="p-6">
@@ -212,10 +286,10 @@ export default function StaffTasksClient({
           <TabsList>
             <TabsTrigger value="all">All Tasks</TabsTrigger>
             <TabsTrigger value="overdue" className={stats.overdueTasks > 0 ? "text-red-600" : ""}>
-                    Due: {formatDate(task.dueDate)}
+              Overdue ({stats.overdueTasks})
             </TabsTrigger>
-            <TabsTrigger value="inprogress">In Progress</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="inprogress">In Progress ({stats.inProgressTasks})</TabsTrigger>
+            <TabsTrigger value="pending">Pending ({stats.pendingTasks})</TabsTrigger>
           </TabsList>
           
           <TabsContent value="all">
@@ -223,21 +297,21 @@ export default function StaffTasksClient({
           </TabsContent>
           
           <TabsContent value="overdue">
-            {renderTaskList(sortedTasks)}
+            {renderTaskList(sortedTasks.filter(task => new Date(task.dueDate) < new Date() && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELLED))}
           </TabsContent>
           
           <TabsContent value="inprogress">
-            {renderTaskList(sortedTasks)}
+            {renderTaskList(sortedTasks.filter(task => task.status === TaskStatus.IN_PROGRESS))}
           </TabsContent>
           
           <TabsContent value="pending">
-            {renderTaskList(sortedTasks)}
+            {renderTaskList(sortedTasks.filter(task => task.status === TaskStatus.PENDING))}
           </TabsContent>
         </Tabs>
       </div>
     </div>
   );
-  
+
   function renderTaskList(tasks: Task[]) {
     if (tasks.length === 0) {
       return (
@@ -249,9 +323,7 @@ export default function StaffTasksClient({
           <p className="text-sm text-gray-500 mt-1">
             {searchQuery
               ? "Try adjusting your search term"
-              : activeTab === "all"
-              ? "You don't have any assigned tasks"
-              : `You don't have any ${activeTab} tasks`}
+              : "You don't have any assigned tasks"}
           </p>
         </div>
       );
@@ -281,7 +353,7 @@ export default function StaffTasksClient({
                   <div className="flex items-center text-xs text-gray-500">
                     <Clock className="mr-1 h-3.5 w-3.5" />
                     Due: {formatDate(task.dueDate)}
-                    {new Date(task.dueDate) < new Date() && (
+                    {new Date(task.dueDate) < new Date() && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELLED && (
                       <Badge variant="outline" className="ml-2 text-xs bg-red-50 text-red-700 border-red-200">
                         Overdue
                       </Badge>

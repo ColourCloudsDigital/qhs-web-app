@@ -141,9 +141,6 @@ export default function VendorDashboardClient({ hotels, vendorId }: VendorDashbo
           <Link href="/vendor/bookings">
             <Button size="sm">Manage Bookings</Button>
           </Link>
-          <Link href="/vendor/dashboard/walk-in">
-            <Button variant="secondary" size="sm">Walk-in Booking</Button>
-          </Link>
         </div>
       </div>
 

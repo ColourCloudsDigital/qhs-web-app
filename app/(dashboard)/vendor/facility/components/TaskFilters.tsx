@@ -139,7 +139,7 @@ export default function TaskFilters({
             <SelectItem value="unassigned">Unassigned</SelectItem>
             {staff.map((staffMember) => (
               <SelectItem key={staffMember.id} value={staffMember.id}>
-                {staffMember.user.name}
+                {staffMember.user?.name || 'Unknown'}
               </SelectItem>
             ))}
           </SelectContent>
