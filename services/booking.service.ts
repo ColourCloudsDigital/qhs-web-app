@@ -32,16 +32,18 @@ export const bookingService = {
     // Start building the query - using LEFT JOIN to include bookings without user accounts (guest bookings)
     let query = `
       SELECT 
-        b.id, b.hotelId, b.roomId, b.customerId, b.checkInDate, b.checkOutDate, 
+        b.id, b.hotelId, b.roomUnitId, b.customerId, b.checkInDate, b.checkOutDate, 
         b.numberOfGuests, b.totalAmount, b.status, b.paymentStatus, b.specialRequests, 
         b.createdAt, b.updatedAt,
         h.name as hotelName,
         r.name as roomName, r.type as roomType,
+        ru.roomNumber,
         c.firstName as customerFirstName, c.lastName as customerLastName, c.phone as customerPhone,
         u.name as customerName, u.email as customerEmail
       FROM bookings b
       JOIN hotels h ON b.hotelId = h.id
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       JOIN customers c ON b.customerId = c.id
       LEFT JOIN users u ON c.userId = u.id
       WHERE h.vendorId = ?
@@ -124,9 +126,10 @@ export const bookingService = {
             name: row.hotelName
           },
           room: {
-            id: row.roomId,
+            id: row.roomUnitId,
             name: row.roomName,
-            type: row.roomType
+            type: row.roomType,
+            roomNumber: row.roomNumber
           },
           customer: {
             id: row.customerId,
@@ -170,18 +173,20 @@ export const bookingService = {
       
       const query = `
         SELECT 
-          b.id, b.hotelId, b.roomId, b.customerId, b.checkInDate, b.checkOutDate, 
+          b.id, b.hotelId, b.roomUnitId, b.customerId, b.checkInDate, b.checkOutDate, 
           b.numberOfGuests, b.totalAmount, b.status, b.paymentStatus, b.specialRequests, 
           b.createdAt, b.updatedAt,
           h.name as hotelName, h.address as hotelAddress, h.city as hotelCity, 
           h.state as hotelState, h.country as hotelCountry, h.phone as hotelPhone,
           r.name as roomName, r.type as roomType, r.pricePerNight, r.discountedPrice, r.images as roomImages,
+          ru.roomNumber,
           c.firstName as customerFirstName, c.lastName as customerLastName, 
           c.phone as customerPhone, c.address as customerAddress,
           u.name as customerName, u.email as customerEmail
         FROM bookings b
         JOIN hotels h ON b.hotelId = h.id
-        JOIN rooms r ON b.roomId = r.id
+        JOIN room_units ru ON b.roomUnitId = ru.id
+        JOIN rooms r ON ru.roomId = r.id
         JOIN customers c ON b.customerId = c.id
         LEFT JOIN users u ON c.userId = u.id
         WHERE b.id = ?
@@ -224,9 +229,10 @@ export const bookingService = {
           phone: booking.hotelPhone
         },
         room: {
-          id: booking.roomId,
+          id: booking.roomUnitId,
           name: booking.roomName,
           type: booking.roomType,
+          roomNumber: booking.roomNumber,
           pricePerNight: parseFloat(booking.pricePerNight),
           discountedPrice: booking.discountedPrice ? parseFloat(booking.discountedPrice) : null,
           images: roomImages

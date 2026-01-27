@@ -17,9 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertCircle,
   Calendar,
-  CheckCircle2,
   Clock,
-  Loader2,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -111,7 +109,7 @@ export default function TaskList({
   
   useEffect(() => {
     fetchTasks();
-  }, [hotelId, statusFilter, priorityFilter, categoryFilter, assigneeFilter, searchQuery, page, fetchTasks]);
+  }, [hotelId, statusFilter, priorityFilter, categoryFilter, assigneeFilter, searchQuery, page]);
   
   const handlePageChange = (newPage: number) => {
     setPage(newPage);

@@ -15,7 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import toast from '@/lib/toast';
 import CheckInForm from './CheckInForm';
-import WalkInBookingForm from '@/app/(dashboard)/vendor/components/WalkInBookingForm';
 
 interface QuickActionsProps {
   hotelId: string;
@@ -30,6 +29,9 @@ export default function QuickActions({ hotelId, hotels, vendorId }: QuickActions
 
   const handleQuickAction = (action: string) => {
     switch (action) {
+      case 'walkin':
+        router.push('/vendor/bookings/new');
+        break;
       case 'bookings':
         router.push(`/vendor/bookings?hotelId=${hotelId}`);
         break;
@@ -100,13 +102,11 @@ export default function QuickActions({ hotelId, hotels, vendorId }: QuickActions
         <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle>
-              {activeTab === 'walkin' && 'Create Walk-in Booking'}
               {activeTab === 'checkin' && 'Check-in Guest'}
               {activeTab === 'keycard' && 'Issue Keycard'}
             </DialogTitle>
           </DialogHeader>
           
-          {activeTab === 'walkin' && <WalkInBookingForm hotels={hotels} vendorId={vendorId} />}
           {activeTab === 'checkin' && <CheckInForm hotelId={hotelId} onSuccess={() => setIsActionDialogOpen(false)} />}
           {activeTab === 'keycard' && (
             <div className="space-y-4 py-4">

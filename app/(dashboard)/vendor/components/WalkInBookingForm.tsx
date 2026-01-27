@@ -1,4 +1,6 @@
-import { useState } from 'react';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -24,10 +26,29 @@ interface Hotel {
 interface Room {
   id: string;
   name: string;
-  type: string;
+  roomTypeName: string;
+  roomTypeDescription?: string;
   pricePerNight: number;
-  discountedPrice?: number;
+  finalPrice?: number;
   maxGuests: number;
+  totalUnits: number;
+  availableUnits: number;
+  amenities?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+  }>;
+}
+
+interface Customer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  email?: string;
+  phone: string;
+  address?: string;
 }
 
 interface WalkInBookingFormProps {
@@ -42,9 +63,14 @@ interface FormData {
   roomId: string;
   checkInDate: string;
   checkOutDate: string;
-  guestName: string;
+  customerId: string; // Changed from individual guest fields
+  isNewCustomer: boolean; // Flag to determine if creating new customer
+  // New customer fields
+  guestFirstName: string;
+  guestLastName: string;
   guestEmail: string;
   guestPhone: string;
+  guestAddress: string;
   numberOfGuests: number;
   specialRequests: string;
   paymentMethod: string;
@@ -57,7 +83,7 @@ interface FormData {
 const formSteps = [
   'Hotel & Room Selection',
   'Dates & Guests',
-  'Guest Information',
+  'Customer Information',
   'ID & Documents',
   'Payment Details',
   'Review & Confirm'
@@ -89,18 +115,26 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
   const router = useRouter();
   const [[page, direction], setPage] = useState([0, 0]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [customerSearch, setCustomerSearch] = useState('');
 
   const [formData, setFormData] = useState<FormData>({
     hotelId: '',
     roomId: '',
     checkInDate: format(new Date(), 'yyyy-MM-dd'),
     checkOutDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-    guestName: '',
+    customerId: '',
+    isNewCustomer: true,
+    guestFirstName: '',
+    guestLastName: '',
     guestEmail: '',
     guestPhone: '',
+    guestAddress: '',
     numberOfGuests: 1,
     specialRequests: '',
     paymentMethod: 'CASH',
@@ -116,24 +150,74 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
     }
   };
 
-  const fetchRooms = async (hotelId: string) => {
+  const fetchCustomers = async (search?: string) => {
+    setIsLoadingCustomers(true);
     try {
-      const response = await fetch(`/api/vendor/hotels/${hotelId}/available-rooms`);
+      const url = new URL('/api/vendor/customers', window.location.origin);
+      if (search) {
+        url.searchParams.set('search', search);
+      }
+      url.searchParams.set('limit', '50'); // Get more for selection
+      
+      const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.json();
-        setRooms(data);
+        setCustomers(data.customers);
+      } else {
+        console.error('Failed to fetch customers:', response.statusText);
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setCustomers([]);
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  };
+
+  const fetchRooms = async (hotelId: string) => {
+    if (!hotelId) return;
+    
+    setIsLoadingRooms(true);
+    try {
+      // Include check-in and check-out dates for availability checking
+      const checkInDate = formData.checkInDate;
+      const checkOutDate = formData.checkOutDate;
+      
+      const url = new URL(`/api/vendor/hotels/${hotelId}/available-rooms`, window.location.origin);
+      if (checkInDate && checkOutDate) {
+        url.searchParams.set('checkInDate', checkInDate);
+        url.searchParams.set('checkOutDate', checkOutDate);
+      }
+      
+      const response = await fetch(url.toString());
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched rooms:', data); // Debug log
         
-        if (data.length > 0) {
-          setFormData(prev => ({ ...prev, roomId: data[0].id }));
+        // Filter rooms that have available units
+        const availableRooms = data.filter((room: Room) => room.availableUnits > 0);
+        setRooms(availableRooms);
+        
+        if (availableRooms.length > 0) {
+          setFormData(prev => ({ ...prev, roomId: availableRooms[0].id }));
+        } else {
+          setFormData(prev => ({ ...prev, roomId: '' }));
         }
+      } else {
+        console.error('Failed to fetch rooms:', response.statusText);
+        setRooms([]);
       }
     } catch (error) {
       console.error('Error fetching rooms:', error);
+      setRooms([]);
+    } finally {
+      setIsLoadingRooms(false);
     }
   };
 
   const selectedRoomObj = rooms.find(room => room.id === formData.roomId);
-  const pricePerNight = selectedRoomObj ? (selectedRoomObj.discountedPrice || selectedRoomObj.pricePerNight) : 0;
+  const pricePerNight = selectedRoomObj ? (selectedRoomObj.finalPrice || selectedRoomObj.pricePerNight) : 0;
   
   const checkInDateObj = new Date(formData.checkInDate);
   const checkOutDateObj = new Date(formData.checkOutDate);
@@ -141,12 +225,65 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
   
   const totalAmount = pricePerNight * nights;
 
+  // Auto-fetch rooms when hotel is selected
+  useEffect(() => {
+    if (formData.hotelId) {
+      fetchRooms(formData.hotelId);
+    }
+  }, [formData.hotelId]);
+
+  // Auto-fetch customers when component mounts
+  useEffect(() => {
+    if (isOpen) {
+      fetchCustomers();
+    }
+  }, [isOpen]);
+
+  // Search customers when search term changes
+  useEffect(() => {
+    if (customerSearch) {
+      const timeoutId = setTimeout(() => {
+        fetchCustomers(customerSearch);
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    } else {
+      fetchCustomers();
+    }
+  }, [customerSearch]);
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
     
     try {
+      let finalCustomerId = formData.customerId;
+      
+      // If creating a new customer, create it first
+      if (formData.isNewCustomer) {
+        const customerResponse = await fetch('/api/vendor/customers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            firstName: formData.guestFirstName,
+            lastName: formData.guestLastName,
+            email: formData.guestEmail,
+            phone: formData.guestPhone,
+            address: formData.guestAddress
+          }),
+        });
+        
+        if (!customerResponse.ok) {
+          const errorData = await customerResponse.json();
+          throw new Error(errorData.error || 'Failed to create customer');
+        }
+        
+        const customerData = await customerResponse.json();
+        finalCustomerId = customerData.customer.id;
+      }
+      
       const bookingResponse = await fetch('/api/vendor/bookings/walk-in', {
         method: 'POST',
         headers: {
@@ -155,7 +292,10 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
         body: JSON.stringify({
           hotelId: formData.hotelId,
           roomId: formData.roomId,
-          guestName: formData.guestName,
+          customerId: finalCustomerId,
+          guestName: formData.isNewCustomer 
+            ? `${formData.guestFirstName} ${formData.guestLastName}`.trim()
+            : customers.find(c => c.id === formData.customerId)?.fullName,
           guestEmail: formData.guestEmail,
           guestPhone: formData.guestPhone,
           checkInDate: formData.checkInDate,
@@ -171,21 +311,22 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
       });
       
       if (!bookingResponse.ok) {
-        throw new Error('Failed to create booking');
+        const errorData = await bookingResponse.json();
+        throw new Error(errorData.error || 'Failed to create booking');
       }
 
       const bookingData = await bookingResponse.json();
-      const bookingId = bookingData.id;
+      const bookingId = bookingData.bookingId || bookingData.id;
 
       if (formData.documents.length > 0) {
         for (const file of formData.documents) {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('name', file.name);
+          const formDataUpload = new FormData();
+          formDataUpload.append('file', file);
+          formDataUpload.append('name', file.name);
 
           const documentResponse = await fetch(`/api/bookings/${bookingId}/documents`, {
             method: 'POST',
-            body: formData,
+            body: formDataUpload,
           });
 
           if (!documentResponse.ok) {
@@ -203,7 +344,7 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
       }, 1500);
     } catch (error) {
       console.error('Error creating walk-in booking:', error);
-      setErrorMessage('Failed to create booking. Please try again.');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create booking. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -243,32 +384,74 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </div>  
             
             <div className="space-y-2">
-              <Label htmlFor="room">Room*</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="room">Room*</Label>
+                {formData.hotelId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchRooms(formData.hotelId)}
+                    disabled={isLoadingRooms}
+                    className="text-xs"
+                  >
+                    {isLoadingRooms ? 'Loading...' : 'Refresh'}
+                  </Button>
+                )}
+              </div>
               <Select
                 value={formData.roomId}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, roomId: value }))}
-                disabled={!formData.hotelId || rooms.length === 0}
+                disabled={!formData.hotelId || isLoadingRooms}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a room" />
+                  <SelectValue placeholder={
+                    isLoadingRooms 
+                      ? "Loading rooms..." 
+                      : !formData.hotelId 
+                        ? "Select a hotel first" 
+                        : rooms.length === 0 
+                          ? "No available rooms" 
+                          : "Select a room"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
+                  {rooms.length === 0 && !isLoadingRooms && formData.hotelId && (
+                    <div className="p-2 text-sm text-gray-500">
+                      No rooms available for selected dates
+                    </div>
+                  )}
                   {rooms.map((room) => (
                     <SelectItem key={room.id} value={room.id}>
-                      {room.name} ({room.type}) - {room.discountedPrice ? (
-                        <span className="line-through">{room.pricePerNight.toFixed(2)}</span>
-                      ) : (
-                        room.pricePerNight.toFixed(2)
-                      )} {room.discountedPrice && (
-                        <span>{room.discountedPrice.toFixed(2)}</span>
-                      )} NGN/night
+                      <div className="flex flex-col">
+                        <div className="font-medium">
+                          {room.name} ({room.roomTypeName})
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {room.finalPrice && room.finalPrice !== room.pricePerNight ? (
+                            <>
+                              <span className="line-through">{room.pricePerNight.toFixed(2)}</span>
+                              <span className="ml-1 text-green-600 font-medium">{room.finalPrice.toFixed(2)}</span>
+                            </>
+                          ) : (
+                            <span>{room.pricePerNight.toFixed(2)}</span>
+                          )} NGN/night • {room.availableUnits} available • Max {room.maxGuests} guests
+                        </div>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {formData.hotelId && rooms.length === 0 && !isLoadingRooms && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-sm text-yellow-800">
+                    No rooms are available for the selected dates. Try different dates or check back later.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -281,7 +464,13 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
               <Input
                 type="date"
                 value={formData.checkInDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, checkInDate: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, checkInDate: e.target.value }));
+                  // Refetch rooms if hotel is selected
+                  if (formData.hotelId) {
+                    setTimeout(() => fetchRooms(formData.hotelId), 100);
+                  }
+                }}
                 min={format(new Date(), 'yyyy-MM-dd')}
                 required
               />
@@ -292,7 +481,13 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
               <Input
                 type="date"
                 value={formData.checkOutDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, checkOutDate: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, checkOutDate: e.target.value }));
+                  // Refetch rooms if hotel is selected
+                  if (formData.hotelId) {
+                    setTimeout(() => fetchRooms(formData.hotelId), 100);
+                  }
+                }}
                 min={format(addDays(new Date(formData.checkInDate), 1), 'yyyy-MM-dd')}
                 required
               />
@@ -308,6 +503,11 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
                 max={selectedRoomObj?.maxGuests || 1}
                 required
               />
+              {selectedRoomObj && (
+                <p className="text-sm text-gray-500">
+                  Maximum {selectedRoomObj.maxGuests} guests for this room
+                </p>
+              )}
             </div>
           </div>
         );
@@ -315,33 +515,135 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
       case 2:
         return (
           <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="guestName">Guest Name*</Label>
-              <Input
-                type="text"
-                value={formData.guestName}
-                onChange={(e) => setFormData(prev => ({ ...prev, guestName: e.target.value }))}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="guestEmail">Guest Email</Label>
-              <Input
-                type="email"
-                value={formData.guestEmail}
-                onChange={(e) => setFormData(prev => ({ ...prev, guestEmail: e.target.value }))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="guestPhone">Guest Phone*</Label>
-              <Input
-                type="tel"
-                value={formData.guestPhone}
-                onChange={(e) => setFormData(prev => ({ ...prev, guestPhone: e.target.value }))}
-                required
-              />
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="customerType"
+                    checked={!formData.isNewCustomer}
+                    onChange={() => setFormData(prev => ({ ...prev, isNewCustomer: false, customerId: '' }))}
+                  />
+                  <span>Select Existing Customer</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="customerType"
+                    checked={formData.isNewCustomer}
+                    onChange={() => setFormData(prev => ({ ...prev, isNewCustomer: true, customerId: '' }))}
+                  />
+                  <span>Add New Customer</span>
+                </label>
+              </div>
+
+              {!formData.isNewCustomer ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="customerSearch">Search Customers</Label>
+                    <Input
+                      type="text"
+                      placeholder="Search by name, phone, or email..."
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="customerId">Select Customer*</Label>
+                    <Select
+                      value={formData.customerId}
+                      onValueChange={(value) => {
+                        setFormData(prev => ({ ...prev, customerId: value }));
+                        const selectedCustomer = customers.find(c => c.id === value);
+                        if (selectedCustomer) {
+                          setFormData(prev => ({
+                            ...prev,
+                            guestFirstName: selectedCustomer.firstName,
+                            guestLastName: selectedCustomer.lastName || '',
+                            guestEmail: selectedCustomer.email || '',
+                            guestPhone: selectedCustomer.phone,
+                            guestAddress: selectedCustomer.address || ''
+                          }));
+                        }
+                      }}
+                      disabled={isLoadingCustomers}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={
+                          isLoadingCustomers 
+                            ? "Loading customers..." 
+                            : customers.length === 0 
+                              ? "No customers found" 
+                              : "Select a customer"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            <div className="flex flex-col">
+                              <div className="font-medium">{customer.fullName}</div>
+                              <div className="text-sm text-gray-500">
+                                {customer.phone} {customer.email && `• ${customer.email}`}
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="guestFirstName">First Name*</Label>
+                      <Input
+                        type="text"
+                        value={formData.guestFirstName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, guestFirstName: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="guestLastName">Last Name</Label>
+                      <Input
+                        type="text"
+                        value={formData.guestLastName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, guestLastName: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="guestEmail">Email</Label>
+                    <Input
+                      type="email"
+                      value={formData.guestEmail}
+                      onChange={(e) => setFormData(prev => ({ ...prev, guestEmail: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="guestPhone">Phone*</Label>
+                    <Input
+                      type="tel"
+                      value={formData.guestPhone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, guestPhone: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="guestAddress">Address</Label>
+                    <Textarea
+                      value={formData.guestAddress}
+                      onChange={(e) => setFormData(prev => ({ ...prev, guestAddress: e.target.value }))}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -455,6 +757,11 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
         );
       
       case 5:
+        const selectedCustomer = customers.find(c => c.id === formData.customerId);
+        const customerName = formData.isNewCustomer 
+          ? `${formData.guestFirstName} ${formData.guestLastName}`.trim()
+          : selectedCustomer?.fullName || '';
+        
         return (
           <div className="space-y-6">
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -481,8 +788,12 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
                   <dd className="font-medium">{formData.numberOfGuests}</dd>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <dt className="text-gray-600">Guest Name:</dt>
-                  <dd className="font-medium">{formData.guestName}</dd>
+                  <dt className="text-gray-600">Customer:</dt>
+                  <dd className="font-medium">{customerName} {formData.isNewCustomer && '(New)'}</dd>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <dt className="text-gray-600">Phone:</dt>
+                  <dd className="font-medium">{formData.guestPhone}</dd>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <dt className="text-gray-600">Payment Method:</dt>

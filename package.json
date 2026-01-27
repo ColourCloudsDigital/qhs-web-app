@@ -100,6 +100,7 @@
         "react-simplemde-editor": "^5.2.0",
         "react-sortablejs": "^6.1.4",
         "react-text-mask": "^5.5.0",
+        "recharts": "^3.7.0",
         "sharp": "^0.33.2",
         "sortablejs": "^1.15.0",
         "sweetalert2": "^11.7.1",
