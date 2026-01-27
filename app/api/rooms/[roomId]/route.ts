@@ -3,10 +3,10 @@ import { roomService } from '@/lib/services/room.service';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { roomId: string } }
 ) {
   try {
-    const roomId = params.id;
+    const roomId = params.roomId;
 
     try {
       const room = await roomService.getRoomById(roomId);

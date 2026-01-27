@@ -6,8 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { NotificationType, NotificationStatus } from '@/lib/types/enums';
-import { UserRole } from '@/lib/types/enums';
+import { NotificationType, NotificationStatus, UserRole } from '@/lib/types/enums';
 
 interface Notification {
   id: string;
@@ -24,6 +23,34 @@ interface Notification {
   };
 }
 
+const roleNotificationTypes: Record<UserRole, NotificationType[]> = {
+  [UserRole.ADMIN]: Object.values(NotificationType),
+  [UserRole.SUPER_ADMIN]: Object.values(NotificationType),
+  [UserRole.VENDOR]: [
+    NotificationType.BOOKING,
+    NotificationType.PAYMENT,
+    NotificationType.SUBSCRIPTION,
+    NotificationType.PROMOTION,
+    NotificationType.ANNOUNCEMENT,
+    NotificationType.MESSAGE,
+    NotificationType.OTHER,
+  ],
+  [UserRole.STAFF]: [
+    NotificationType.MAINTENANCE,
+    NotificationType.ANNOUNCEMENT,
+    NotificationType.SYSTEM,
+    NotificationType.MESSAGE,
+    NotificationType.OTHER,
+  ],
+  [UserRole.CUSTOMER]: [
+    NotificationType.BOOKING,
+    NotificationType.PAYMENT,
+    NotificationType.PROMOTION,
+    NotificationType.MESSAGE,
+    NotificationType.ANNOUNCEMENT,
+  ],
+};
+
 export default function NotificationCenter() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -31,7 +58,12 @@ export default function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [preferences, setPreferences] = useState<Partial<Record<NotificationType, boolean>>>({});
+  const [preferencesLoading, setPreferencesLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const userRole = session?.user?.role as UserRole || UserRole.CUSTOMER; // Default to CUSTOMER if not set
 
   // Fetch unread count
   const fetchUnreadCount = async () => {
@@ -55,6 +87,36 @@ export default function NotificationCenter() {
     } catch (error) {
       console.error('Error fetching notifications:', error);
       setIsLoading(false);
+    }
+  };
+
+  // Fetch notification preferences
+  const fetchPreferences = async () => {
+    try {
+      setPreferencesLoading(true);
+      const response = await fetch('/api/notifications/preferences');
+      const data = await response.json();
+      setPreferences(data.preferences || {});
+      setPreferencesLoading(false);
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+      setPreferencesLoading(false);
+    }
+  };
+
+  // Update preference
+  const updatePreference = async (type: NotificationType, enabled: boolean) => {
+    try {
+      await fetch('/api/notifications/preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, enabled }),
+      });
+      setPreferences(prev => ({ ...prev, [type]: enabled }));
+    } catch (error) {
+      console.error('Error updating preference:', error);
     }
   };
 
@@ -113,21 +175,27 @@ export default function NotificationCenter() {
     
     // Navigate based on notification type and metadata
     if (notification.metadata) {
-      if (notification.type === 'BOOKING' && notification.metadata.bookingId) {
-        router.push(`/dashboard/bookings/${notification.metadata.bookingId}`);
-      } else if (notification.type === 'PAYMENT' && notification.metadata.paymentId) {
-        router.push(`/dashboard/payments/${notification.metadata.paymentId}`);
-      } else if (notification.type === 'SUBSCRIPTION' && notification.metadata.subscriptionId) {
-        router.push(`/dashboard/subscription`);
-      } else {
-        // Default action for other types
-        router.push(`/admin/notifications`);
-      }
-    } else {
-      router.push(`/admin/notifications`);
+      router.push(`${getViewAllPath()}?notificationId=${notification.id}`);
     }
     
     setIsOpen(false);
+  };
+
+  // Get view all path based on role
+  const getViewAllPath = () => {
+    switch (userRole) {
+      case UserRole.ADMIN:
+      case UserRole.SUPER_ADMIN:
+        return '/admin/notifications';
+      case UserRole.VENDOR:
+        return '/vendor/notifications';
+      case UserRole.STAFF:
+        return '/staff/notifications';
+      case UserRole.CUSTOMER:
+        return '/customer/notifications';
+      default:
+        return '/notifications';
+    }
   };
 
   // Initialize
@@ -151,11 +219,19 @@ export default function NotificationCenter() {
     }
   }, [isOpen]);
 
+  // Load preferences when settings open
+  useEffect(() => {
+    if (isSettingsOpen) {
+      fetchPreferences();
+    }
+  }, [isSettingsOpen]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setIsSettingsOpen(false);
       }
     }
 
@@ -164,10 +240,6 @@ export default function NotificationCenter() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  // Handle WebSocket or Server-Sent Events (SSE) for real-time notifications
-  // This would be implemented here - you'd connect to your backend to receive
-  // push notifications in real-time using WebSockets or SSE
 
   // Format notification time
   const formatNotificationTime = (dateString: string) => {
@@ -181,19 +253,24 @@ export default function NotificationCenter() {
   // Get icon for notification type
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
-      case 'BOOKING':
+      case NotificationType.BOOKING:
         return <span className="text-blue-500">🏨</span>;
-      case 'PAYMENT':
+      case NotificationType.PAYMENT:
         return <span className="text-green-500">💰</span>;
-      case 'SUBSCRIPTION':
+      case NotificationType.SUBSCRIPTION:
         return <span className="text-purple-500">🔄</span>;
-      case 'MESSAGE':
+      case NotificationType.MESSAGE:
         return <span className="text-yellow-500">✉️</span>;
-      case 'ANNOUNCEMENT':
+      case NotificationType.ANNOUNCEMENT:
         return <span className="text-red-500">📢</span>;
       default:
         return <span className="text-gray-500">🔔</span>;
     }
+  };
+
+  // Get human-readable notification type
+  const getNotificationTypeLabel = (type: NotificationType) => {
+    return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, ' ');
   };
 
   return (
@@ -253,7 +330,7 @@ export default function NotificationCenter() {
                   <li
                     key={notification.id}
                     className={`cursor-pointer border-b border-gray-100 dark:border-gray-700 ${
-                      notification.status === 'UNREAD'
+                      notification.status === NotificationStatus.UNREAD
                         ? 'bg-blue-50 dark:bg-blue-900/10'
                         : ''
                     }`}
@@ -286,22 +363,57 @@ export default function NotificationCenter() {
           <div className="border-t border-gray-200 p-2 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <Link
-                href="/admin/notifications"
+                href={getViewAllPath()}
                 className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                 onClick={() => setIsOpen(false)}
               >
                 View all notifications
                 <ChevronDown className="ml-1 inline h-3 w-3 transform rotate-270" />
               </Link>
-              <Link
-                href="/admin/notifications/settings"
+              <button
+                onClick={() => setIsSettingsOpen(true)}
                 className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                onClick={() => setIsOpen(false)}
               >
                 <Settings className="h-3 w-3" />
-              </Link>
+              </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-md bg-white p-4 shadow-lg dark:bg-gray-800 sm:w-96">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-medium">Notification Settings</h3>
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          {preferencesLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {roleNotificationTypes[userRole].map((type) => (
+                <div key={type} className="flex items-center justify-between">
+                  <label className="text-sm text-gray-700 dark:text-gray-300">
+                    {getNotificationTypeLabel(type)}
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={preferences[type] ?? true} // Default to enabled
+                    onChange={(e) => updatePreference(type, e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

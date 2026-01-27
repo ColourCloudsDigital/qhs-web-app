@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { notificationService } from '@/lib/services/notification.service';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import pool from '@/lib/db';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
+    
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const result = await notificationService.markAllAsRead(session.user.id);
-
-    return NextResponse.json({ success: true, count: result.count });
-  } catch (error: any) {
+    
+    // Mark all unread notifications as read for the current user
+    await pool.query(
+      `UPDATE notifications 
+       SET status = 'READ', updatedAt = NOW() 
+       WHERE userId = ? AND status = 'UNREAD'`,
+      [session.user.id]
+    );
+    
+    return NextResponse.json({
+      success: true,
+      message: 'All notifications marked as read'
+    });
+    
+  } catch (error) {
     console.error('Error marking all notifications as read:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to mark all notifications as read' },
+      { error: 'Failed to mark notifications as read' },
       { status: 500 }
     );
   }

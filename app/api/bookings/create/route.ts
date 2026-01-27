@@ -1,152 +1,282 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { RowDataPacket } from 'mysql2';
+import bcrypt from 'bcryptjs';
+import pool from '@/lib/db';
+import { availabilityService } from '@/lib/services/availability.service';
+import { customerNotificationService } from '@/lib/services/customer-notification.service';
+import { emailService } from '@/lib/services/email.service';
 
-interface AvailabilityResult extends RowDataPacket {
-  bookingCount: number;
-}
-
-interface RoomResult extends RowDataPacket {
-  pricePerNight: number;
-}
-
-/**
- * POST /api/bookings/create
- * Creates a booking with customer information without creating a user account
- */
 export async function POST(request: NextRequest) {
-  const connection = await pool.getConnection();
-  
   try {
-    // Parse request body
-    const body = await request.json();
-    console.log('Booking request body:', body);
+    // Parse guest booking data from request body
+    const bookingData = await request.json();
     
-    // Extract data from request
-    const { 
-      // Guest info
-      firstName, 
-      lastName, 
-      email, 
-      phone,
-      
-      // Booking info
-      hotelId,
-      roomId,
-      checkInDate,
-      checkOutDate,
-      numberOfGuests,
-      specialRequests,
-      paymentMethod 
-    } = body;
+    // Validate required fields
+    const requiredFields = [
+      'firstName', 'lastName', 'email', 'phone',
+      'hotelId', 'roomId', 'checkInDate', 'checkOutDate', 'numberOfGuests'
+    ];
     
-    // Basic validation
-    if (!firstName || !lastName || !email || !phone) {
-      return NextResponse.json({ error: 'Missing guest information' }, { status: 400 });
+    for (const field of requiredFields) {
+      if (!bookingData[field]) {
+        return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
+      }
     }
     
-    if (!hotelId || !roomId || !checkInDate || !checkOutDate || !numberOfGuests) {
-      return NextResponse.json({ error: 'Missing booking information' }, { status: 400 });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(bookingData.email)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
     }
     
-    console.log('Starting transaction');
+    // Begin transaction to handle the entire guest booking process
+    const connection = await pool.getConnection();
     await connection.beginTransaction();
     
-    // Verify room availability - simplified query to avoid potential syntax issues
-    const [availabilityResults] = await connection.query<AvailabilityResult[]>(
-      `SELECT COUNT(*) as bookingCount 
-       FROM bookings 
-       WHERE roomId = ? 
-       AND status != 'CANCELLED'
-       AND (
-         (checkInDate < ? AND checkOutDate > ?)
-       )`,
-      [roomId, checkOutDate, checkInDate]
-    );
-    
-    console.log('Availability check result:', availabilityResults[0]);
-    
-    if (availabilityResults[0].bookingCount > 0) {
-      return NextResponse.json({ error: 'Room is not available for the selected dates' }, { status: 409 });
-    }
-    
-    // Step 1: Create customer record with name and hotel information
-    console.log('Creating customer');
-    const customerId = uuidv4();
-    
-    await connection.query(
-      `INSERT INTO customers (id, firstName, lastName, userId, hotelId, phone, address, createdAt, updatedAt) 
-       VALUES (?, ?, ?, NULL, ?, ?, NULL, NOW(), NOW())`,
-      [customerId, firstName, lastName, hotelId, phone]
-    );
-    
-    // Step 2: Get room price with error handling
-    console.log('Getting room price');
-    const [roomResults] = await connection.query<RoomResult[]>('SELECT pricePerNight FROM rooms WHERE id = ?', [roomId]);
-    
-    if (!roomResults || roomResults.length === 0) {
-      throw new Error(`Room with id ${roomId} not found`);
-    }
-    
-    // Calculate nights and total price
-    const startDate = new Date(checkInDate);
-    const endDate = new Date(checkOutDate);
-    const nights = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const pricePerNight = roomResults[0].pricePerNight;
-    const totalAmount = pricePerNight * nights;
-    
-    console.log('Price calculation:', { nights, pricePerNight, totalAmount });
-    
-    // Step 3: Create booking with actual database schema fields
-    console.log('Creating booking');
-    const bookingId = uuidv4();
-    
-    await connection.query(
-      `INSERT INTO bookings (id, hotelId, roomId, customerId, checkInDate, checkOutDate, 
-       numberOfGuests, totalAmount, status, paymentStatus, specialRequests, createdAt, updatedAt) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', 'PENDING', ?, NOW(), NOW())`,
-      [
-        bookingId, hotelId, roomId, customerId,
-        checkInDate, checkOutDate, numberOfGuests,
-        totalAmount, specialRequests || null
-      ]
-    );
-    
-    // Commit the transaction
-    console.log('Committing transaction');
-    await connection.commit();
-    
-    // Return the booking id and reference
-    return NextResponse.json({
-      success: true,
-      id: bookingId,
-      totalAmount,
-      nights
-    });
-    
-  } catch (error: any) {
-    // Rollback in case of error
-    console.error('Error creating booking:', error);
     try {
+      let userId = null;
+      let customerId = null;
+      
+      // Check if user already exists by email
+      const [existingUsers] = await connection.query(
+        'SELECT id FROM users WHERE email = ?',
+        [bookingData.email]
+      );
+      
+      if ((existingUsers as any[]).length > 0) {
+        // User exists, get their customer record
+        userId = (existingUsers as any[])[0].id;
+        
+        const [existingCustomers] = await connection.query(
+          'SELECT id FROM customers WHERE userId = ?',
+          [userId]
+        );
+        
+        if ((existingCustomers as any[]).length > 0) {
+          customerId = (existingCustomers as any[])[0].id;
+        } else {
+          // User exists but no customer record, create customer
+          customerId = uuidv4();
+          await connection.query(
+            `INSERT INTO customers (id, userId, firstName, lastName, phone, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+            [customerId, userId, bookingData.firstName, bookingData.lastName, bookingData.phone]
+          );
+        }
+      } else {
+        // Create new user and customer
+        userId = uuidv4();
+        customerId = uuidv4();
+        
+        // Generate a temporary password for the guest user
+        const tempPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(tempPassword, 12);
+        
+        // Create user record
+        await connection.query(
+          `INSERT INTO users (id, email, password, role, emailVerified, createdAt, updatedAt)
+           VALUES (?, ?, ?, 'CUSTOMER', 0, NOW(), NOW())`,
+          [userId, bookingData.email, hashedPassword]
+        );
+        
+        // Create customer record
+        await connection.query(
+          `INSERT INTO customers (id, userId, firstName, lastName, phone, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+          [customerId, userId, bookingData.firstName, bookingData.lastName, bookingData.phone]
+        );
+      }
+      
+      // Check if room exists and is available
+      const [roomResults] = await connection.query(
+        'SELECT * FROM rooms WHERE id = ? AND status = ?',
+        [bookingData.roomId, 'available']
+      );
+      
+      if ((roomResults as any[]).length === 0) {
+        await connection.rollback();
+        return NextResponse.json({ error: 'Room not found or not available' }, { status: 400 });
+      }
+      
+      const room = (roomResults as any[])[0];
+      
+      // Check room availability for the selected dates
+      const isAvailable = await availabilityService.checkRoomAvailability({
+        roomId: bookingData.roomId,
+        checkInDate: new Date(bookingData.checkInDate),
+        checkOutDate: new Date(bookingData.checkOutDate),
+      });
+      
+      if (!isAvailable) {
+        await connection.rollback();
+        return NextResponse.json({ error: 'Room is not available for the selected dates' }, { status: 400 });
+      }
+      
+      // Find available room unit
+      const [availableUnits] = await connection.query(
+        `SELECT * FROM room_units 
+         WHERE roomId = ? AND status = 'available' 
+         AND (currentBookingId IS NULL OR currentBookingId = '')
+         LIMIT 1`,
+        [bookingData.roomId]
+      );
+      
+      if ((availableUnits as any[]).length === 0) {
+        await connection.rollback();
+        return NextResponse.json({ error: 'No available units for this room' }, { status: 400 });
+      }
+      
+      // Calculate price
+      const priceInfo = await availabilityService.calculateBookingPrice({
+        roomId: bookingData.roomId,
+        checkInDate: new Date(bookingData.checkInDate),
+        checkOutDate: new Date(bookingData.checkOutDate),
+      });
+      
+      // Generate booking ID
+      const bookingId = uuidv4();
+      
+      // Set default values
+      const status = 'CONFIRMED';
+      const paymentStatus = bookingData.paymentMethod === 'PAY_AT_HOTEL' ? 'PENDING' : 'PENDING';
+      const specialRequests = bookingData.specialRequests || '';
+      const paymentMethod = bookingData.paymentMethod || 'PAY_AT_HOTEL';
+      
+      // Create booking in database
+      const bookingQuery = `
+        INSERT INTO bookings (
+          id, hotelId, roomId, customerId, checkInDate, checkOutDate, 
+          numberOfGuests, numberOfRooms, totalAmount, status, paymentStatus, specialRequests,
+          createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      `;
+      
+      await connection.query(bookingQuery, [
+        bookingId,
+        bookingData.hotelId,
+        bookingData.roomId,
+        customerId,
+        bookingData.checkInDate,
+        bookingData.checkOutDate,
+        bookingData.numberOfGuests,
+        1, // numberOfRooms defaults to 1 for guest bookings
+        priceInfo.totalPrice,
+        status,
+        paymentStatus,
+        specialRequests
+      ]);
+      
+      // Update room unit status
+      const roomUnit = (availableUnits as any[])[0];
+      await connection.query(
+        `UPDATE room_units SET status = 'reserved', currentBookingId = ? WHERE id = ?`,
+        [bookingId, roomUnit.id]
+      );
+      
+      // If payment method is online payment, create payment record
+      if (paymentMethod !== 'PAY_AT_HOTEL') {
+        const paymentId = uuidv4();
+        const paymentQuery = `
+          INSERT INTO payments (
+            id, bookingId, amount, status, paymentMethod, transactionId, 
+            createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+        `;
+        
+        await connection.query(paymentQuery, [
+          paymentId,
+          bookingId,
+          priceInfo.totalPrice,
+          'PENDING',
+          paymentMethod,
+          uuidv4().substring(0, 8)
+        ]);
+      }
+      
+      await connection.commit();
+      
+      // Send booking confirmation notification and email
+      try {
+        // Get hotel details for notification and email
+        const [hotelRows] = await pool.query(
+          'SELECT name, address, phone, email, vendorId FROM hotels WHERE id = ?',
+          [bookingData.hotelId]
+        );
+        
+        const hotel = (hotelRows as any[])[0];
+        
+        // Send notification through customer notification service
+        await customerNotificationService.sendBookingNotification('confirmed', {
+          bookingId,
+          customerId,
+          userId,
+          hotelName: hotel?.name || 'Hotel',
+          roomName: room?.name || 'Room',
+          checkInDate: bookingData.checkInDate,
+          checkOutDate: bookingData.checkOutDate,
+          totalAmount: priceInfo.totalPrice,
+          status
+        });
+        
+        // Send booking confirmation email
+        await emailService.sendBookingConfirmation({
+          to: bookingData.email,
+          guestName: `${bookingData.firstName} ${bookingData.lastName}`,
+          bookingDetails: {
+            id: bookingId,
+            checkInDate: bookingData.checkInDate,
+            checkOutDate: bookingData.checkOutDate,
+            roomType: room.type || 'Standard Room',
+            numberOfGuests: bookingData.numberOfGuests,
+            totalAmount: priceInfo.totalPrice,
+            paymentStatus
+          },
+          hotelDetails: {
+            name: hotel?.name || 'Hotel',
+            address: hotel?.address || '',
+            phone: hotel?.phone || '',
+            email: hotel?.email || '',
+            currency: 'NGN'
+          },
+          vendorId: hotel?.vendorId
+        });
+        
+      } catch (notificationError) {
+        console.error('Failed to send booking confirmation:', notificationError);
+        // Don't fail the booking if notification/email fails
+      }
+      
+      return NextResponse.json({
+        success: true,
+        id: bookingId,
+        message: 'Booking created successfully',
+        bookingDetails: {
+          bookingId,
+          totalAmount: priceInfo.totalPrice,
+          nights: priceInfo.nights,
+          paymentRequired: paymentMethod !== 'PAY_AT_HOTEL',
+          checkInDate: bookingData.checkInDate,
+          checkOutDate: bookingData.checkOutDate,
+          hotelName: hotel?.name || 'Hotel',
+          roomName: room?.name || 'Room'
+        }
+      });
+      
+    } catch (error) {
       await connection.rollback();
-      console.log('Transaction rolled back');
-    } catch (rollbackError) {
-      console.error('Error rolling back transaction:', rollbackError);
+      throw error;
+    } finally {
+      connection.release();
     }
     
-    // Return detailed error for debugging
-    return NextResponse.json({ 
-      error: 'Failed to create booking',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    }, { status: 500 });
-  } finally {
-    try {
-      connection.release();
-      console.log('Connection released');
-    } catch (releaseError) {
-      console.error('Error releasing connection:', releaseError);
-    }
+  } catch (error) {
+    console.error('Error creating guest booking:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to create booking', 
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
+      { status: 500 }
+    );
   }
-} 
+}

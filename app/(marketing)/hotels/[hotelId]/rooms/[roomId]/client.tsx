@@ -14,10 +14,15 @@ import {
   ChevronRight,
   Info,
   Check,
-  ArrowRight
+  ArrowRight,
+  Loader2,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import ImageLightbox from '@/components/common/ImageLightbox';
+import UnifiedBookingModal from '@/components/booking/UnifiedBookingModal';
+import toast from '@/lib/toast';
 
 // Defining more specific types
 interface Hotel {
@@ -56,12 +61,16 @@ interface RoomDetailClientProps {
   hotel: Hotel;
   room: Room;
   relatedRooms: Room[];
+  isLoggedIn?: boolean;
+  customerId?: string | null;
 }
 
 export default function RoomDetailClient({ 
   hotel, 
   room,
-  relatedRooms
+  relatedRooms,
+  isLoggedIn = false,
+  customerId = null
 }: RoomDetailClientProps) {
   const router = useRouter();
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -69,7 +78,8 @@ export default function RoomDetailClient({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
-  const [guests, setGuests] = useState(1);
+  const [guests, setGuests] = useState(2);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   
   // Get today's date and tomorrow's date
   const today = new Date();
@@ -103,16 +113,33 @@ export default function RoomDetailClient({
   };
   
   const handleReservation = () => {
-    const params = new URLSearchParams();
-    params.append('hotelId', hotel.id);
-    params.append('roomId', room.id);
+    // Validate form data
+    if (!checkInDate || !checkOutDate || !guests) {
+      toast.error('Please select check-in date, check-out date and number of guests', {
+        title: 'Missing Information'
+      });
+      return;
+    }
     
-    if (checkInDate) params.append('checkIn', checkInDate);
-    if (checkOutDate) params.append('checkOut', checkOutDate);
-    if (guests) params.append('guests', guests.toString());
-    
-    router.push(`/hotels/${hotel.id}/book?${params.toString()}`);
+    if (new Date(checkOutDate) <= new Date(checkInDate)) {
+      toast.error('Check-out date must be after check-in date', {
+        title: 'Invalid Dates'
+      });
+      return;
+    }
+
+    // Check if guest count exceeds room capacity
+    if (guests > room.capacity) {
+      toast.error(`This room can accommodate maximum ${room.capacity} guests`, {
+        title: 'Too Many Guests'
+      });
+      return;
+    }
+
+    // Open the unified booking modal
+    setBookingModalOpen(true);
   };
+
   
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">
@@ -405,14 +432,14 @@ export default function RoomDetailClient({
                 onClick={handleReservation}
                 className="flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-center font-medium text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
-                Reserve Now
+                Continue to Book
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               
               <div className="mt-4 flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
                 <Info className="h-4 w-4" />
                 <p>
-                  Don&apos;t miss this room! Prices may increase if you view this room again later.
+                  Don't miss this room! Prices may increase if you view this room again later.
                 </p>
               </div>
             </div>
@@ -430,6 +457,19 @@ export default function RoomDetailClient({
           title={room.name}
         />
       )}
+
+      {/* Unified Booking Modal */}
+      <UnifiedBookingModal
+        isOpen={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        hotel={hotel}
+        room={room}
+        initialCheckInDate={checkInDate}
+        initialCheckOutDate={checkOutDate}
+        initialGuests={guests}
+        isLoggedIn={isLoggedIn}
+        customerId={customerId}
+      />
     </div>
   );
 }

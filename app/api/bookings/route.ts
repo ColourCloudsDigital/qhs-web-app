@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '@/lib/db';
 import { availabilityService } from '@/lib/services/availability.service';
+import { customerNotificationService } from '@/lib/services/customer-notification.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,9 +27,18 @@ export async function GET(request: NextRequest) {
     if (session.user.role === 'CUSTOMER' && session.user.customerId) {
       // Customers can only see their own bookings
       const [bookings] = await pool.query(
-        `SELECT * FROM bookings WHERE customerId = ? LIMIT ?, ?`,
+        `SELECT 
+        bookings.*,
+        rooms.name AS roomName
+        FROM bookings
+        JOIN rooms ON rooms.id = bookings.roomId
+        WHERE bookings.customerId = ?
+         AND bookings.status IN ('CONFIRMED', 'PENDING')
+         ORDER BY createdAt DESC
+         LIMIT ?, ?`,
         [session.user.customerId, (page - 1) * limit, limit]
       );
+      
       
       return NextResponse.json({ bookings });
     } else if (session.user.role === 'VENDOR' && session.user.vendorId) {
@@ -116,12 +126,18 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Handle numberOfRooms (default to 1)
+    const numberOfRooms = bookingData.numberOfRooms ? parseInt(bookingData.numberOfRooms) : 1;
+    if (numberOfRooms < 1) {
+      return NextResponse.json({ error: 'Invalid number of rooms' }, { status: 400 });
+    }
+    
     // Begin transaction to handle the entire booking process
     const connection = await pool.getConnection();
     await connection.beginTransaction();
     
     try {
-      // Check if room exists and has available units
+      // Check if room exists and has enough available units
       const [roomResults] = await connection.query(
         'SELECT * FROM rooms WHERE id = ? AND status = ?',
         [bookingData.roomId, 'available']
@@ -132,21 +148,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Room not found or not available' }, { status: 400 });
       }
       
-      // Find an available room unit
+      // Find enough available room units
       const [availableUnits] = await connection.query(
         `SELECT * FROM room_units 
          WHERE roomId = ? AND status = 'available' 
          AND (currentBookingId IS NULL OR currentBookingId = '')
-         LIMIT 1`,
-        [bookingData.roomId]
+         LIMIT ?`,
+        [bookingData.roomId, numberOfRooms]
       );
       
-      if ((availableUnits as any[]).length === 0) {
+      if ((availableUnits as any[]).length < numberOfRooms) {
         await connection.rollback();
-        return NextResponse.json({ error: 'No available units for this room' }, { status: 400 });
+        return NextResponse.json({ error: 'Not enough available units for this room' }, { status: 400 });
       }
-      
-      const roomUnit = (availableUnits as any[])[0];
       
       // Calculate price
       const priceInfo = await availabilityService.calculateBookingPrice({
@@ -154,6 +168,9 @@ export async function POST(request: NextRequest) {
         checkInDate: new Date(bookingData.checkInDate),
         checkOutDate: new Date(bookingData.checkOutDate),
       });
+      
+      // Adjust total price for multiple rooms
+      const totalAmount = priceInfo.totalPrice * numberOfRooms;
       
       // Generate a UUID for the booking
       const bookingId = uuidv4();
@@ -163,15 +180,14 @@ export async function POST(request: NextRequest) {
       const paymentStatus = bookingData.paymentMethod === 'PAY_AT_HOTEL' ? 'PENDING' : 'PENDING';
       const specialRequests = bookingData.specialRequests || '';
       const paymentMethod = bookingData.paymentMethod || 'PAY_AT_HOTEL';
-      const totalAmount = priceInfo.totalPrice;
       
-      // Create booking in database
+      // Create booking in database (include numberOfRooms)
       const query = `
         INSERT INTO bookings (
           id, hotelId, roomId, customerId, checkInDate, checkOutDate, 
-          numberOfGuests, totalAmount, status, paymentStatus, specialRequests,
+          numberOfGuests, numberOfRooms, totalAmount, status, paymentStatus, specialRequests,
           createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
       
       await connection.query(query, [
@@ -182,17 +198,20 @@ export async function POST(request: NextRequest) {
         bookingData.checkInDate,
         bookingData.checkOutDate,
         bookingData.numberOfGuests,
+        numberOfRooms,
         totalAmount,
         status,
         paymentStatus,
         specialRequests
       ]);
       
-      // Update the room_unit status to reserved and set the currentBookingId
-      await connection.query(
-        `UPDATE room_units SET status = 'reserved', currentBookingId = ? WHERE id = ?`,
-        [bookingId, roomUnit.id]
-      );
+      // Update the room_units status to reserved and set the currentBookingId
+      for (const roomUnit of (availableUnits as any[])) {
+        await connection.query(
+          `UPDATE room_units SET status = 'reserved', currentBookingId = ? WHERE id = ?`,
+          [bookingId, roomUnit.id]
+        );
+      }
       
       // If payment method is online payment, create payment record
       if (paymentMethod !== 'PAY_AT_HOTEL') {
@@ -216,12 +235,60 @@ export async function POST(request: NextRequest) {
       
       await connection.commit();
       
+      // Send booking confirmation notification to customer
+      try {
+        // Get customer details for notification
+        const [customerRows] = await pool.query(
+          'SELECT userId, firstName, lastName FROM customers WHERE id = ?',
+          [bookingData.customerId]
+        );
+        
+        const customer = (customerRows as any[])[0];
+        
+        if (customer && customer.userId) {
+          // Get hotel details for notification
+          const [hotelRows] = await pool.query(
+            'SELECT name FROM hotels WHERE id = ?',
+            [bookingData.hotelId]
+          );
+          
+          const hotel = (hotelRows as any[])[0];
+          
+          // Get room details for notification
+          const [roomRows] = await pool.query(
+            'SELECT name FROM rooms WHERE id = ?',
+            [bookingData.roomId]
+          );
+          
+          const room = (roomRows as any[])[0];
+          
+          await customerNotificationService.sendBookingNotification('confirmed', {
+            bookingId,
+            customerId: bookingData.customerId,
+            userId: customer.userId,
+            hotelName: hotel?.name || 'Hotel',
+            roomName: room?.name || 'Room',
+            checkInDate: bookingData.checkInDate,
+            checkOutDate: bookingData.checkOutDate,
+            totalAmount,
+            status
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to send booking notification:', notificationError);
+        // Don't fail the booking if notification fails
+      }
+      
       return NextResponse.json({
-        bookingId,
-        totalAmount,
-        paymentRequired: paymentMethod !== 'PAY_AT_HOTEL',
-        nights: priceInfo.nights,
-        message: 'Booking created successfully'
+        success: true,
+        id: bookingId,
+        message: 'Booking created successfully',
+        bookingDetails: {
+          bookingId,
+          totalAmount,
+          nights: priceInfo.nights,
+          paymentRequired: paymentMethod !== 'PAY_AT_HOTEL'
+        }
       });
     } catch (error) {
       await connection.rollback();

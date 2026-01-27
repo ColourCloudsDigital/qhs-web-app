@@ -18,6 +18,7 @@ interface BookingClientProps {
   initialCheckInDate: string;
   initialCheckOutDate: string;
   initialGuests?: number;
+  initialSelectedRoomId?: string | null;
   customerId?: string | null;
   isLoggedIn: boolean;
 }
@@ -28,13 +29,14 @@ export default function BookingClient({
   initialCheckInDate,
   initialCheckOutDate,
   initialGuests = 2,
+  initialSelectedRoomId = null,
   customerId,
   isLoggedIn,
 }: BookingClientProps) {
   const router = useRouter();
   const [checkInDate, setCheckInDate] = useState(initialCheckInDate);
   const [checkOutDate, setCheckOutDate] = useState(initialCheckOutDate);
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(initialSelectedRoomId);
   const [step, setStep] = useState<'select-room' | 'booking-details'>('select-room');
   
   // Find the selected room details

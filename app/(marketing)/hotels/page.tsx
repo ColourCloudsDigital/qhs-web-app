@@ -69,7 +69,7 @@ export default async function HotelsPage({
               <div className="rounded-lg bg-white p-8 text-center shadow-md dark:bg-gray-800">
                 <h2 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">No Hotels Found</h2>
                 <p className="text-gray-700 dark:text-gray-300">
-                  We couldn&apos;t find any hotels matching your search criteria. Try adjusting your filters.
+                  We couldn't find any hotels matching your search criteria. Try adjusting your filters.
                 </p>
               </div>
             ) : (

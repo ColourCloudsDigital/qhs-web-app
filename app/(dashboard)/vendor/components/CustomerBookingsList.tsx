@@ -42,23 +42,27 @@ export default function CustomerBookingsList({
   
   // Fetch bookings for this customer
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchBookings() {
+      if (!isMounted) return;
       setIsLoading(true);
-      
+
       // Build query parameters
       const queryParams = new URLSearchParams();
       queryParams.set('page', page.toString());
       queryParams.set('limit', limit.toString());
-      
+
       if (status) {
         queryParams.set('status', status);
       }
-      
+
       try {
         const response = await fetch(`/api/customer/${customerId}/bookings?${queryParams.toString()}`);
-        
+
         if (response.ok) {
           const data = await response.json();
+          if (!isMounted) return;
           setBookings(data.data);
           setTotalPages(data.meta.totalPages);
           setTotalItems(data.meta.totalItems);
@@ -68,11 +72,38 @@ export default function CustomerBookingsList({
       } catch (error) {
         console.error('Error fetching bookings:', error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     }
-    
+
     fetchBookings();
+
+    // Subscribe to booking updates via BroadcastChannel with localStorage fallback
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('bookings');
+      bc.addEventListener('message', () => {
+        fetchBookings();
+      });
+    } catch (e) {
+      // ignore
+    }
+
+    const onStorage = (ev: StorageEvent) => {
+      if (ev.key === 'bookings-updated') {
+        fetchBookings();
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      isMounted = false;
+      if (bc) {
+        try { bc.close(); } catch (e) {}
+      }
+      window.removeEventListener('storage', onStorage);
+    };
   }, [customerId, page, limit, status]);
   
   // Handle pagination
@@ -257,6 +288,11 @@ export default function CustomerBookingsList({
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Room</p>
                       <p className="font-medium text-gray-900 dark:text-white">
                         {booking.room.name} ({booking.room.type})
+                        {booking.numberOfRooms && booking.numberOfRooms > 1 && (
+                          <span className="ml-2 text-sm text-primary">
+                            × {booking.numberOfRooms} rooms
+                          </span>
+                        )}
                       </p>
                     </div>
                     
