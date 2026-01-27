@@ -15,8 +15,13 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
     const status = searchParams.get('status') as NotificationStatus | null;
     const type = searchParams.get('type') as NotificationType | null;
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 10;
-    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
+    
+    // Parse and validate limit and page with proper defaults
+    const limitParam = searchParams.get('limit');
+    const pageParam = searchParams.get('page');
+    
+    const limit = limitParam ? Math.max(1, parseInt(limitParam) || 10) : 10;
+    const page = pageParam ? Math.max(1, parseInt(pageParam) || 1) : 1;
 
     const options: any = { limit, page };
     if (status) options.status = status;

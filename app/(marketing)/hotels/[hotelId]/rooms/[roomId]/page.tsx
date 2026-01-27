@@ -1,5 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { roomService } from '@/lib/services/room.service';
 import RoomDetailClient from './client';
 
@@ -40,6 +42,16 @@ export default async function RoomDetailPage({ params }: PageProps) {
   const { hotelId, roomId } = params;
   
   try {
+    // Get session to check if user is logged in
+    const session = await getServerSession(authOptions);
+    const isLoggedIn = !!session?.user;
+    let customerId = null;
+
+    // If user is logged in and is a customer, get their customer ID
+    if (isLoggedIn && session?.user?.role === 'CUSTOMER') {
+      customerId = session.user.customerId || null;
+    }
+    
     // Get the room directly by its ID - the room already has the hotel information nested
     const room = await roomService.getRoomById(roomId);
     
@@ -70,6 +82,8 @@ export default async function RoomDetailPage({ params }: PageProps) {
         hotel={room.hotel}
         room={room}
         relatedRooms={filteredRelatedRooms}
+        isLoggedIn={isLoggedIn}
+        customerId={customerId}
       />
     );
   } catch (error) {

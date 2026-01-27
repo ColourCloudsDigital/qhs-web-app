@@ -2,6 +2,7 @@ import pool from '@/lib/db';
 import { BookingStatus, PaymentStatus } from '@/lib/types/enums';
 import { availabilityService } from './availability.service';
 import { emailService } from './email.service';
+import { customerNotificationService } from './customer-notification.service';
 import { PaginationParams } from '@/lib/utils';
 
 // Helper function to safely parse JSON
@@ -710,6 +711,55 @@ export const bookingService = {
     // Get updated booking
     const updatedBooking = await this.getBookingById(id, false, false, false);
 
+    // Send notification based on status change
+    if (booking.customer && booking.hotel && booking.room) {
+      try {
+        // Get customer userId for notification
+        const [customerRows] = await pool.query(
+          'SELECT userId FROM customers WHERE id = ?',
+          [booking.customerId]
+        );
+        
+        const customer = (customerRows as any[])[0];
+        
+        if (customer && customer.userId) {
+          let notificationType: 'created' | 'confirmed' | 'cancelled' | 'checked_in' | 'checked_out' | 'modified' = 'modified';
+          
+          switch (status) {
+            case BookingStatus.CONFIRMED:
+              notificationType = 'confirmed';
+              break;
+            case BookingStatus.CANCELLED:
+              notificationType = 'cancelled';
+              break;
+            case BookingStatus.CHECKED_IN:
+              notificationType = 'checked_in';
+              break;
+            case BookingStatus.CHECKED_OUT:
+              notificationType = 'checked_out';
+              break;
+            default:
+              notificationType = 'modified';
+          }
+
+          await customerNotificationService.sendBookingNotification(notificationType, {
+            bookingId: booking.id,
+            customerId: booking.customerId,
+            userId: customer.userId,
+            hotelName: booking.hotel.name,
+            roomName: booking.room.name,
+            checkInDate: booking.checkInDate,
+            checkOutDate: booking.checkOutDate,
+            totalAmount: booking.totalAmount,
+            status: status
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to send booking status notification:', notificationError);
+        // Don't fail the status update if notification fails
+      }
+    }
+
     // Send notification email based on status change
     if (status === BookingStatus.CONFIRMED) {
       try {
@@ -755,7 +805,7 @@ export const bookingService = {
    */
   async cancelBooking(id: string, reason: string, cancelledBy: 'CUSTOMER' | 'VENDOR' | 'ADMIN') {
     // Verify that booking exists and get related data
-    const booking = await this.getBookingById(id, true, true, false);
+    const booking = await this.getBookingById(id, true, true, true);
 
     if (!booking) {
       throw new Error('Booking not found');
@@ -812,7 +862,58 @@ export const bookingService = {
         }
       }
 
+      // Release room units back to available status
+      // Clear currentBookingId and set status back to 'available'
+      await connection.query(
+        'UPDATE room_units SET status = ?, currentBookingId = NULL WHERE currentBookingId = ?',
+        ['available', id]
+      );
+
       await connection.commit();
+
+      // Send cancellation notification
+      if (booking.customer && booking.hotel && booking.room) {
+        try {
+          // Get customer userId for notification
+          const [customerRows] = await pool.query(
+            'SELECT userId FROM customers WHERE id = ?',
+            [booking.customerId]
+          );
+          
+          const customer = (customerRows as any[])[0];
+          
+          if (customer && customer.userId) {
+            await customerNotificationService.sendBookingNotification('cancelled', {
+              bookingId: booking.id,
+              customerId: booking.customerId,
+              userId: customer.userId,
+              hotelName: booking.hotel.name,
+              roomName: booking.room.name,
+              checkInDate: booking.checkInDate,
+              checkOutDate: booking.checkOutDate,
+              totalAmount: booking.totalAmount,
+              status: BookingStatus.CANCELLED
+            });
+
+            // If refund is eligible, also send payment refund notification
+            if (isRefundEligible && booking.payments && booking.payments.length > 0) {
+              await customerNotificationService.sendPaymentNotification('refunded', {
+                paymentId: booking.payments[0].id,
+                bookingId: booking.id,
+                customerId: booking.customerId,
+                userId: customer.userId,
+                amount: booking.totalAmount,
+                status: 'REFUNDED',
+                hotelName: booking.hotel.name,
+                paymentMethod: booking.payments[0].method || 'Unknown'
+              });
+            }
+          }
+        } catch (notificationError) {
+          console.error('Failed to send cancellation notification:', notificationError);
+          // Don't fail the cancellation if notification fails
+        }
+      }
 
       // Get updated booking
       const updatedBooking = await this.getBookingById(id, false, false, false);

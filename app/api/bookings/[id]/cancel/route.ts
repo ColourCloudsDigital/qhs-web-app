@@ -73,6 +73,33 @@ export async function POST(
         cancelledBy
       );
       
+      // Fetch booking to get room and hotel info
+      const bookingRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/bookings/${bookingId}`
+      );
+      const bookingData = await bookingRes.json();
+
+      // Restore room availability
+      try {
+        await fetch(
+          `/api/hotels/${bookingData.hotelId}/rooms/${bookingData.roomId}/availability`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: 'restore',
+              numberOfRooms: bookingData.numberOfRooms || 1,
+              bookingId: bookingData.id,
+            }),
+          }
+        );
+      } catch (err) {
+        console.error('Failed to restore availability:', err);
+        // Don't fail the cancellation if availability update fails
+      }
+
       return NextResponse.json(cancelledBooking);
     } catch (err) {
       if (err instanceof Error) {

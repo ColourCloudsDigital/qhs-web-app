@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import RoomCard from './RoomCard';
 
 interface Amenity {
@@ -30,23 +31,95 @@ interface RoomCardWrapperProps {
 
 export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps) {
   const router = useRouter();
+  const { data: session } = useSession();
 
   // This function now matches the expected (roomId: string) => void signature
-  const handleReserve = (roomId: string) => {
-    // If we have a hotelId, use the book endpoint
+  const handleReserve = async (roomId: string) => {
+    // Try to get checkIn, checkOut, guests from window.location.search if present
+    let checkIn = '';
+    let checkOut = '';
+    let guests = '';
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      checkIn = urlParams.get('checkIn') || '';
+      checkOut = urlParams.get('checkOut') || '';
+      guests = urlParams.get('guests') || '';
+    }
+
+    // If we have dates and the user is authenticated, attempt to create booking immediately
+    if (checkIn && checkOut && session?.user) {
+      try {
+        const customerId = (session as any).user?.customerId;
+        if (!customerId) {
+          // If no customerId, redirect to book flow with new route structure
+          const params = new URLSearchParams();
+          if (checkIn) params.set('checkIn', checkIn);
+          if (checkOut) params.set('checkOut', checkOut);
+          if (guests) params.set('guests', guests);
+          if (hotelId) {
+            router.push(`/hotels/${hotelId}/book/${roomId}${params.toString() ? `?${params.toString()}` : ''}`);
+            return;
+          }
+        }
+
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hotelId: hotelId || undefined,
+            roomId,
+            customerId: (session as any).user?.customerId,
+            checkInDate: checkIn,
+            checkOutDate: checkOut,
+            numberOfGuests: guests ? Number(guests) : 1,
+            numberOfRooms: 1, // Default to 1 room for immediate booking
+            specialRequests: '',
+            paymentMethod: 'PAY_AT_HOTEL'
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to create booking');
+        }
+
+        const booking = await res.json();
+        const bookingId = booking.bookingId || booking.id || null;
+        if (!bookingId) throw new Error('Booking response missing id');
+
+        // Notify other open windows/components that bookings changed
+        try {
+          const bc = new BroadcastChannel('bookings');
+          bc.postMessage({ type: 'updated', bookingId });
+          bc.close();
+        } catch (e) {
+          // BroadcastChannel may not be available; fallback to localStorage event
+          try {
+            localStorage.setItem('bookings-updated', JSON.stringify({ ts: Date.now(), bookingId }));
+          } catch (_) {}
+        }
+
+        // Navigate to confirmation
+        if (bookingId) {
+          router.push(`/bookings/${bookingId}/confirmation`);
+          return;
+        }
+      } catch (error) {
+        console.error('Immediate booking failed, falling back to booking page', error);
+        // Continue to fallback behavior below
+      }
+    }
+
+    // Fallback: redirect to booking flow page with new route structure
+    const params = new URLSearchParams();
+    if (checkIn) params.set('checkIn', checkIn);
+    if (checkOut) params.set('checkOut', checkOut);
+    if (guests) params.set('guests', guests);
+    const queryString = params.toString();
     if (hotelId) {
-      const params = new URLSearchParams({
-        roomId,
-      });
-      
-      router.push(`/hotels/${hotelId}/book?${params.toString()}`);
+      router.push(`/hotels/${hotelId}/book/${roomId}${queryString ? `?${queryString}` : ''}`);
     } else {
-      // Fallback to generic booking URL
-      const params = new URLSearchParams({
-        roomId,
-      });
-      
-      router.push(`/booking?${params.toString()}`);
+      router.push(`/booking?${queryString}`);
     }
   };
 
@@ -55,13 +128,6 @@ export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps)
     if (hotelId) {
       router.push(`/hotels/${hotelId}/rooms/${room.id}`);
     }
-  };
-
-  // Create a wrapper function for the RoomCard onReserve
-  // This stops propagation of click events to prevent navigation conflicts
-  const handleReserveClick = (roomId: string) => {
-    // We need to manually stop propagation in the RoomCard component
-    handleReserve(roomId);
   };
 
   return (
@@ -77,7 +143,7 @@ export default function RoomCardWrapper({ room, hotelId }: RoomCardWrapperProps)
         images={room.images}
         status={room.status}
         amenities={room.amenities}
-        onReserve={handleReserveClick}
+        hotelId={hotelId}
       />
     </div>
   );

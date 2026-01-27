@@ -162,8 +162,20 @@ export default function BookingForm({
       if (booking.paymentRequired) {
         router.push(`/payment/${booking.bookingId}`);
       } else {
-        // No payment required, redirect to booking confirmation page
-        router.push(`/bookings/${booking.bookingId}/confirmation`);
+        // No payment required, redirect to booking success page
+        const successParams = new URLSearchParams({
+          bookingId: booking.bookingId,
+          hotelName: hotelId, // This should be the hotel name, but we'll use ID for now
+          roomName: roomName,
+          checkInDate: checkInDate,
+          checkOutDate: checkOutDate,
+          numberOfGuests: numberOfGuests.toString(),
+          totalAmount: booking.totalAmount?.toString() || '0',
+          nights: booking.nights?.toString() || '1',
+          paymentRequired: 'false'
+        });
+        
+        router.push(`/booking-success?${successParams.toString()}`);
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred. Please try again.');

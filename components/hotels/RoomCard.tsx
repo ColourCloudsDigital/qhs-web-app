@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { User, ArrowRight, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
@@ -20,10 +21,10 @@ interface RoomProps {
   capacity: number;
   pricePerNight: number;
   discountedPrice?: number | null;
-  images: string[];
+  images?: string[];
   status: string;
   amenities: Amenity[];
-  onReserve: (roomId: string) => void;
+  hotelId?: string;
 }
 
 export default function RoomCard({
@@ -34,11 +35,14 @@ export default function RoomCard({
   capacity,
   pricePerNight,
   discountedPrice,
-  images,
+  images = [],
   status,
   amenities,
-  onReserve
+  hotelId
 }: RoomProps) {
+  const router = useRouter();
+  // Ensure images is always an array
+  const safeImages = Array.isArray(images) ? images : [];
   const [expanded, setExpanded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -53,21 +57,28 @@ export default function RoomCard({
     // Stop propagation to parent elements
     e.stopPropagation();
     e.preventDefault();
-    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % safeImages.length);
   };
 
   const prevImage = (e: React.MouseEvent) => {
     // Stop propagation to parent elements
     e.stopPropagation();
     e.preventDefault();
-    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + safeImages.length) % safeImages.length);
   };
 
   const handleReserveClick = (e: React.MouseEvent) => {
     // Stop propagation to prevent parent click handlers
     e.stopPropagation();
     e.preventDefault();
-    onReserve(id);
+
+    // Navigate to room detail page where user can view details and book
+    if (hotelId) {
+      router.push(`/hotels/${hotelId}/rooms/${id}`);
+    } else {
+      // Fallback if hotelId is not available
+      router.push(`/hotels/${id}`);
+    }
   };
 
   const handleImageDotClick = (e: React.MouseEvent, index: number) => {
@@ -82,16 +93,16 @@ export default function RoomCard({
       <div className="grid gap-6 p-6 md:grid-cols-3">
         {/* Room Image */}
         <div className="relative h-60 w-full overflow-hidden rounded-lg md:h-full">
-          {images.length > 0 ? (
+          {safeImages.length > 0 ? (
             <>
               <Image
-                src={images[currentImageIndex]}
+                src={safeImages[currentImageIndex]}
                 alt={name}
                 fill
                 className="object-cover"
                 unoptimized={true}
               />
-              {images.length > 1 && (
+              {safeImages.length > 1 && (
                 <>
                   <button
                     onClick={prevImage}
@@ -108,7 +119,7 @@ export default function RoomCard({
                     <ChevronUp className="rotate-90 h-5 w-5" />
                   </button>
                   <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
-                    {images.map((_, index) => (
+                    {safeImages.map((_, index) => (
                       <button
                         key={index}
                         onClick={(e) => handleImageDotClick(e, index)}

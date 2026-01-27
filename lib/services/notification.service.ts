@@ -180,7 +180,11 @@ class NotificationService implements NotificationServiceInterface {
 
   async getUserNotifications(userId: string, options: any = {}) {
     const { status, type, limit = 10, page = 1 } = options;
-    const skip = (page - 1) * limit;
+    
+    // Ensure limit and page are valid numbers
+    const validLimit = parseInt(limit?.toString() || '10') || 10;
+    const validPage = parseInt(page?.toString() || '1') || 1;
+    const skip = (validPage - 1) * validLimit;
 
     // Build filter conditions
     let whereClause = 'WHERE userId = ?';
@@ -205,7 +209,7 @@ class NotificationService implements NotificationServiceInterface {
     const total = (countRows as any[])[0].total;
 
     // Add pagination parameters
-    const paginationParams = [...queryParams, skip, parseInt(limit.toString())];
+    const paginationParams = [...queryParams, skip, validLimit];
     
     // Get notifications
     const [rows] = await pool.query(
@@ -225,17 +229,17 @@ class NotificationService implements NotificationServiceInterface {
     }));
 
     // Calculate pagination data
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / validLimit);
 
     return {
       notifications,
       pagination: {
         total,
-        page,
-        limit,
+        page: validPage,
+        limit: validLimit,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
+        hasNextPage: validPage < totalPages,
+        hasPrevPage: validPage > 1,
       },
     };
   }

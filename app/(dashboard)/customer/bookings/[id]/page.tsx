@@ -19,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useBookingStore } from '@/lib/hooks/useBookingContext';
 
 interface Booking {
   id: string;
@@ -28,6 +29,7 @@ interface Booking {
   checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
+  numberOfRooms: number; // Added to track multiple room bookings
   totalAmount: number;
   status: string;
   paymentStatus: string;
@@ -99,8 +101,17 @@ export default function BookingDetailPage() {
       const bookingData = await bookingRes.json();
       setBooking(bookingData);
 
-      // Fetch available rooms for the booking period
-      await fetchAvailableRooms(bookingData.hotelId, bookingData.checkInDate, bookingData.checkOutDate);
+      // Debug log booking payload
+      console.log('Booking data fetched:', bookingData);
+
+      // Normalize hotel id and dates, backend expects hotelId param and YYYY-MM-DD dates
+      const hotelId = bookingData.hotelId || bookingData.hotel?.id;
+      const normalizeDate = (d: string) => new Date(d).toISOString().slice(0, 10);
+      const checkIn = normalizeDate(bookingData.checkInDate);
+      const checkOut = normalizeDate(bookingData.checkOutDate);
+
+      // Fetch available rooms for the booking period (use backend's expected query names)
+      await fetchAvailableRooms(hotelId, checkIn, checkOut);
 
       // Show success toast if this was just created (could be from URL params or localStorage)
       const urlParams = new URLSearchParams(window.location.search);
@@ -128,9 +139,11 @@ export default function BookingDetailPage() {
 
   const fetchAvailableRooms = async (hotelId: string, checkInDate: string, checkOutDate: string) => {
     try {
-      const response = await fetch(
-        `/api/hotels/${hotelId}/available-rooms?checkIn=${checkInDate}&checkOut=${checkOutDate}`
-      );
+      const url = `/api/hotels/${encodeURIComponent(hotelId)}/available-rooms?checkInDate=${encodeURIComponent(
+        checkInDate
+      )}&checkOutDate=${encodeURIComponent(checkOutDate)}`;
+      console.log('Fetching available rooms URL:', url);
+      const response = await fetch(url);
 
       if (response.ok) {
         const rooms = await response.json();
@@ -164,6 +177,14 @@ export default function BookingDetailPage() {
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Failed to cancel booking');
+      }
+
+      // Update booking data to reflect cancellation
+      if (booking) {
+        setBooking({
+          ...booking,
+          status: 'CANCELLED',
+        });
       }
 
       toast.success('Booking cancelled successfully', {
@@ -341,12 +362,14 @@ export default function BookingDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">{booking.numberOfGuests} guest{booking.numberOfGuests !== 1 ? 's' : ''}</span>
+                  <Bed className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">
+                    {booking.numberOfRooms || 1} room{(booking.numberOfRooms || 1) !== 1 ? 's' : ''} • {nights} night{nights !== 1 ? 's' : ''}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Bed className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">{nights} night{nights !== 1 ? 's' : ''}</span>
+                  <Users className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">{booking.numberOfGuests} guest{booking.numberOfGuests !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             </div>
@@ -366,14 +389,34 @@ export default function BookingDetailPage() {
           <div className="flex-1">
             <h4 className="text-xl font-medium text-gray-900 mb-1">{booking.room.name}</h4>
             <p className="text-gray-600 mb-2">{booking.room.type}</p>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
               <span>Capacity: {booking.room.capacity} guest{booking.room.capacity !== 1 ? 's' : ''}</span>
               <span>{formatCurrency(booking.room.pricePerNight)} / night</span>
             </div>
+            
+            {/* Show breakdown if multiple rooms */}
+            {booking.numberOfRooms && booking.numberOfRooms > 1 && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between text-gray-700">
+                    <span>{booking.numberOfRooms} rooms × {nights} night{nights !== 1 ? 's' : ''}</span>
+                    <span className="font-medium">{formatCurrency(booking.room.pricePerNight * nights * booking.numberOfRooms)}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    ({formatCurrency(booking.room.pricePerNight)}/night per room)
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-primary">{formatCurrency(booking.totalAmount)}</div>
             <div className="text-sm text-gray-500">Total amount</div>
+            {booking.numberOfRooms && booking.numberOfRooms > 1 && (
+              <div className="text-xs text-gray-400 mt-1">
+                for {booking.numberOfRooms} room{booking.numberOfRooms !== 1 ? 's' : ''}
+              </div>
+            )}
           </div>
         </div>
       </div>

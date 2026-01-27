@@ -1,23 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { notificationService } from '@/lib/services/notification.service';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import pool from '@/lib/db';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
+    
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const count = await notificationService.getUnreadCount(session.user.id);
-
-    return NextResponse.json({ count });
-  } catch (error: any) {
+    
+    // Get unread notification count for the current user
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) as count 
+       FROM notifications 
+       WHERE userId = ? AND status = 'UNREAD'`,
+      [session.user.id]
+    );
+    
+    const count = (countRows as any[])[0]?.count || 0;
+    
+    return NextResponse.json({
+      count: parseInt(count)
+    });
+    
+  } catch (error) {
     console.error('Error fetching notification count:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch notification count' },
+      { error: 'Failed to fetch notification count' },
       { status: 500 }
     );
   }
