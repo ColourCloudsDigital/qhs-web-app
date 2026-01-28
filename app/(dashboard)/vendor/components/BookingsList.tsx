@@ -418,7 +418,7 @@ export default function BookingsList({
               <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
                 <p>
                   You are currently offline. You can still view your bookings and perform actions. 
-                    All changes will be synchronized when you&apos;re back online.
+                    All changes will be synchronized when you're back online.
                 </p>
                 </div>
               </div>
