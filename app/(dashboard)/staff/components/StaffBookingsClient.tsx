@@ -364,16 +364,16 @@ export default function StaffBookingsClient({
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-4 mb-2">
-                        <h3 className="font-medium">{booking.customer.name}</h3>
+                        <h3 className="font-medium">{booking.customer?.name || 'Guest'}</h3>
                         {getStatusBadge(booking.status)}
                         {getPaymentStatusBadge(booking.paymentStatus)}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
                         <div>
-                          <span className="font-medium">Hotel:</span> {booking.hotel.name}
+                          <span className="font-medium">Hotel:</span> {booking.hotel?.name || 'Hotel'}
                         </div>
                         <div>
-                          <span className="font-medium">Room:</span> {booking.room.name}
+                          <span className="font-medium">Room:</span> {booking.room?.name || 'Room'}
                         </div>
                         <div>
                           <span className="font-medium">Check-in:</span> {formatDate(booking.checkInDate)}

@@ -34,7 +34,7 @@ export const automatedCheckoutService = {
           b.status,
           b.customerId,
           b.hotelId,
-          b.roomId,
+          b.roomUnitId,
           b.totalAmount,
           c.userId,
           c.firstName,
@@ -44,7 +44,8 @@ export const automatedCheckoutService = {
         FROM bookings b
         JOIN customers c ON b.customerId = c.id
         JOIN hotels h ON b.hotelId = h.id
-        JOIN rooms r ON b.roomId = r.id
+        JOIN room_units ru ON b.roomUnitId = ru.id
+        JOIN rooms r ON ru.roomId = r.id
         WHERE b.checkOutDate < CURDATE()
           AND b.status IN ('CHECKED_IN', 'CONFIRMED')
         ORDER BY b.checkOutDate ASC
@@ -144,7 +145,8 @@ export const automatedCheckoutService = {
         FROM bookings b
         JOIN customers c ON b.customerId = c.id
         JOIN hotels h ON b.hotelId = h.id
-        JOIN rooms r ON b.roomId = r.id
+        JOIN room_units ru ON b.roomUnitId = ru.id
+        JOIN rooms r ON ru.roomId = r.id
         WHERE b.id = ?
       `, [bookingId]);
 
@@ -235,7 +237,8 @@ export const automatedCheckoutService = {
       FROM bookings b
       JOIN customers c ON b.customerId = c.id
       JOIN hotels h ON b.hotelId = h.id
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       WHERE b.checkOutDate < CURDATE()
         AND b.status IN ('CHECKED_IN', 'CONFIRMED')
       ORDER BY b.checkOutDate ASC

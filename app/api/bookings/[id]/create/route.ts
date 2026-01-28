@@ -54,22 +54,29 @@ export async function POST(request: NextRequest) {
     console.log('Starting transaction');
     await connection.beginTransaction();
     
-    // Verify room availability - simplified query to avoid potential syntax issues
-    const [availabilityResults] = await connection.query<AvailabilityResult[]>(
-      `SELECT COUNT(*) as bookingCount 
-       FROM bookings 
-       WHERE roomId = ? 
-       AND status != 'CANCELLED'
-       AND (
-         (checkInDate < ? AND checkOutDate > ?)
-       )`,
-      [roomId, checkOutDate, checkInDate]
+    // Verify room availability and get available room unit
+    const [availableUnits] = await connection.query(
+      `SELECT ru.id as roomUnitId 
+       FROM room_units ru
+       WHERE ru.roomId = ? 
+       AND ru.status = 'available'
+       AND ru.id NOT IN (
+         SELECT b.roomUnitId 
+         FROM bookings b 
+         WHERE b.roomUnitId IS NOT NULL
+         AND b.status != 'CANCELLED'
+         AND (
+           (b.checkInDate < ? AND b.checkOutDate > ?)
+         )
+       )
+       LIMIT ?`,
+      [roomId, checkOutDate, checkInDate, numberOfRooms || 1]
     );
     
-    console.log('Availability check result:', availabilityResults[0]);
+    console.log('Available units check result:', availableUnits);
     
-    if (availabilityResults[0].bookingCount > 0) {
-      return NextResponse.json({ error: 'Room is not available for the selected dates' }, { status: 409 });
+    if ((availableUnits as any[]).length < (numberOfRooms || 1)) {
+      return NextResponse.json({ error: 'Not enough available room units for the selected dates' }, { status: 409 });
     }
     
     // Step 1: Create customer record with name and hotel information
@@ -99,19 +106,26 @@ export async function POST(request: NextRequest) {
     
     console.log('Price calculation:', { nights, pricePerNight, totalAmount });
     
-    // Step 3: Create booking with actual database schema fields
+    // Step 3: Create booking with room unit ID instead of room ID
     console.log('Creating booking');
     const bookingId = uuidv4();
+    const selectedRoomUnit = (availableUnits as any[])[0];
     
     await connection.query(
-      `INSERT INTO bookings (id, hotelId, roomId, customerId, checkInDate, checkOutDate, 
+      `INSERT INTO bookings (id, hotelId, roomUnitId, customerId, checkInDate, checkOutDate, 
        numberOfGuests, numberOfRooms, totalAmount, status, paymentStatus, specialRequests, createdAt, updatedAt) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', 'PENDING', ?, NOW(), NOW())`,
       [
-        bookingId, hotelId, roomId, customerId,
+        bookingId, hotelId, selectedRoomUnit.roomUnitId, customerId,
         checkInDate, checkOutDate, numberOfGuests, numberOfRooms, totalAmount,
-        specialRequests || null, 'CONFIRMED', 'PENDING'
+        specialRequests || null
       ]
+    );
+    
+    // Update room unit status to reserved
+    await connection.query(
+      `UPDATE room_units SET status = 'reserved', currentBookingId = ? WHERE id = ?`,
+      [bookingId, selectedRoomUnit.roomUnitId]
     );
     
     // Commit the transaction

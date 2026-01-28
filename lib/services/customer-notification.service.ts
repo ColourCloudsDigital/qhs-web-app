@@ -393,7 +393,8 @@ class CustomerNotificationService {
         SELECT b.*, h.name as hotelName, r.name as roomName, c.userId
         FROM bookings b
         JOIN hotels h ON b.hotelId = h.id
-        JOIN rooms r ON b.roomId = r.id
+        JOIN room_units ru ON b.roomUnitId = ru.id
+        JOIN rooms r ON ru.roomId = r.id
         JOIN customers c ON b.customerId = c.id
         WHERE DATE(b.checkInDate) = ? AND b.status = 'CONFIRMED'
       `, [tomorrowStr]);

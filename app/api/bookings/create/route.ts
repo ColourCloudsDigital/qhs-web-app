@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import pool from '@/lib/db';
 import { availabilityService } from '@/lib/services/availability.service';
 import { customerNotificationService } from '@/lib/services/customer-notification.service';
@@ -195,16 +195,20 @@ export async function POST(request: NextRequest) {
       
       await connection.commit();
       
-      // Send booking confirmation notification and email
+      // Get hotel details for response
+      let hotel: any = null;
       try {
-        // Get hotel details for notification and email
         const [hotelRows] = await pool.query(
           'SELECT name, address, phone, email, vendorId FROM hotels WHERE id = ?',
           [bookingData.hotelId]
         );
-        
-        const hotel = (hotelRows as any[])[0];
-        
+        hotel = (hotelRows as any[])[0];
+      } catch (error) {
+        console.error('Failed to fetch hotel details:', error);
+      }
+      
+      // Send booking confirmation notification and email
+      try {
         // Send notification through customer notification service
         await customerNotificationService.sendBookingNotification('confirmed', {
           bookingId,

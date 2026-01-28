@@ -367,7 +367,7 @@ export default function NotificationCenter() {
               <div className="flex items-center justify-center py-8">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
               </div>
-            ) : notifications.length === 0 ? (
+            ) : !notifications || notifications.length === 0 ? (
               <div className="py-8 text-center text-gray-500 dark:text-gray-400">
                 <p>No new notifications</p>
               </div>
@@ -413,6 +413,7 @@ export default function NotificationCenter() {
                 href={
                   session?.user?.role === 'STAFF' ? '/staff/notifications' : 
                   session?.user?.role === 'VENDOR' ? '/vendor/notifications' : 
+                  session?.user?.role === 'CUSTOMER' ? '/customer/notifications' :
                   '/admin/notifications'
                 }
                 className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
@@ -425,12 +426,13 @@ export default function NotificationCenter() {
                 href={
                   session?.user?.role === 'STAFF' ? '/staff/notifications/settings' : 
                   session?.user?.role === 'VENDOR' ? '/vendor/notifications/settings' : 
+                  session?.user?.role === 'CUSTOMER' ? '/customer/notifications/settings' :
                   '/admin/notifications/settings'
                 }
                 className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
               >
                 <Settings className="h-3 w-3" />
-              </button>
+              </Link>
             </div>
           </div>
         </div>

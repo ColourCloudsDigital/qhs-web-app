@@ -250,10 +250,10 @@ export default function CustomerBookingsList({
               <div className="grid md:grid-cols-3">
                 {/* Hotel Image */}
                 <div className="relative h-48 w-full md:h-full">
-                  {booking.hotel.images[0] ? (
+                  {booking.hotel?.images?.[0] ? (
                     <Image
                       src={booking.hotel.images[0]}
-                      alt={booking.hotel.name}
+                      alt={booking.hotel?.name || 'Hotel'}
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, 33vw"
@@ -270,12 +270,12 @@ export default function CustomerBookingsList({
                   <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                        {booking.hotel.name}
+                        {booking.hotel?.name || 'Hotel'}
                       </h3>
                       <div className="mt-1 flex items-center text-sm text-gray-500 dark:text-gray-400">
                         <MapPin className="mr-1 h-4 w-4" />
                         <span>
-                          {booking.hotel.city}, {booking.hotel.country}
+                          {booking.hotel?.city || 'City'}, {booking.hotel?.country || 'Country'}
                         </span>
                       </div>
                     </div>
@@ -287,7 +287,7 @@ export default function CustomerBookingsList({
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Room</p>
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {booking.room.name} ({booking.room.type})
+                        {booking.room?.name || 'Room'} ({booking.room?.type || 'Standard'})
                         {booking.numberOfRooms && booking.numberOfRooms > 1 && (
                           <span className="ml-2 text-sm text-primary">
                             × {booking.numberOfRooms} rooms

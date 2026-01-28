@@ -26,7 +26,7 @@ export default function BookingDetailHeader({ booking }: BookingDetailHeaderProp
             Booking #{booking.id.slice(0, 8).toUpperCase()}
           </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {booking.hotel.name} • {booking.room.name}
+            {booking.hotel?.name || 'Hotel'} • {booking.room?.name || 'Room'}
           </p>
         </div>
         

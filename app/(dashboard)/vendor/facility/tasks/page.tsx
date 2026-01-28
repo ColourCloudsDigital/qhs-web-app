@@ -126,7 +126,7 @@ export default async function TasksPage() {
     }
 
     const vendor = vendorResult[0];
-    const hasSubscription = vendor.subscriptionPlanId && vendor.subscriptionStatus === 'active';
+    const hasSubscription = vendor.subscriptionPlanId && vendor.subscriptionStatus?.toLowerCase() === 'active';
 
     if (!hasSubscription) {
       return <SubscriptionRequired moduleType={ModuleType.FACILITY_MANAGEMENT} />;
