@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     // Additional check for required columns
     results.columnsCheck = {
       rooms: await checkColumns('rooms', ['id', 'hotelId', 'name', 'roomType', 'pricePerNight']),
-      bookings: await checkColumns('bookings', ['id', 'hotelId', 'roomId', 'customerId', 'checkInDate', 'checkOutDate']),
+      bookings: await checkColumns('bookings', ['id', 'hotelId', 'roomUnitId', 'customerId', 'checkInDate', 'checkOutDate']),
       customers: await checkColumns('customers', ['id', 'firstName', 'lastName', 'email', 'phone', 'isGuest'])
     };
     

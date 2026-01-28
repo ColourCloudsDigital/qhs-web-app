@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import pool from '@/lib/db';
+import prisma from '@/lib/prisma';
 import { BookingStatus } from '@/lib/types/enums';
 
 export async function GET(
@@ -110,11 +111,21 @@ export async function GET(
         }
       },
       select: {
-        roomId: true
+        roomUnitId: true
       }
     });
     
-    const bookedRoomIdsSet = new Set(bookedRoomIds.map((b: any) => b.roomId));
+    // Get room IDs from room units
+    const roomUnitIds = bookedRoomIds.map((b: any) => b.roomUnitId).filter(id => id);
+    let bookedRoomIdsSet = new Set();
+    
+    if (roomUnitIds.length > 0) {
+      const roomUnits = await prisma.query(
+        'SELECT roomId FROM room_units WHERE id IN (?)',
+        [roomUnitIds]
+      );
+      bookedRoomIdsSet = new Set(roomUnits.map((ru: any) => ru.roomId));
+    }
     
     // Get all rooms in the hotel
     const rooms = await prisma.room.findMany({
