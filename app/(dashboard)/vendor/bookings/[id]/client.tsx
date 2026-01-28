@@ -62,9 +62,15 @@ export default function BookingDetailClient({
 
   // Handle booking status update
   const handleStatusUpdate = async (newStatus: BookingStatus) => {
+    console.log('=== Status Update Debug ===');
+    console.log('handleStatusUpdate called with:', newStatus);
+    console.log('Current booking ID:', bookingData.id);
+    console.log('Current booking status:', bookingData.status);
+    
     setStatusUpdateLoading(true);
     
     try {
+      console.log('Making API call to update status...');
       const response = await fetch(`/api/bookings/${bookingData.id}/status`, {
         method: 'PATCH',
         headers: {
@@ -73,23 +79,36 @@ export default function BookingDetailClient({
         body: JSON.stringify({ status: newStatus }),
       });
 
+      console.log('API response status:', response.status);
+      console.log('API response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error('Failed to update booking status');
+        const errorData = await response.text();
+        console.error('API error response:', errorData);
+        throw new Error(`Failed to update booking status: ${response.status}`);
       }
 
       const updatedBooking = await response.json();
+      console.log('API response data:', updatedBooking);
+      
       setBookingData({
         ...bookingData,
-        status: updatedBooking.status,
+        status: updatedBooking.status || newStatus,
       });
       
+      console.log('Booking data updated, closing modal...');
       setIsStatusModalOpen(false);
+      
+      console.log('Refreshing page...');
       router.refresh(); // Refresh the page to get updated data
+      
+      console.log('Status update completed successfully');
     } catch (error) {
       console.error('Error updating booking status:', error);
       // Handle error (show error message)
     } finally {
       setStatusUpdateLoading(false);
+      console.log('Status update loading set to false');
     }
   };
 

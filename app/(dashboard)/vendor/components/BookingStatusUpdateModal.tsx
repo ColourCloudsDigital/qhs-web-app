@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   CheckSquare, 
   LogIn, 
@@ -29,23 +29,44 @@ export default function BookingStatusUpdateModal({
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus | null>(null);
   const [notes, setNotes] = useState('');
   
+  // Reset state when modal opens/closes or currentStatus changes
+  useEffect(() => {
+    if (isOpen) {
+      // Reset state when modal opens
+      setSelectedStatus(null);
+      setNotes('');
+      console.log('Modal opened - state reset');
+    }
+  }, [isOpen, currentStatus]);
+  
   // Handle status selection
   const handleStatusSelection = (status: BookingStatus) => {
+    console.log('Status selected:', status);
+    console.log('Current status:', currentStatus);
+    console.log('Previous selected status:', selectedStatus);
     setSelectedStatus(status);
+    console.log('New selected status will be:', status);
   };
   
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('=== Form Submission Debug ===');
+    console.log('Form submitted with selectedStatus:', selectedStatus);
+    
     if (!selectedStatus) {
+      console.log('No status selected, aborting submission');
       return;
     }
     
     try {
+      console.log('Calling onUpdateStatus with:', selectedStatus);
       await onUpdateStatus(selectedStatus);
+      console.log('onUpdateStatus completed successfully');
       setSelectedStatus(null);
       setNotes('');
+      console.log('Form state reset after successful update');
     } catch (error) {
       console.error('Error updating booking status:', error);
     }
@@ -53,6 +74,8 @@ export default function BookingStatusUpdateModal({
   
   // Determine available status options based on current status
   const getAvailableStatuses = (): { status: BookingStatus; label: string; icon: JSX.Element }[] => {
+    console.log('Getting available statuses for current status:', currentStatus);
+    
     switch (currentStatus) {
       case BookingStatus.PENDING:
         return [
@@ -70,14 +93,48 @@ export default function BookingStatusUpdateModal({
           { status: BookingStatus.CHECKED_OUT, label: 'Check Out Guest', icon: <LogOut className="h-5 w-5" /> }
         ];
       default:
+        console.log('No available status transitions for:', currentStatus);
         return [];
     }
   };
   
   const availableStatuses = getAvailableStatuses();
   
+  console.log('=== Modal State Debug ===');
+  console.log('isOpen:', isOpen);
+  console.log('currentStatus:', currentStatus);
+  console.log('Available statuses:', availableStatuses);
+  console.log('Selected status:', selectedStatus);
+  console.log('isLoading:', isLoading);
+  console.log('========================');
+  
   if (!isOpen) {
     return null;
+  }
+  
+  // Add validation to ensure we have valid statuses
+  if (availableStatuses.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+            Update Booking Status
+          </h2>
+          <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+            No status updates are available for the current booking status: <strong>{currentStatus}</strong>
+          </p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
   
   return (
@@ -93,33 +150,45 @@ export default function BookingStatusUpdateModal({
               Select New Status:
             </label>
             <div className="space-y-2">
-              {availableStatuses.map((option) => (
-                <button
-                  key={option.status}
-                  type="button"
-                  onClick={() => handleStatusSelection(option.status)}
-                  className={`flex w-full items-center rounded-md border p-3 ${
-                    selectedStatus === option.status
-                      ? 'border-primary bg-primary-50 dark:border-primary dark:bg-primary/20'
-                      : 'border-gray-300 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  <div className={`rounded-full p-1 ${
-                    selectedStatus === option.status
-                      ? 'bg-primary text-white'
-                      : 'bg-gray-100 text-gray-500 dark:bg-gray-600 dark:text-gray-300'
-                  }`}>
-                    {option.icon}
-                  </div>
-                  <span className={`ml-3 font-medium ${
-                    selectedStatus === option.status
-                      ? 'text-primary dark:text-primary-light' 
-                      : 'text-gray-700 dark:text-gray-300'
-                  }`}>
-                    {option.label}
-                  </span>
-                </button>
-              ))}
+              {availableStatuses.map((option) => {
+                const isSelected = selectedStatus === option.status;
+                console.log(`Rendering button for ${option.status}, isSelected: ${isSelected}`);
+                
+                return (
+                  <button
+                    key={option.status}
+                    type="button"
+                    onClick={() => {
+                      console.log('=== Button Click Debug ===');
+                      console.log('Button clicked for status:', option.status);
+                      console.log('Current selectedStatus before click:', selectedStatus);
+                      handleStatusSelection(option.status);
+                      console.log('handleStatusSelection called');
+                      console.log('========================');
+                    }}
+                    className={`flex w-full items-center rounded-md border p-3 transition-all duration-200 ${
+                      isSelected
+                        ? 'border-primary bg-primary-50 dark:border-primary dark:bg-primary/20'
+                        : 'border-gray-300 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <div className={`rounded-full p-1 transition-all duration-200 ${
+                      isSelected
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-600 dark:text-gray-300'
+                    }`}>
+                      {option.icon}
+                    </div>
+                    <span className={`ml-3 font-medium transition-all duration-200 ${
+                      isSelected
+                        ? 'text-primary dark:text-primary-light' 
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      {option.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           
