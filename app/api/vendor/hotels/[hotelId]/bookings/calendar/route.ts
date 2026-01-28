@@ -83,7 +83,8 @@ export async function GET(
         DATE(checkInDate) as date,
         COUNT(*) as count
       FROM bookings b
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       WHERE r.hotelId = ? 
       AND DATE(b.checkInDate) >= ?
       AND DATE(b.checkInDate) <= ?

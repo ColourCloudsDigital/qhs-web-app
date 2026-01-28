@@ -48,12 +48,13 @@ async function getBookingDetails(bookingId: string): Promise<BookingDetails | nu
         u.email,
         h.name AS hotelName, h.address AS hotelAddress,
         h.city AS hotelCity, h.state AS hotelState, h.country AS hotelCountry,
-        r.name AS roomName
+        r.name AS roomName, r.type AS roomType
       FROM bookings b
       JOIN customers c ON b.customerId = c.id
       LEFT JOIN users u ON c.userId = u.id
       JOIN hotels h ON b.hotelId = h.id
-      JOIN rooms r ON b.roomId = r.id
+      JOIN room_units ru ON b.roomUnitId = ru.id
+      JOIN rooms r ON ru.roomId = r.id
       WHERE b.id = ?`,
       [bookingId]
     );
