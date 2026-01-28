@@ -93,7 +93,7 @@ export async function GET(
     const [bookingsResult] = await pool.query(`
       SELECT 
         b.id,
-        b.roomId,
+        ru.roomId,
         b.checkInDate,
         b.checkOutDate,
         b.status,
@@ -101,6 +101,7 @@ export async function GET(
         c.lastName,
         COALESCE(CONCAT(c.firstName, ' ', c.lastName), c.firstName, c.lastName, 'Guest') as name
       FROM bookings b
+      JOIN room_units ru ON b.roomUnitId = ru.id
       JOIN customers c ON b.customerId = c.id
       WHERE b.hotelId = ?
         AND (

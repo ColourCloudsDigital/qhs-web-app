@@ -234,48 +234,30 @@ export class RoomService {
       // Query recent bookings - Fix: use roomUnitId and join with room_units
       console.log(`[RoomService] Fetching recent bookings for roomId: ${roomId}`);
       const [bookingRows] = await pool.query(
-        `SELECT b.* 
+        `SELECT b.*, c.firstName, c.lastName 
          FROM bookings b
          JOIN room_units ru ON b.roomUnitId = ru.id
+         LEFT JOIN customers c ON b.customerId = c.id
          WHERE ru.roomId = ? 
          ORDER BY b.createdAt DESC 
          LIMIT 5`,
         [roomId]
       );
       
-      // If we have bookings and need customer details, fetch them separately
+      // If we have bookings, add customer info to each booking
       if ((bookingRows as any[]).length > 0) {
-        try {
-          // Get unique customer IDs from bookings
-          const customerIds = Array.from(new Set((bookingRows as any[])
-            .map((booking: any) => booking.customerId || booking.guestId)
-            .filter((id: any) => id)));
-          
-          if (customerIds.length > 0) {
-            const [customerRows] = await pool.query(
-              `SELECT * FROM customers WHERE id IN (?)`,
-              [customerIds]
-            );
-            
-            // Create a lookup map
-            const customerMap = (customerRows as any[]).reduce((map: Record<string, any>, c: any) => {
-              map[c.id] = c;
-              return map;
-            }, {});
-            
-            // Add customer info to bookings
-            (bookingRows as any[]).forEach((booking: any) => {
-              if (booking.customerId && customerMap[booking.customerId]) {
-                booking.customer = customerMap[booking.customerId];
-              } else if (booking.guestId && customerMap[booking.guestId]) {
-                booking.guest = customerMap[booking.guestId];
-              }
-            });
+        (bookingRows as any[]).forEach((booking: any) => {
+          if (booking.firstName || booking.lastName) {
+            booking.customer = {
+              id: booking.customerId,
+              firstName: booking.firstName,
+              lastName: booking.lastName,
+              name: booking.firstName && booking.lastName 
+                ? `${booking.firstName} ${booking.lastName}`
+                : booking.firstName || booking.lastName || 'Guest'
+            };
           }
-        } catch (err) {
-          console.error('[RoomService] Error fetching customer data:', err);
-          // Non-fatal, continue without customer data
-        }
+        });
       }
       
       // Parse room images
