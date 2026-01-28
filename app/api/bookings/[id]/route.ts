@@ -218,7 +218,7 @@ export async function PATCH(
       const isAvailable = await pool.query(`
         SELECT COUNT(*) as bookingCount
         FROM bookings
-        WHERE roomId = ?
+        WHERE roomUnitId = ?
         AND id != ?
         AND status IN ('PENDING', 'CONFIRMED', 'CHECKED_IN')
         AND (
@@ -226,7 +226,7 @@ export async function PATCH(
           (checkInDate >= ? AND checkInDate < ?)
         )
       `, [
-        currentBooking.roomId,
+        currentBooking.roomUnitId,
         bookingId,
         parsedCheckOut.toISOString().split('T')[0],
         parsedCheckIn.toISOString().split('T')[0],

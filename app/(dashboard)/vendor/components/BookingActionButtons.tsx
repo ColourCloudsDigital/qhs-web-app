@@ -1,13 +1,11 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { BookingStatus } from '@/lib/types/enums';
 import { Button } from '@/components/ui/button';
+import { useBookingModalsStore } from './bookingModalsStore';
 import { 
   Pen, 
   Printer, 
-  Ban, 
   CheckCircle,
   AlertTriangle,
   XCircle
@@ -24,20 +22,23 @@ const BookingActionButtons = ({
   onUpdateStatus,
   onPrint
 }: BookingActionButtonsProps) => {
+  const { setModal } = useBookingModalsStore();
+  
   // Skip showing buttons that don't make sense for current status
   const showCancel = booking.status !== 'CANCELED' && booking.status !== 'COMPLETED';
   const showConfirm = booking.status === 'PENDING';
-  const showCheckIn = booking.status === 'CONFIRMED';
-  const showCheckOut = booking.status === 'CHECKED_IN';
   
   return (
     <div className="flex flex-wrap gap-2">
-      <Link href={`/vendor/bookings/edit/${booking.id}`} className="w-auto">
-        <Button variant="outline" size="sm" className="flex items-center">
-          <Pen className="mr-2 h-4 w-4" />
-          Edit
-        </Button>
-      </Link>
+      <Button 
+        onClick={() => setModal('edit', booking.id)}
+        variant="outline" 
+        size="sm" 
+        className="flex items-center"
+      >
+        <Pen className="mr-2 h-4 w-4" />
+        Edit
+      </Button>
       
       <Button onClick={onPrint} variant="outline" size="sm" className="flex items-center">
         <Printer className="mr-2 h-4 w-4" />
