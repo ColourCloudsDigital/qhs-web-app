@@ -73,6 +73,13 @@ export const bookingService = {
       throw new Error('Room not found');
     }
 
+    // Find available room unit for this room using the availability service
+    const selectedRoomUnit = await availabilityService.selectBestRoomUnit({
+      roomId,
+      checkInDate,
+      checkOutDate,
+    });
+
     // Get hotel settings for payment
     const [paymentSettingsResult] = await pool.query(`
       SELECT
@@ -137,16 +144,16 @@ export const bookingService = {
     try {
       await connection.beginTransaction();
 
-      // Create booking
+      // Create booking using roomUnitId instead of roomId
       const [bookingResult] = await connection.query(
         `INSERT INTO bookings (
-          hotelId, roomId, customerId, checkInDate, checkOutDate,
+          hotelId, roomUnitId, customerId, checkInDate, checkOutDate,
           numberOfGuests, totalAmount, status, paymentStatus, specialRequests,
           createdAt, updatedAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [
           hotelId,
-          roomId,
+          selectedRoomUnit.id, // Use room unit ID instead of room ID
           customerId,
           checkInDate,
           checkOutDate,
@@ -222,10 +229,12 @@ export const bookingService = {
         
         const hotel = (hotelResults as any[])[0];
         
-        // Get room details
+        // Get room details using room unit
         const [roomResults] = await pool.query(
-          `SELECT * FROM rooms WHERE id = ?`,
-          [roomId]
+          `SELECT r.* FROM rooms r 
+           JOIN room_units ru ON r.id = ru.roomId 
+           WHERE ru.id = ?`,
+          [selectedRoomUnit.id]
         );
         
         const room = (roomResults as any[])[0];
@@ -276,7 +285,7 @@ export const bookingService = {
    * Get a booking by ID
    */
   async getBookingById(id: string, includeCustomer = false, includeHotel = false, includeRoom = false) {
-    // Get booking with all related data
+    // Get booking with all related data using room_units table
     const [bookingResults] = await pool.query(
             `SELECT bookings.*,
             hotels.id as hotelId,
@@ -289,6 +298,8 @@ export const bookingService = {
             hotels.email as hotelEmail,
             hotels.images as hotelImages,
             hotels.vendorId as hotelVendorId,
+            room_units.id as roomUnitId,
+            room_units.roomNumber as roomNumber,
             rooms.id as roomId,
             rooms.name as roomName,
             rooms.type as roomType,
@@ -304,7 +315,8 @@ export const bookingService = {
             users.email as userEmail
       FROM bookings
       LEFT JOIN hotels ON bookings.hotelId = hotels.id
-      LEFT JOIN rooms ON bookings.roomId = rooms.id
+      LEFT JOIN room_units ON bookings.roomUnitId = room_units.id
+      LEFT JOIN rooms ON room_units.roomId = rooms.id
       LEFT JOIN customers ON bookings.customerId = customers.id
       LEFT JOIN users ON customers.userId = users.id
       WHERE bookings.id = ?`,
@@ -339,7 +351,8 @@ export const bookingService = {
     const formattedBooking = {
       id: bookingData.id,
       hotelId: bookingData.hotelId,
-      roomId: bookingData.roomId,
+      roomUnitId: bookingData.roomUnitId,
+      roomId: bookingData.roomId, // Keep roomId for backward compatibility
       customerId: bookingData.customerId,
       checkInDate: bookingData.checkInDate,
       checkOutDate: bookingData.checkOutDate,
@@ -371,7 +384,11 @@ export const bookingService = {
         capacity: bookingData.roomCapacity,
         pricePerNight: bookingData.roomPricePerNight,
         discountedPrice: bookingData.roomDiscountedPrice,
-        images: tryParseJSON(bookingData.roomImages, [])
+        images: tryParseJSON(bookingData.roomImages, []),
+        roomUnit: {
+          id: bookingData.roomUnitId,
+          roomNumber: bookingData.roomNumber
+        }
       } : null,
       customer: includeCustomer && bookingData.customerId ? {
         id: bookingData.customerId,
@@ -420,12 +437,15 @@ export const bookingService = {
           hotels.state as hotel_state,
           hotels.country as hotel_country,
           hotels.images as hotel_images,
+          room_units.id as room_unit_id,
+          room_units.roomNumber as room_number,
           rooms.id as room_id,
           rooms.name as room_name,
           rooms.type as room_type
         FROM bookings
         LEFT JOIN hotels ON bookings.hotelId = hotels.id
-        LEFT JOIN rooms ON bookings.roomId = rooms.id
+        LEFT JOIN room_units ON bookings.roomUnitId = room_units.id
+        LEFT JOIN rooms ON room_units.roomId = rooms.id
         WHERE ${whereClause}
         ORDER BY bookings.createdAt DESC
         LIMIT ? OFFSET ?
@@ -479,7 +499,8 @@ export const bookingService = {
     const formattedBookings = bookingsData.map((booking: any) => ({
       id: booking.id,
       hotelId: booking.hotelId,
-      roomId: booking.roomId,
+      roomUnitId: booking.roomUnitId,
+      roomId: booking.room_id, // Keep roomId for backward compatibility
       customerId: booking.customerId,
       checkInDate: booking.checkInDate,
       checkOutDate: booking.checkOutDate,
@@ -502,6 +523,10 @@ export const bookingService = {
         id: booking.room_id,
         name: booking.room_name,
         type: booking.room_type,
+        roomUnit: {
+          id: booking.room_unit_id,
+          roomNumber: booking.room_number
+        }
       },
       payments: paymentsMap[booking.id] || [],
     }));
@@ -573,7 +598,7 @@ export const bookingService = {
 
     const whereClause = whereConditions.join(' AND ');
 
-    // Get bookings with count
+    // Get bookings with count using the correct schema
     const [bookingsResult, countResult] = await Promise.all([
       pool.query(`
         SELECT
@@ -582,16 +607,19 @@ export const bookingService = {
           customers.firstName as customer_firstName,
           customers.lastName as customer_lastName,
           customers.phone as customer_phone,
-         
+          customers.email as customer_email,
           users.name as user_name,
           users.email as user_email,
+          room_units.id as room_unit_id,
+          room_units.roomNumber as room_number,
           rooms.id as room_id,
           rooms.name as room_name,
           rooms.type as room_type
         FROM bookings
         LEFT JOIN customers ON bookings.customerId = customers.id
         LEFT JOIN users ON customers.userId = users.id
-        LEFT JOIN rooms ON bookings.roomId = rooms.id
+        LEFT JOIN room_units ON bookings.roomUnitId = room_units.id
+        LEFT JOIN rooms ON room_units.roomId = rooms.id
         WHERE ${whereClause}
         ORDER BY bookings.createdAt DESC
         LIMIT ? OFFSET ?
@@ -601,6 +629,7 @@ export const bookingService = {
         FROM bookings
         LEFT JOIN customers ON bookings.customerId = customers.id
         LEFT JOIN users ON customers.userId = users.id
+        LEFT JOIN room_units ON bookings.roomUnitId = room_units.id
         WHERE ${whereClause}
       `, params)
     ]);
@@ -647,7 +676,8 @@ export const bookingService = {
     const formattedBookings = bookingsData.map((booking: any) => ({
       id: booking.id,
       hotelId: booking.hotelId,
-      roomId: booking.roomId,
+      roomUnitId: booking.roomUnitId,
+      roomId: booking.room_id, // Keep roomId for backward compatibility
       customerId: booking.customerId,
       checkInDate: booking.checkInDate,
       checkOutDate: booking.checkOutDate,
@@ -673,6 +703,10 @@ export const bookingService = {
         id: booking.room_id,
         name: booking.room_name,
         type: booking.room_type,
+        roomUnit: {
+          id: booking.room_unit_id,
+          roomNumber: booking.room_number
+        }
       },
       payments: paymentsMap[booking.id] || [],
     }));
@@ -746,8 +780,8 @@ export const bookingService = {
             bookingId: booking.id,
             customerId: booking.customerId,
             userId: customer.userId,
-            hotelName: booking.hotel.name,
-            roomName: booking.room.name,
+            hotelName: booking.hotel?.name || 'Hotel',
+            roomName: booking.room?.name || 'Room',
             checkInDate: booking.checkInDate,
             checkOutDate: booking.checkOutDate,
             totalAmount: booking.totalAmount,
@@ -766,8 +800,8 @@ export const bookingService = {
         if (booking.customer && booking.hotel) {
           // Send booking confirmation email
           await emailService.sendBookingConfirmation({
-            to: booking.customer.email,
-            guestName: booking.customer.name,
+            to: booking.customer?.email || '',
+            guestName: booking.customer.name || 'Guest',
             bookingDetails: {
               id: booking.id,
               checkInDate: booking.checkInDate,
@@ -778,13 +812,13 @@ export const bookingService = {
               roomType: booking.room?.type || 'Standard Room'
             },
             hotelDetails: {
-              name: booking.hotel.name,
-              address: booking.hotel.address,
-              city: booking.hotel.city,
-              state: booking.hotel.state,
-              country: booking.hotel.country,
-              phone: booking.hotel.phone,
-              email: booking.hotel.email,
+              name: booking.hotel?.name || 'Hotel',
+              address: booking.hotel?.address || '',
+              city: booking.hotel?.city || '',
+              state: booking.hotel?.state || '',
+              country: booking.hotel?.country || '',
+              phone: booking.hotel?.phone || '',
+              email: booking.hotel?.email || '',
               currency: 'NGN',
               primaryColor: '#1e3a8a' // Default primary color
             },
@@ -887,8 +921,8 @@ export const bookingService = {
               bookingId: booking.id,
               customerId: booking.customerId,
               userId: customer.userId,
-              hotelName: booking.hotel.name,
-              roomName: booking.room.name,
+              hotelName: booking.hotel?.name || 'Hotel',
+              roomName: booking.room?.name || 'Room',
               checkInDate: booking.checkInDate,
               checkOutDate: booking.checkOutDate,
               totalAmount: booking.totalAmount,
@@ -904,7 +938,7 @@ export const bookingService = {
                 userId: customer.userId,
                 amount: booking.totalAmount,
                 status: 'REFUNDED',
-                hotelName: booking.hotel.name,
+                hotelName: booking.hotel?.name || 'Hotel',
                 paymentMethod: booking.payments[0].method || 'Unknown'
               });
             }

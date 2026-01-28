@@ -207,7 +207,7 @@ export default function PaymentClient({ booking }: PaymentClientProps) {
             {/* Hotel Info */}
             <div className="mb-4">
               <h3 className="font-medium text-gray-900 dark:text-white">
-                {booking.hotel.name}
+                {booking.hotel?.name || 'Hotel'}
               </h3>
               <div className="mt-1 flex items-center text-sm text-gray-500 dark:text-gray-400">
                 <MapPin className="mr-1 h-4 w-4" />
@@ -218,10 +218,10 @@ export default function PaymentClient({ booking }: PaymentClientProps) {
             {/* Room Info */}
             <div className="mb-4 rounded-md bg-gray-50 p-3 dark:bg-gray-700/30">
               <p className="font-medium text-gray-900 dark:text-white">
-                {booking.room.name}
+                {booking.room?.name || 'Room'}
               </p>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {booking.room.type} Room • Max {booking.room.capacity} {booking.room.capacity === 1 ? 'guest' : 'guests'}
+                {booking.room?.type || 'Standard'} Room • Max {booking.room?.capacity || 1} {(booking.room?.capacity || 1) === 1 ? 'guest' : 'guests'}
               </div>
             </div>
             

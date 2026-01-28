@@ -561,18 +561,18 @@ export default function BookingsList({
                           <div className="flex items-center">
                             <User className="mr-2 h-4 w-4 text-gray-400" />
                             <div>
-                              <div>{booking.customer.name}</div>
+                              <div>{booking.customer?.name || 'Guest'}</div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {booking.customer.email}
+                                {booking.customer?.email || 'No email'}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
                           <div>
-                            <div>{booking.hotel.name}</div>
+                            <div>{booking.hotel?.name || 'Hotel'}</div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {booking.room.name} ({booking.room.type})
+                              {booking.room?.name || 'Room'} ({booking.room?.type || 'Standard'})
                             </div>
                           </div>
                         </td>

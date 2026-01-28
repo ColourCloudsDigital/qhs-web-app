@@ -110,7 +110,7 @@ const DashboardSidebar = ({
       // In a real implementation, we would fetch these from the API
       setModules([
         'WIFI', 'QR_MENU', 'CCTV', 'FACILITY_MANAGEMENT', 
-        'MAINTENANCE', 'ANALYTICS', 'KEYCARD', 'POS'
+        'ANALYTICS', 'KEYCARD', 'POS'
       ]);
       
       // Uncomment this section to fetch the modules from the API when ready

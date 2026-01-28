@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       `SELECT 
         COUNT(*) as total,
         COUNT(CASE WHEN status = ? THEN 1 END) as unread,
-        COUNT(CASE WHEN status = ? THEN 1 END) as read,
+        COUNT(CASE WHEN status = ? THEN 1 END) as \`read\`,
         COUNT(CASE WHEN status = ? THEN 1 END) as archived
        FROM notifications 
        WHERE userId = ?`,
@@ -36,13 +36,42 @@ export async function GET(req: NextRequest) {
       archived: 0
     };
 
+    // Get stats by type
+    const [typeStatsRows] = await pool.query(
+      `SELECT 
+        type,
+        COUNT(*) as count
+       FROM notifications 
+       WHERE userId = ?
+       GROUP BY type`,
+      [session.user.id]
+    );
+
+    const byType: Record<string, number> = {};
+    (typeStatsRows as any[]).forEach(row => {
+      byType[row.type] = parseInt(row.count) || 0;
+    });
+
+    // Get recent notifications
+    const [recentRows] = await pool.query(
+      `SELECT id, title, content, type, status, createdAt
+       FROM notifications 
+       WHERE userId = ?
+       ORDER BY createdAt DESC
+       LIMIT 10`,
+      [session.user.id]
+    );
+
     return NextResponse.json({ 
-      stats: {
-        total: parseInt(stats.total) || 0,
-        unread: parseInt(stats.unread) || 0,
-        read: parseInt(stats.read) || 0,
-        archived: parseInt(stats.archived) || 0
-      }
+      total: parseInt(stats.total) || 0,
+      unread: parseInt(stats.unread) || 0,
+      byStatus: {
+        [NotificationStatus.READ]: parseInt(stats.read) || 0,
+        [NotificationStatus.ARCHIVED]: parseInt(stats.archived) || 0,
+        [NotificationStatus.UNREAD]: parseInt(stats.unread) || 0
+      },
+      byType,
+      recent: (recentRows as any[]) || []
     });
   } catch (error: any) {
     console.error('Error fetching notification stats:', error);

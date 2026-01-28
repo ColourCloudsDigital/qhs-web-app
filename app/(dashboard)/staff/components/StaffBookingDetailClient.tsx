@@ -318,7 +318,7 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
               Booking #{booking.id.slice(0, 8).toUpperCase()}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              {booking.customer.name} • {booking.hotel.name}
+              {booking.customer?.name || 'Guest'} • {booking.hotel?.name || 'Hotel'}
             </p>
           </div>
           <Link href="/staff/bookings">
@@ -373,7 +373,7 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
                       <MapPin className="h-5 w-5 text-gray-400" />
                       <div>
                         <p className="text-sm font-medium">Room</p>
-                        <p className="text-sm text-gray-600">{booking.room.name} ({booking.room.type})</p>
+                        <p className="text-sm text-gray-600">{booking.room?.name || 'Room'} ({booking.room?.type || 'Standard'})</p>
                       </div>
                     </div>
                   </div>
@@ -399,11 +399,11 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
                     <div className="flex items-center space-x-3">
                       <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
                         <span className="text-sm font-medium">
-                          {booking.customer.name.charAt(0).toUpperCase()}
+                          {booking.customer?.name?.charAt(0)?.toUpperCase() || 'G'}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{booking.customer.name}</p>
+                        <p className="text-sm font-medium">{booking.customer?.name || 'Guest'}</p>
                         <p className="text-sm text-gray-600">Customer</p>
                       </div>
                     </div>
@@ -411,10 +411,10 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
                       <Mail className="h-5 w-5 text-gray-400" />
                       <div>
                         <p className="text-sm font-medium">Email</p>
-                        <p className="text-sm text-gray-600">{booking.customer.email}</p>
+                        <p className="text-sm text-gray-600">{booking.customer?.email || 'No email provided'}</p>
                       </div>
                     </div>
-                    {booking.customer.phone && (
+                    {booking.customer?.phone && (
                       <div className="flex items-center space-x-3">
                         <Phone className="h-5 w-5 text-gray-400" />
                         <div>

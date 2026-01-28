@@ -79,9 +79,10 @@ export default function NotificationDashboard() {
 
   const getStatusIcon = (status: NotificationStatus) => {
     switch (status) {
-      case 'UNREAD': return <AlertCircle className="h-4 w-4 text-blue-500" />;
-      case 'READ': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'ARCHIVED': return <Clock className="h-4 w-4 text-gray-500" />;
+      case NotificationStatus.UNREAD: return <AlertCircle className="h-4 w-4 text-blue-500" />;
+      case NotificationStatus.READ: return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case NotificationStatus.ARCHIVED: return <Clock className="h-4 w-4 text-gray-500" />;
+      default: return <AlertCircle className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -149,7 +150,7 @@ export default function NotificationDashboard() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Read</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.byStatus.READ || 0}</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats?.byStatus?.[NotificationStatus.READ] || 0}</p>
             </div>
           </div>
         </div>
@@ -161,7 +162,7 @@ export default function NotificationDashboard() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Archived</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.byStatus.ARCHIVED || 0}</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats?.byStatus?.[NotificationStatus.ARCHIVED] || 0}</p>
             </div>
           </div>
         </div>
@@ -179,7 +180,7 @@ export default function NotificationDashboard() {
           </a>
         </div>
         
-        {stats.recent.length === 0 ? (
+        {!stats.recent || stats.recent.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400">No recent notifications</p>
         ) : (
           <div className="space-y-3">
@@ -187,7 +188,7 @@ export default function NotificationDashboard() {
               <div
                 key={notification.id}
                 className={`flex items-start space-x-3 rounded-lg p-3 ${
-                  notification.status === 'UNREAD'
+                  notification.status === NotificationStatus.UNREAD
                     ? 'bg-blue-50 dark:bg-blue-900/10'
                     : 'bg-gray-50 dark:bg-gray-700/50'
                 }`}

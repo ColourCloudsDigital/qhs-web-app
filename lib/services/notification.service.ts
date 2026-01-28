@@ -355,8 +355,189 @@ export class NotificationService {
   }
 
   /**
-   * Get vendor users for bulk notifications
+   * Get notifications for a user with pagination and filtering
    */
+  static async getUserNotifications(
+    userId: string,
+    options: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      type?: string;
+    } = {}
+  ) {
+    try {
+      const { page = 1, limit = 10, status, type } = options;
+      const offset = (page - 1) * limit;
+
+      // Build WHERE conditions
+      const whereConditions: string[] = ['userId = ?'];
+      const params: any[] = [userId];
+
+      if (status) {
+        whereConditions.push('status = ?');
+        params.push(status);
+      }
+
+      if (type) {
+        whereConditions.push('type = ?');
+        params.push(type);
+      }
+
+      const whereClause = whereConditions.join(' AND ');
+
+      // Get notifications with count
+      const [notificationsResult, countResult] = await Promise.all([
+        pool.query(`
+          SELECT id, title, content, type, status, metadata, createdAt, updatedAt
+          FROM notifications
+          WHERE ${whereClause}
+          ORDER BY createdAt DESC
+          LIMIT ? OFFSET ?
+        `, [...params, limit, offset]),
+        pool.query(`
+          SELECT COUNT(*) as total
+          FROM notifications
+          WHERE ${whereClause}
+        `, params)
+      ]);
+
+      const notifications = (notificationsResult as any[])[0] || [];
+      const total = (countResult as any[])[0][0]?.total || 0;
+
+      // Parse metadata for each notification
+      const formattedNotifications = notifications.map((notification: any) => ({
+        ...notification,
+        metadata: notification.metadata ? JSON.parse(notification.metadata) : null
+      }));
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        notifications: formattedNotifications,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems: total,
+          itemsPerPage: limit,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1
+        }
+      };
+    } catch (error) {
+      console.error('Error getting user notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get notification statistics for a user
+   */
+  static async getNotificationStats(userId: string) {
+    try {
+      const [statsRows] = await pool.query(
+        `SELECT 
+          COUNT(*) as total,
+          COUNT(CASE WHEN status = 'UNREAD' THEN 1 END) as unread,
+          COUNT(CASE WHEN status = 'READ' THEN 1 END) as \`read\`,
+          COUNT(CASE WHEN status = 'ARCHIVED' THEN 1 END) as archived
+         FROM notifications 
+         WHERE userId = ?`,
+        [userId]
+      );
+
+      const stats = (statsRows as any[])[0] || {
+        total: 0,
+        unread: 0,
+        read: 0,
+        archived: 0
+      };
+
+      return {
+        total: parseInt(stats.total) || 0,
+        unread: parseInt(stats.unread) || 0,
+        byStatus: {
+          read: parseInt(stats.read) || 0,
+          ARCHIVED: parseInt(stats.archived) || 0,
+          UNREAD: parseInt(stats.unread) || 0
+        }
+      };
+    } catch (error) {
+      console.error('Error getting notification stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send bulk notifications to multiple users
+   */
+  static async sendBulkNotification(params: {
+    title: string;
+    content: string;
+    type: string;
+    recipientType: string;
+    senderId?: string;
+    metadata?: any;
+    filter?: any;
+  }) {
+    try {
+      let userIds: string[] = [];
+
+      // Get users based on recipient type
+      switch (params.recipientType) {
+        case 'CUSTOMERS':
+          const [customers] = await pool.query(
+            'SELECT userId FROM customers WHERE userId IS NOT NULL'
+          );
+          userIds = (customers as any[]).map(c => c.userId);
+          break;
+        case 'VENDORS':
+          const [vendors] = await pool.query(
+            'SELECT id FROM users WHERE role = "VENDOR"'
+          );
+          userIds = (vendors as any[]).map(v => v.id);
+          break;
+        case 'STAFF':
+          const [staff] = await pool.query(
+            'SELECT userId FROM staff WHERE userId IS NOT NULL'
+          );
+          userIds = (staff as any[]).map(s => s.userId);
+          break;
+        case 'ALL':
+        default:
+          const [allUsers] = await pool.query(
+            'SELECT id FROM users'
+          );
+          userIds = (allUsers as any[]).map(u => u.id);
+          break;
+      }
+
+      // Create notifications for all users
+      const promises = userIds.map(userId =>
+        this.createNotification({
+          title: params.title,
+          content: params.content,
+          type: params.type as NotificationType,
+          recipient: 'USER',
+          userId,
+          senderId: params.senderId,
+          metadata: params.metadata
+        })
+      );
+
+      await Promise.all(promises);
+
+      return {
+        success: true,
+        message: `Bulk notification sent to ${userIds.length} users`,
+        recipientCount: userIds.length
+      };
+    } catch (error) {
+      console.error('Error sending bulk notification:', error);
+      throw error;
+    }
+  }
+
   static async getVendorUsers(vendorId: string): Promise<string[]> {
     try {
       const [users] = await pool.query(
@@ -398,4 +579,5 @@ export class NotificationService {
   }
 }
 
+export const notificationService = NotificationService;
 export default NotificationService;

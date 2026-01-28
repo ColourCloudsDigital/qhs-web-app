@@ -333,9 +333,9 @@ export default function BookingDetailPage() {
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{booking.hotel.name}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{booking.hotel?.name || 'Hotel'}</h3>
               <p className="text-gray-600 text-sm mb-1">
-                {booking.hotel.address}
+                {booking.hotel?.address || 'Address not available'}
               </p>
               <p className="text-gray-600 text-sm">
                 {booking.hotel.city}, {booking.hotel.state}, {booking.hotel.country}
@@ -387,10 +387,10 @@ export default function BookingDetailPage() {
             </div>
           </div>
           <div className="flex-1">
-            <h4 className="text-xl font-medium text-gray-900 mb-1">{booking.room.name}</h4>
-            <p className="text-gray-600 mb-2">{booking.room.type}</p>
+            <h4 className="text-xl font-medium text-gray-900 mb-1">{booking.room?.name || 'Room'}</h4>
+            <p className="text-gray-600 mb-2">{booking.room?.type || 'Standard'}</p>
             <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
-              <span>Capacity: {booking.room.capacity} guest{booking.room.capacity !== 1 ? 's' : ''}</span>
+              <span>Capacity: {booking.room?.capacity || 1} guest{(booking.room?.capacity || 1) !== 1 ? 's' : ''}</span>
               <span>{formatCurrency(booking.room.pricePerNight)} / night</span>
             </div>
             
@@ -435,7 +435,7 @@ export default function BookingDetailPage() {
           Available Rooms During Your Stay
         </h3>
         <p className="text-gray-600 mb-6">
-          These rooms were available at {booking.hotel.name} during your check-in and check-out period
+          These rooms were available at {booking.hotel?.name || 'Hotel'} during your check-in and check-out period
           ({formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}).
         </p>
 

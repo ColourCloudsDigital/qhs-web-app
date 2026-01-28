@@ -40,7 +40,7 @@ export async function canAccessModule(
       const vendor = vendorRows[0];
 
       // If subscription is not active, no access
-      if (vendor.subscriptionStatus !== 'active') {
+      if (vendor.subscriptionStatus?.toLowerCase() !== 'active') {
         return false;
       }
 
@@ -106,7 +106,7 @@ export const moduleAccessService = {
       const vendor = vendorRows[0];
 
       // If subscription is not active, no access
-      if (vendor.subscriptionStatus !== 'active') {
+      if (vendor.subscriptionStatus?.toLowerCase() !== 'active') {
         return false;
       }
 
@@ -241,7 +241,7 @@ export const moduleAccessService = {
       ) as [RowDataPacket[], any];
 
       // If no active subscription, all modules are inaccessible
-      if (!vendor.subscriptionPlanId || vendor.subscriptionStatus !== 'active') {
+      if (!vendor.subscriptionPlanId || vendor.subscriptionStatus?.toLowerCase() !== 'active') {
         return allModules.map((module: any) => ({
           ...module,
           hasAccess: false,

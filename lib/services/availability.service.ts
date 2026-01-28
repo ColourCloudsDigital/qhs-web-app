@@ -40,16 +40,17 @@ export const availabilityService = {
         return false; // No available room units for this room type
       }
 
-      // Check for conflicting bookings
+      // Check for conflicting bookings using the new schema
       const [bookings] = await pool.query(
-        `SELECT * FROM bookings 
-         WHERE roomId = ? 
+        `SELECT b.* FROM bookings b
+         JOIN room_units ru ON b.roomUnitId = ru.id
+         WHERE ru.roomId = ? 
          AND (
-           (checkInDate >= ? AND checkInDate < ?) OR
-           (checkOutDate > ? AND checkOutDate <= ?) OR
-           (checkInDate <= ? AND checkOutDate >= ?)
+           (b.checkInDate >= ? AND b.checkInDate < ?) OR
+           (b.checkOutDate > ? AND b.checkOutDate <= ?) OR
+           (b.checkInDate <= ? AND b.checkOutDate >= ?)
          )
-         AND status IN ('CONFIRMED', 'PENDING', 'CHECKED_IN')`,
+         AND b.status IN ('CONFIRMED', 'PENDING', 'CHECKED_IN')`,
         [
           roomId,
           checkInDate.toISOString().split('T')[0],
@@ -106,16 +107,17 @@ export const availabilityService = {
           [room.id, 'available']
         );
         
-        // Get conflicting bookings
+        // Get conflicting bookings using the new schema
         const [bookings] = await pool.query(
-          `SELECT * FROM bookings 
-           WHERE roomId = ? 
+          `SELECT b.* FROM bookings b
+           JOIN room_units ru ON b.roomUnitId = ru.id
+           WHERE ru.roomId = ? 
            AND (
-             (checkInDate >= ? AND checkInDate < ?) OR
-             (checkOutDate > ? AND checkOutDate <= ?) OR
-             (checkInDate <= ? AND checkOutDate >= ?)
+             (b.checkInDate >= ? AND b.checkInDate < ?) OR
+             (b.checkOutDate > ? AND b.checkOutDate <= ?) OR
+             (b.checkInDate <= ? AND b.checkOutDate >= ?)
            )
-           AND status IN ('CONFIRMED', 'PENDING', 'CHECKED_IN')`,
+           AND b.status IN ('CONFIRMED', 'PENDING', 'CHECKED_IN')`,
           [
             room.id,
             checkInDate.toISOString().split('T')[0],
@@ -222,6 +224,98 @@ export const availabilityService = {
       };
     } catch (error) {
       console.error('Error calculating booking price:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get available room units for a specific room and date range
+   */
+  async getAvailableRoomUnits({
+    roomId,
+    checkInDate,
+    checkOutDate,
+  }: {
+    roomId: string;
+    checkInDate: Date;
+    checkOutDate: Date;
+  }) {
+    try {
+      // Get all room units for this room
+      const [roomUnits] = await pool.query(
+        `SELECT ru.* FROM room_units ru 
+         WHERE ru.roomId = ? AND ru.status = 'available'`,
+        [roomId]
+      );
+
+      if ((roomUnits as any[]).length === 0) {
+        return [];
+      }
+
+      // Get room units that are already booked for the date range
+      const [bookedUnits] = await pool.query(
+        `SELECT DISTINCT b.roomUnitId FROM bookings b
+         WHERE b.roomUnitId IN (${(roomUnits as any[]).map(() => '?').join(',')})
+         AND (
+           (b.checkInDate >= ? AND b.checkInDate < ?) OR
+           (b.checkOutDate > ? AND b.checkOutDate <= ?) OR
+           (b.checkInDate <= ? AND b.checkOutDate >= ?)
+         )
+         AND b.status IN ('CONFIRMED', 'PENDING', 'CHECKED_IN')`,
+        [
+          ...(roomUnits as any[]).map((unit: any) => unit.id),
+          checkInDate.toISOString().split('T')[0],
+          checkOutDate.toISOString().split('T')[0],
+          checkInDate.toISOString().split('T')[0],
+          checkOutDate.toISOString().split('T')[0],
+          checkInDate.toISOString().split('T')[0],
+          checkOutDate.toISOString().split('T')[0],
+        ]
+      );
+
+      const bookedUnitIds = (bookedUnits as any[]).map((unit: any) => unit.roomUnitId);
+      
+      // Filter out booked units
+      const availableUnits = (roomUnits as any[]).filter(
+        (unit: any) => !bookedUnitIds.includes(unit.id)
+      );
+
+      return availableUnits;
+    } catch (error) {
+      console.error('Error getting available room units:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Select the best available room unit for a booking
+   */
+  async selectBestRoomUnit({
+    roomId,
+    checkInDate,
+    checkOutDate,
+  }: {
+    roomId: string;
+    checkInDate: Date;
+    checkOutDate: Date;
+  }) {
+    try {
+      const availableUnits = await this.getAvailableRoomUnits({
+        roomId,
+        checkInDate,
+        checkOutDate,
+      });
+
+      if (availableUnits.length === 0) {
+        throw new Error('No available room units for the selected dates');
+      }
+
+      // For now, just return the first available unit
+      // In the future, this could be enhanced with logic to select the "best" unit
+      // (e.g., based on room number, floor, amenities, etc.)
+      return availableUnits[0];
+    } catch (error) {
+      console.error('Error selecting room unit:', error);
       throw error;
     }
   }

@@ -43,7 +43,7 @@ export async function POST(
     try {
       // Verify booking belongs to staff's hotel and is checked in
       const [bookingResults] = await connection.query(
-        'SELECT id, status, roomId FROM bookings WHERE id = ? AND hotelId = ?',
+        'SELECT id, status, roomUnitId FROM bookings WHERE id = ? AND hotelId = ?',
         [bookingId, hotelId]
       );
 
@@ -75,8 +75,8 @@ export async function POST(
       await connection.query(
         `UPDATE room_units 
          SET status = 'available', currentBookingId = NULL 
-         WHERE roomId = ? AND currentBookingId = ?`,
-        [booking.roomId, bookingId]
+         WHERE id = ? AND currentBookingId = ?`,
+        [booking.roomUnitId, bookingId]
       );
 
       await connection.commit();

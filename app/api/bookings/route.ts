@@ -27,14 +27,13 @@ export async function GET(request: NextRequest) {
     if (session.user.role === 'CUSTOMER' && session.user.customerId) {
       // Customers can only see their own bookings
       const [bookings] = await pool.query(
-        `SELECT 
-        bookings.*,
-        rooms.name AS roomName
-        FROM bookings
-        JOIN rooms ON rooms.id = bookings.roomId
-        WHERE bookings.customerId = ?
-         AND bookings.status IN ('CONFIRMED', 'PENDING')
-         ORDER BY createdAt DESC
+        `SELECT b.*, ru.roomNumber, r.name AS roomName, r.type as roomType
+         FROM bookings b
+         LEFT JOIN room_units ru ON b.roomUnitId = ru.id
+         LEFT JOIN rooms r ON ru.roomId = r.id
+         WHERE b.customerId = ?
+         AND b.status IN ('CONFIRMED', 'PENDING')
+         ORDER BY b.createdAt DESC
          LIMIT ?, ?`,
         [session.user.customerId, (page - 1) * limit, limit]
       );
@@ -181,10 +180,13 @@ export async function POST(request: NextRequest) {
       const specialRequests = bookingData.specialRequests || '';
       const paymentMethod = bookingData.paymentMethod || 'PAY_AT_HOTEL';
       
-      // Create booking in database (include numberOfRooms)
+      // Select the first available room unit for the booking
+      const selectedRoomUnit = (availableUnits as any[])[0];
+      
+      // Create booking in database (use roomUnitId instead of roomId)
       const query = `
         INSERT INTO bookings (
-          id, hotelId, roomId, customerId, checkInDate, checkOutDate, 
+          id, hotelId, roomUnitId, customerId, checkInDate, checkOutDate, 
           numberOfGuests, numberOfRooms, totalAmount, status, paymentStatus, specialRequests,
           createdAt, updatedAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
@@ -193,7 +195,7 @@ export async function POST(request: NextRequest) {
       await connection.query(query, [
         bookingId,
         bookingData.hotelId,
-        bookingData.roomId,
+        selectedRoomUnit.id, // Use room unit ID instead of room ID
         bookingData.customerId,
         bookingData.checkInDate,
         bookingData.checkOutDate,
@@ -256,8 +258,8 @@ export async function POST(request: NextRequest) {
           
           // Get room details for notification
           const [roomRows] = await pool.query(
-            'SELECT name FROM rooms WHERE id = ?',
-            [bookingData.roomId]
+            'SELECT r.name FROM rooms r JOIN room_units ru ON r.id = ru.roomId WHERE ru.id = ?',
+            [selectedRoomUnit.id]
           );
           
           const room = (roomRows as any[])[0];
