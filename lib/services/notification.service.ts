@@ -538,6 +538,83 @@ export class NotificationService {
     }
   }
 
+  /**
+   * Update user notification preferences
+   */
+  static async updateNotificationPreferences(
+    userId: string,
+    preferences: {
+      emailEnabled: boolean;
+      pushEnabled: boolean;
+      inAppEnabled: boolean;
+      subscribedTypes: string[];
+      unsubscribedTypes: string[];
+    }
+  ) {
+    try {
+      const now = new Date();
+      
+      // Check if preferences already exist
+      const [existing] = await pool.query(
+        'SELECT id FROM notification_preferences WHERE userId = ?',
+        [userId]
+      );
+
+      const subscribedTypesJson = JSON.stringify(preferences.subscribedTypes);
+      const unsubscribedTypesJson = JSON.stringify(preferences.unsubscribedTypes);
+
+      if (existing && (existing as any[]).length > 0) {
+        // Update existing preferences
+        await pool.query(
+          `UPDATE notification_preferences 
+           SET emailEnabled = ?, pushEnabled = ?, inAppEnabled = ?, 
+               subscribedTypes = ?, unsubscribedTypes = ?, updatedAt = ?
+           WHERE userId = ?`,
+          [
+            preferences.emailEnabled ? 1 : 0,
+            preferences.pushEnabled ? 1 : 0,
+            preferences.inAppEnabled ? 1 : 0,
+            subscribedTypesJson,
+            unsubscribedTypesJson,
+            now,
+            userId
+          ]
+        );
+      } else {
+        // Insert new preferences
+        const preferenceId = uuidv4();
+        await pool.query(
+          `INSERT INTO notification_preferences 
+           (id, userId, emailEnabled, pushEnabled, inAppEnabled, subscribedTypes, unsubscribedTypes, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            preferenceId,
+            userId,
+            preferences.emailEnabled ? 1 : 0,
+            preferences.pushEnabled ? 1 : 0,
+            preferences.inAppEnabled ? 1 : 0,
+            subscribedTypesJson,
+            unsubscribedTypesJson,
+            now,
+            now
+          ]
+        );
+      }
+
+      // Return the updated preferences
+      return {
+        emailEnabled: preferences.emailEnabled ? 1 : 0,
+        pushEnabled: preferences.pushEnabled ? 1 : 0,
+        inAppEnabled: preferences.inAppEnabled ? 1 : 0,
+        subscribedTypes: preferences.subscribedTypes,
+        unsubscribedTypes: preferences.unsubscribedTypes
+      };
+    } catch (error) {
+      console.error('[NotificationService] Error updating notification preferences:', error);
+      throw error;
+    }
+  }
+
   static async getVendorUsers(vendorId: string): Promise<string[]> {
     try {
       const [users] = await pool.query(
