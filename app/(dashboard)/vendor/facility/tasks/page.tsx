@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: 'Manage maintenance tasks, staff assignments, and facility operations',
 };
 
-async function getVendorHotels(userId: string) {
+async function getVendorHotels(userId: string): Promise<Array<{id: string; name: string}>> {
   try {
     const [hotels] = await pool.query(
       `SELECT h.id, h.name 
@@ -23,7 +23,10 @@ async function getVendorHotels(userId: string) {
       [userId]
     ) as [RowDataPacket[], any];
 
-    return hotels || [];
+    return (hotels || []).map((hotel: RowDataPacket) => ({
+      id: hotel.id,
+      name: hotel.name
+    }));
   } catch (error) {
     console.error('Error fetching vendor hotels:', error);
     return [];
@@ -50,7 +53,7 @@ async function getTaskStats(hotelId: string) {
 
     // Get task counts by status
     const [statusCounts] = await pool.query(
-      `SELECT status, COUNT(*) as count 
+      `SELECT status, COUNT(*) as _count 
        FROM facility_tasks 
        WHERE hotelId = ? 
        GROUP BY status`,
@@ -59,7 +62,7 @@ async function getTaskStats(hotelId: string) {
 
     // Get counts by priority
     const [priorityCounts] = await pool.query(
-      `SELECT priority, COUNT(*) as count 
+      `SELECT priority, COUNT(*) as _count 
        FROM facility_tasks 
        WHERE hotelId = ? 
        GROUP BY priority`,
@@ -84,8 +87,14 @@ async function getTaskStats(hotelId: string) {
     ) as [RowDataPacket[], any];
 
     return {
-      statusCounts: statusCounts || [],
-      priorityCounts: priorityCounts || [],
+      statusCounts: (statusCounts || []).map((row: RowDataPacket) => ({
+        status: row.status,
+        _count: row._count
+      })),
+      priorityCounts: (priorityCounts || []).map((row: RowDataPacket) => ({
+        priority: row.priority,
+        _count: row._count
+      })),
       overdueTasks: overdueTasks[0]?.count || 0,
       totalTasks: totalTasks[0]?.count || 0,
     };
@@ -171,11 +180,20 @@ export default async function TasksPage() {
       [defaultHotelId]
     ) as [RowDataPacket[], any];
 
+    const transformedStaff = (staff || []).map((row: RowDataPacket) => ({
+      id: row.id,
+      user: {
+        id: row.userId,
+        name: row.name,
+        email: row.email
+      }
+    }));
+
     return (
       <TaskDashboardClient 
         hotels={hotels} 
         initialStats={taskStats} 
-        staff={staff || []} 
+        staff={transformedStaff} 
       />
     );
   } catch (error) {
