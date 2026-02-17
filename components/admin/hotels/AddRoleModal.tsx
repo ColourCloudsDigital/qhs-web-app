@@ -52,7 +52,6 @@ export default function AddRoleModal({
       toast({
         title: 'Error',
         description: 'Role name is required',
-        variant: 'destructive',
       });
       return;
     }
@@ -87,7 +86,6 @@ export default function AddRoleModal({
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to create role',
-        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);

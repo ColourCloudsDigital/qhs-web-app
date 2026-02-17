@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Upload, X, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
 interface LogoUploaderProps {
@@ -43,13 +43,19 @@ export function LogoUploader({
 
     // Validate file type
     if (!allowedFileTypes.includes(file.type)) {
-      toast.error(`Invalid file type. Allowed types: ${allowedFileTypes.join(', ')}`);
+      toast({
+        title: 'Error',
+        description: `Invalid file type. Allowed types: ${allowedFileTypes.join(', ')}`,
+      });
       return;
     }
 
     // Validate file size
     if (file.size > maxSizeInMB * 1024 * 1024) {
-      toast.error(`File size exceeds the limit of ${maxSizeInMB}MB`);
+      toast({
+        title: 'Error',
+        description: `File size exceeds the limit of ${maxSizeInMB}MB`,
+      });
       return;
     }
 
@@ -72,10 +78,16 @@ export function LogoUploader({
       
       onUpload(mockUrl);
       
-      toast.success('Logo uploaded successfully');
+      toast({
+        title: 'Success',
+        description: 'Logo uploaded successfully',
+      });
     } catch (error) {
       console.error('Error uploading file:', error);
-      toast.error('Failed to upload logo');
+      toast({
+        title: 'Error',
+        description: 'Failed to upload logo',
+      });
     } finally {
       setIsUploading(false);
     }
@@ -86,7 +98,10 @@ export function LogoUploader({
     setPreviewUrl(null);
     // In a real app, you might want to call an API to delete the file
     // onUpload(''); // Pass empty string or null to indicate removal
-    toast.info('Logo removed');
+    toast({
+      title: 'Info',
+      description: 'Logo removed',
+    });
   };
 
   // Mock function to simulate server upload

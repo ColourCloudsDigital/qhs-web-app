@@ -2,8 +2,6 @@
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { useEffect, useState } from 'react';
 import sortBy from 'lodash/sortBy';
-import { useSelector } from 'react-redux';
-import { IRootState } from '@/store';
 import Dropdown from '@/components/dropdown';
 import IconCaretDown from '@/components/icon/icon-caret-down';
 
@@ -511,7 +509,7 @@ const rowData = [
 ];
 
 const ComponentsDatatablesColumnChooser = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
 
     // show/hide
     const [page, setPage] = useState(1);

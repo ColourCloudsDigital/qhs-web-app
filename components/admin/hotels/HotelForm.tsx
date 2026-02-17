@@ -7,7 +7,6 @@ import { BasicInfoSection } from './BasicInfoSection';
 import { HotelImagesUploader } from './HotelImagesUploader';
 import { AmenitiesSection } from './AmenitiesSection';
 import { WhitelabelSection } from './WhitelabelSection';
-import { WifiSection } from './WifiSection';
 import { Amenity, Vendor, HotelFormData } from './types';
 
 interface HotelFormProps {
@@ -109,13 +108,6 @@ export function HotelForm({
     }));
   };
   
-  const handleWifiEnabledChange = (checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      wifiEnabled: checked,
-    }));
-  };
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -161,12 +153,6 @@ export function HotelForm({
         onInputChange={handleInputChange}
         onLogoUpload={handleLogoUpload}
         hotelId={hotelId}
-      />
-      
-      <WifiSection 
-        formData={formData}
-        onInputChange={handleInputChange}
-        onWifiEnabledChange={handleWifiEnabledChange}
       />
       
       <FormActions alignEnd className="-mb-4">

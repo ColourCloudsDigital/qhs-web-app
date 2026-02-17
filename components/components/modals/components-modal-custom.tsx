@@ -15,12 +15,10 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { Navigation, Pagination } from 'swiper';
-import { useSelector } from 'react-redux';
-import { IRootState } from '@/store';
-
 const ComponentsModalCustom = () => {
+    const themeConfig = { rtlClass: 'ltr' }; // RTL support removed
+
     const swiperRef = useRef<any>();
-    const themeConfig = useSelector((state: IRootState) => state.themeConfig);
     const items = ['carousel1.jpeg', 'carousel2.jpeg', 'carousel3.jpeg'];
     const [modal17, setModal17] = useState(false);
     const [modal18, setModal18] = useState(false);

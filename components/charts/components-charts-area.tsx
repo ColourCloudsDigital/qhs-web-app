@@ -1,13 +1,10 @@
 'use client';
 import PanelCodeHighlight from '@/components/panel-code-highlight';
-import { IRootState } from '@/store';
 import ReactApexChart from 'react-apexcharts';
 import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
-
 const ComponentsChartsArea = () => {
-    const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
+    const isDark = false; // Dark mode detection removed
 
     const [isMounted, setIsMounted] = useState(false);
     useEffect(() => {

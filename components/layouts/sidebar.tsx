@@ -1,10 +1,8 @@
 ﻿'use client';
 import PerfectScrollbar from 'react-perfect-scrollbar';
-import { useDispatch, useSelector } from 'react-redux';
+import { useThemeConfig } from '@/contexts/ThemeConfigContext';
 import Link from 'next/link';
-import { toggleSidebar } from '@/store/themeConfigSlice';
 import AnimateHeight from 'react-animate-height';
-import { IRootState } from '@/store';
 import { useState, useEffect } from 'react';
 import IconCaretsDown from '@/components/icon/icon-carets-down';
 import IconMenuDashboard from '@/components/icon/menu/icon-menu-dashboard';
@@ -35,13 +33,12 @@ import { usePathname } from 'next/navigation';
 import { getTranslation } from '@/i18n';
 
 const Sidebar = () => {
-    const dispatch = useDispatch();
+    const { themeConfig, toggleSidebar } = useThemeConfig();
     const { t } = getTranslation();
     const pathname = usePathname();
     const [currentMenu, setCurrentMenu] = useState<string>('');
     const [errorSubMenu, setErrorSubMenu] = useState(false);
-    const themeConfig = useSelector((state: IRootState) => state.themeConfig);
-    const semidark = useSelector((state: IRootState) => state.themeConfig.semidark);
+    const semidark = themeConfig.semidark;
     const toggleMenu = (value: string) => {
         setCurrentMenu((oldValue) => {
             return oldValue === value ? '' : value;
@@ -68,7 +65,7 @@ const Sidebar = () => {
     useEffect(() => {
         setActiveRoute();
         if (window.innerWidth < 1024 && themeConfig.sidebar) {
-            dispatch(toggleSidebar());
+            toggleSidebar();
         }
     }, [pathname]);
 
@@ -85,7 +82,7 @@ const Sidebar = () => {
     const handleLinkClick = () => {
         // Close sidebar on mobile when a link is clicked
         if (window.innerWidth < 1024 && themeConfig.sidebar) {
-            dispatch(toggleSidebar());
+            toggleSidebar();
         }
     };
 
@@ -104,7 +101,7 @@ const Sidebar = () => {
                         <button
                             type="button"
                             className="collapse-icon flex h-8 w-8 items-center rounded-full transition duration-300 hover:bg-gray-500/10 rtl:rotate-180 dark:text-white-light dark:hover:bg-dark-light/10"
-                            onClick={() => dispatch(toggleSidebar())}
+                            onClick={() => toggleSidebar()}
                         >
                             <IconCaretsDown className="m-auto rotate-90" />
                         </button>

@@ -516,39 +516,6 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
               </CardContent>
             </Card>
           )}
-          
-          {hotel.wifiConfig && (
-            <Card className="overflow-hidden">
-              <CardHeader className="bg-gray-50 dark:bg-gray-800/50">
-                <CardTitle>WiFi Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 p-6 md:grid-cols-3">
-                <div className="rounded-lg border border-gray-100 p-4 dark:border-gray-700">
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h3>
-                  <p className="mt-2">
-                    {hotel.wifiConfig.isEnabled ? 
-                      <Badge variant="success" className="mt-1">Enabled</Badge> : 
-                      <Badge variant="secondary" className="mt-1">Disabled</Badge>
-                    }
-                  </p>
-                </div>
-                
-                <div className="rounded-lg border border-gray-100 p-4 dark:border-gray-700">
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Network Name</h3>
-                  <p className="mt-2 font-medium text-gray-900 dark:text-white">
-                    {hotel.wifiConfig.networkName || 'Not set'}
-                  </p>
-                </div>
-                
-                <div className="rounded-lg border border-gray-100 p-4 dark:border-gray-700">
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Bandwidth Limit</h3>
-                  <p className="mt-2 font-medium text-gray-900 dark:text-white">
-                    {hotel.wifiConfig.bandwidthLimit} Mbps
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
         
         <TabsContent value="amenities">

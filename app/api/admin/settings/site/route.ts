@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { UserRole } from '@/lib/types/enums';
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const [settings] = await pool.query('SELECT * FROM site_settings LIMIT 1');
+    const [settings] = await pool.query('SELECT * FROM site_settings LIMIT 1') as [any[], any];
     
     return NextResponse.json({ settings: settings[0] || {} });
   } catch (error) {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if settings exist
-    const [existingSettings] = await pool.query('SELECT * FROM site_settings LIMIT 1');
+    const [existingSettings] = await pool.query('SELECT * FROM site_settings LIMIT 1') as [any[], any];
     
     if (existingSettings.length > 0) {
       // Update existing settings

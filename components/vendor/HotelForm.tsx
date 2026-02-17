@@ -30,9 +30,6 @@ interface HotelFormData {
   primaryColor: string;
   secondaryColor: string;
   fontFamily: string;
-  wifiEnabled: boolean;
-  networkName: string;
-  bandwidthLimit: number;
   isActive: boolean;
 }
 
@@ -101,10 +98,6 @@ export function HotelForm({
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Email is invalid';
-    }
-    
-    if (formData.wifiEnabled && !formData.networkName.trim()) {
-      errors.networkName = 'Network name is required when WiFi is enabled';
     }
     
     if (images.length === 0) {
@@ -416,46 +409,6 @@ export function HotelForm({
                 )}
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>WiFi Configuration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Checkbox
-              id="wifiEnabled"
-              label="Enable WiFi Management"
-              checked={formData.wifiEnabled}
-              onChange={(checked) => {
-                handleCheckboxChange('wifiEnabled', checked);
-              }}
-            />
-            
-            <Input
-              label="Network Name"
-              id="networkName"
-              name="networkName"
-              value={formData.networkName}
-              onChange={handleChange}
-              disabled={!formData.wifiEnabled}
-              error={validationErrors.networkName}
-              helperText="Default network name for guest WiFi"
-            />
-            
-            <Input
-              type="number"
-              label="Bandwidth Limit (Mbps)"
-              id="bandwidthLimit"
-              name="bandwidthLimit"
-              value={formData.bandwidthLimit.toString()}
-              onChange={handleChange}
-              disabled={!formData.wifiEnabled}
-              min={1}
-            />
           </div>
         </CardContent>
       </Card>

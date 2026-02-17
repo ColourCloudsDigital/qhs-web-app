@@ -2,12 +2,10 @@
 import Dropdown from '@/components/dropdown';
 import IconSettings from '@/components/icon/icon-settings';
 import PanelCodeHighlight from '@/components/panel-code-highlight';
-import { IRootState } from '@/store';
 import React from 'react';
-import { useSelector } from 'react-redux';
-
 const ComponentsFormsInputGroupDropdownIcon = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
+
     return (
         <PanelCodeHighlight
             title="Dropdown Icon"

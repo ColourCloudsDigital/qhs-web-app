@@ -1,13 +1,12 @@
 'use client';
 import PanelCodeHighlight from '@/components/panel-code-highlight';
-import { IRootState } from '@/store';
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 
 const ComponentsFormDatePickerTime = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
+
     const [date4, setDate4] = useState<any>('13:45');
     return (
         <PanelCodeHighlight
@@ -15,9 +14,6 @@ const ComponentsFormDatePickerTime = () => {
             codeHighlight={`import { useState } from 'react';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
-import { useSelector } from 'react-redux';
-
-const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
 const [date4, setDate4] = useState<any>('13:45');
 
 <Flatpickr

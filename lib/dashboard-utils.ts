@@ -395,26 +395,6 @@ export function getMenuItems(role?: UserRole, modules: string[] = [], permission
       ];
       
       // Add addon modules based on subscription plan
-      if (modules.includes('WIFI') || modules.includes('wifi')) {
-        vendorItems.push({ 
-          title: 'WiFi', 
-          path: '/vendor/wifi', 
-          iconName: 'WifiIcon',
-          expandable: true,
-          children: [
-            {
-              title: 'Credentials',
-              path: '/vendor/wifi',
-              iconName: 'KeyIcon'
-            },
-            {
-              title: 'Configuration',
-              path: '/vendor/wifi/configuration',
-              iconName: 'Cog6ToothIcon'
-            }
-          ]
-        });
-      }
       
       if (modules.includes('MENU') || modules.includes('QR_MENU') || modules.includes('menu')) {
         vendorItems.push({ 
@@ -427,32 +407,6 @@ export function getMenuItems(role?: UserRole, modules: string[] = [], permission
               title: 'All Menus',
               path: '/vendor/menus',
               iconName: 'ClipboardDocumentListIcon'
-            }
-          ]
-        });
-      }
-      
-      if (modules.includes('CCTV') || modules.includes('cctv')) {
-        vendorItems.push({ 
-          title: 'CCTV', 
-          path: '/vendor/cctv', 
-          iconName: 'VideoCameraIcon',
-          expandable: true,
-          children: [
-            {
-              title: 'Dashboard',
-              path: '/vendor/cctv',
-              iconName: 'HomeIcon'
-            },
-            {
-              title: 'View Camera',
-              path: '/vendor/cctv/view',
-              iconName: 'EyeIcon'
-            },
-            {
-              title: 'Multi View',
-              path: '/vendor/cctv/multi',
-              iconName: 'ViewColumnsIcon'
             }
           ]
         });
@@ -479,11 +433,6 @@ export function getMenuItems(role?: UserRole, modules: string[] = [], permission
               title: 'Staff & Roles',
               path: '/vendor/facility/staff-roles',
               iconName: 'UserGroupIcon'
-            },
-            {
-              title: 'Keycards',
-              path: '/vendor/facility/keycards',
-              iconName: 'KeyIcon'
             }
           ]
         });

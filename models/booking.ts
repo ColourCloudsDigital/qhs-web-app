@@ -13,10 +13,6 @@ export interface Booking {
   specialRequests?: string;
   createdAt: Date;
   updatedAt: Date;
-  
-  // Module-specific fields
-  wifiCredentials?: WifiCredential[];
-  keycardIds?: string[];
 }
 
 export enum BookingStatus {
@@ -34,27 +30,6 @@ export enum PaymentStatus {
   PARTIALLY_PAID = 'PARTIALLY_PAID',
   REFUNDED = 'REFUNDED',
   FAILED = 'FAILED'
-}
-
-export interface WifiCredential {
-  username: string;
-  password: string;
-  validFrom: Date;
-  validTo: Date;
-  isActive: boolean;
-}
-
-export interface Keycard {
-  id: string;
-  hotelId: string;
-  cardNumber: string;
-  isActive: boolean;
-  assignedTo?: string; // Booking ID
-  validFrom?: Date;
-  validTo?: Date;
-  lastUsed?: Date;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface Payment {

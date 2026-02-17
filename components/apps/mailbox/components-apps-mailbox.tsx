@@ -38,18 +38,18 @@ import IconUsers from '@/components/icon/icon-users';
 import IconVideo from '@/components/icon/icon-video';
 import IconWheel from '@/components/icon/icon-wheel';
 import IconZipFile from '@/components/icon/icon-zip-file';
-import { IRootState } from '@/store';
 import { Disclosure } from '@headlessui/react';
 import Tippy from '@tippyjs/react';
 import React, { useEffect, useState } from 'react';
 import ReactQuill from 'react-quill';
-import { useSelector } from 'react-redux';
 import Swal from 'sweetalert2';
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import 'tippy.js/dist/tippy.css';
 import 'react-quill/dist/quill.snow.css';
 
 const ComponentsAppsMailbox = () => {
+    const isRtl = false; // RTL support removed
+
     const [mailList, setMailList] = useState([
         {
             id: 1,
@@ -847,8 +847,6 @@ const ComponentsAppsMailbox = () => {
     const [selectedMail, setSelectedMail] = useState<any>(null);
     const [params, setParams] = useState<any>(JSON.parse(JSON.stringify(defaultParams)));
     const [pagedMails, setPagedMails] = useState<any>([]);
-
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
 
     const [pager] = useState<any>({
         currentPage: 1,

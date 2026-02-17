@@ -305,7 +305,6 @@ class CustomerNotificationService {
       } else {
         // Send bulk notification
         await notificationService.sendBulkNotification({
-          id: data.announcementId,
           title: data.title,
           content: data.content,
           type: NotificationType.ANNOUNCEMENT,

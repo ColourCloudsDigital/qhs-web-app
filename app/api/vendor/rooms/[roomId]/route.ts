@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { RoomService } from '@/services/rooms';
 import { UserRole } from '@/lib/types/enums';
 import pool from '@/lib/db';
@@ -92,9 +92,9 @@ export async function GET(
       }
       
       // Get similar rooms in the same hotel
-      let similarRooms = [];
+      let similarRooms: any[] = [];
       try {
-        similarRooms = await RoomService.getSimilarRooms(roomId, room.hotelId, room.roomTypeId);
+        similarRooms = await RoomService.getSimilarRooms(roomId, room.hotelId, room.type);
         console.log('[API] Got similar rooms:', similarRooms.length);
       } catch (similarError) {
         console.error('[API] Error getting similar rooms:', similarError);

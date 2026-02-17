@@ -64,9 +64,6 @@ export interface Amenity {
     primaryColor: string;
     secondaryColor: string;
     fontFamily: string;
-    wifiEnabled: boolean;
-    networkName: string;
-    bandwidthLimit: number;
     isActive: boolean;
   }
   
@@ -90,7 +87,6 @@ export interface Amenity {
     rooms?: Room[];
     roomTypes?: RoomType[];
     whitelabelConfig?: WhitelabelConfig;
-    wifiConfig?: WifiConfig;
     createdAt?: string;
     updatedAt?: string;
     isActive: boolean;
@@ -108,12 +104,6 @@ export interface Amenity {
     primaryColor: string;
     secondaryColor: string;
     fontFamily: string;
-  }
-  
-  export interface WifiConfig {
-    networkName: string;
-    isEnabled: boolean;
-    bandwidthLimit: number;
   }
   
   export interface RoomTypeFormData {

@@ -32,9 +32,6 @@ const defaultFormData: HotelFormData = {
   primaryColor: '#1e3a8a',
   secondaryColor: '#f59e0b',
   fontFamily: 'Poppins, sans-serif',
-  wifiEnabled: true,
-  networkName: '',
-  bandwidthLimit: 10,
   isActive: true, // Default to active
 };
 
@@ -92,10 +89,6 @@ export default function EditHotelPage({ params }: HotelEditPageProps) {
         primaryColor: hotel.whitelabelConfig?.primaryColor || '#1e3a8a',
         secondaryColor: hotel.whitelabelConfig?.secondaryColor || '#f59e0b',
         fontFamily: hotel.whitelabelConfig?.fontFamily || 'Poppins, sans-serif',
-        // WiFi config
-        wifiEnabled: hotel.wifiConfig?.isEnabled ?? true,
-        networkName: hotel.wifiConfig?.networkName || '',
-        bandwidthLimit: hotel.wifiConfig?.bandwidthLimit || 10,
         // Add isActive field
         isActive: hotel.isActive !== undefined ? hotel.isActive : true,
       });
@@ -164,11 +157,6 @@ export default function EditHotelPage({ params }: HotelEditPageProps) {
           primaryColor: data.primaryColor,
           secondaryColor: data.secondaryColor,
           fontFamily: data.fontFamily,
-        },
-        wifiConfig: {
-          networkName: data.networkName,
-          isEnabled: data.wifiEnabled,
-          bandwidthLimit: data.bandwidthLimit,
         },
       };
       

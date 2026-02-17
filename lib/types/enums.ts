@@ -108,11 +108,6 @@ export enum NotificationRecipient {
   STAFF = "STAFF"
 }
 
-export enum KeycardType {
-  PHYSICAL = "PHYSICAL",
-  VIRTUAL = "VIRTUAL"
-}
-
 export enum SubscriptionPlan {
   FREE = "FREE",
   BASIC = "BASIC",

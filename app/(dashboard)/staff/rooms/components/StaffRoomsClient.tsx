@@ -450,8 +450,10 @@ export function StaffRoomsClient() {
                           <div className="flex items-center gap-2">
                             <Select
                               value={unit.status === 'occupied' || unit.status === 'reserved' ? 'available' : unit.status}
-                              onValueChange={(newStatus: 'available' | 'maintenance' | 'cleaning') => {
-                                updateRoomUnitStatus(unit.id, newStatus)
+                              onValueChange={(newStatus) => {
+                                if (newStatus === 'available' || newStatus === 'maintenance' || newStatus === 'cleaning') {
+                                  updateRoomUnitStatus(unit.id, newStatus)
+                                }
                               }}
                               disabled={updatingStatus === unit.id || unit.status === 'occupied' || unit.status === 'reserved'}
                             >

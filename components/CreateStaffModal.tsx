@@ -239,7 +239,7 @@ export default function CreateStaffModal({
         </DialogHeader>
 
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="error">
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>

@@ -363,7 +363,6 @@ export const bookingService = {
       specialRequests: bookingData.specialRequests || '',
       createdAt: bookingData.createdAt,
       updatedAt: bookingData.updatedAt,
-      wifiCredentials: bookingData.wifiCredentials ? JSON.parse(bookingData.wifiCredentials) : null,
       payments: payments,
       hotel: includeHotel && bookingData.hotelId ? {
         id: bookingData.hotelId,

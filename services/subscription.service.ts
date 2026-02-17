@@ -55,8 +55,8 @@ export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     });
 
     // Transform the subscription plans data
-    const transformedPlans = plans.map((plan) => {
-      const features = plan.planFeatures.map((feature) => {
+    const transformedPlans = plans.map((plan: any) => {
+      const features = plan.planFeatures.map((feature: any) => {
         const limits = JSON.parse(feature.limits as string);
         return {
           moduleId: feature.moduleId,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { db } from '@/lib/db'
+import pool from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is staff
-    const staff = await db.staff.findUnique({
+    const staff = await prisma.staff.findUnique({
       where: { userId: session.user.id },
       include: { hotel: true }
     })

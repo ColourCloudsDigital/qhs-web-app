@@ -279,7 +279,6 @@ export default function RegisterPage() {
           <ul className="list-disc list-inside space-y-1">
             <li>Up to 5 rooms</li>
             <li>Up to 10 bookings</li>
-            <li>Basic WiFi management (5 devices)</li>
             <li>Basic QR Menu (20 items)</li>
           </ul>
           <div className="mt-2">You can upgrade to a paid plan anytime from your dashboard.</div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
@@ -36,18 +36,6 @@ export async function GET(req: NextRequest) {
           name: 'POS System',
           type: 'ADDON',
           description: 'Point of sale system for hotel restaurants and shops'
-        },
-        {
-          id: '4',
-          name: 'WiFi Management',
-          type: 'ADDON',
-          description: 'Guest WiFi access management and credentials'
-        },
-        {
-          id: '5',
-          name: 'CCTV Integration',
-          type: 'ADDON',
-          description: 'Security camera integration and monitoring'
         },
         {
           id: '6',

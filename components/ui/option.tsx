@@ -1,7 +1,7 @@
 import * as React from "react";
 import { SelectItem } from "./select";
 
-interface OptionProps extends React.HTMLAttributes<HTMLOptionElement> {
+interface OptionProps extends React.ComponentPropsWithoutRef<typeof SelectItem> {
   value: string;
   disabled?: boolean;
   selected?: boolean;

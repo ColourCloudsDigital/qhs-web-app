@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { db } from '@/lib/db'
+import pool from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is staff
-    const staff = await db.staff.findUnique({
+    const staff = await prisma.staff.findUnique({
       where: { userId: session.user.id },
       include: { hotel: true }
     })
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get revenue data
-    const payments = await db.payment.findMany({
+    const payments = await prisma.payment.findMany({
       where: {
         OR: [
           { vendorId: staff.hotelId },
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Get booking data
-    const bookings = await db.booking.findMany({
+    const bookings = await prisma.booking.findMany({
       where: {
         hotelId: staff.hotelId,
         createdAt: {
@@ -79,26 +79,26 @@ export async function GET(request: NextRequest) {
     })
 
     // Get room data for occupancy calculation
-    const rooms = await db.room.findMany({
+    const rooms = await prisma.room.findMany({
       where: { hotelId: staff.hotelId },
       include: {
         roomUnits: true
       }
     })
 
-    const totalRoomUnits = rooms.reduce((sum, room) => sum + room.roomUnits.length, 0)
+    const totalRoomUnits = rooms.reduce((sum: number, room: any) => sum + room.roomUnits.length, 0)
 
     // Process revenue data by date
     const revenueByDate = new Map()
     const bookingsByDate = new Map()
 
-    payments.forEach(payment => {
+    payments.forEach((payment: any) => {
       const date = payment.createdAt.toISOString().split('T')[0]
       const current = revenueByDate.get(date) || 0
       revenueByDate.set(date, current + payment.amount)
     })
 
-    bookings.forEach(booking => {
+    bookings.forEach((booking: any) => {
       const date = booking.createdAt.toISOString().split('T')[0]
       const current = bookingsByDate.get(date) || 0
       bookingsByDate.set(date, current + 1)

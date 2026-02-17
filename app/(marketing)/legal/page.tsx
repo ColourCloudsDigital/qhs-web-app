@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 
 async function getLegalDocuments(): Promise<LegalDocument[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/legal`, { 
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/legal`, { 
       cache: 'no-store'
     });
     

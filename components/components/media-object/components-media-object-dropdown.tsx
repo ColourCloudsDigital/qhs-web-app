@@ -5,12 +5,10 @@ import IconChatDot from '@/components/icon/icon-chat-dot';
 import IconHorizontalDots from '@/components/icon/icon-horizontal-dots';
 import IconPhone from '@/components/icon/icon-phone';
 import PanelCodeHighlight from '@/components/panel-code-highlight';
-import { IRootState } from '@/store';
 import React from 'react';
-import { useSelector } from 'react-redux';
-
 const ComponentsMediaObjectDropdown = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
+
     return (
         <PanelCodeHighlight
             title="Dropdown List"

@@ -105,11 +105,6 @@ interface HotelData {
     secondaryColor?: string;
     fontFamily?: string;
   } | null;
-  wifiConfig?: {
-    networkName?: string;
-    isEnabled?: boolean;
-    bandwidthLimit?: number;
-  } | null;
   status?: string;
 }
 
@@ -559,41 +554,6 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
               </div>
             </CardContent>
           </Card>
-          
-          {/* WiFi Configuration Card */}
-          {hotelData.wifiConfig && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>WiFi Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">WiFi Enabled</p>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {hotelData.wifiConfig.isEnabled ? 'Yes' : 'No'}
-                  </p>
-                </div>
-                
-                {hotelData.wifiConfig.isEnabled && (
-                  <>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Network Name</p>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                        {hotelData.wifiConfig.networkName || 'Not set'}
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Bandwidth Limit</p>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                        {hotelData.wifiConfig.bandwidthLimit ? `${hotelData.wifiConfig.bandwidthLimit} Mbps` : 'Unlimited'}
-                      </p>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
       

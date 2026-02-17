@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { UserRole } from '@/lib/types/enums';
 import { RoomService } from '@/services/rooms';
 import pool from '@/lib/db';
@@ -37,7 +37,6 @@ export async function GET(
         id: room.id,
         name: room.name,
         price: room.pricePerNight,
-        roomTypeId: room.roomTypeId,
         bedType: room.bedType,
         hotelId: room.hotelId,
         hasHotelInfo: !!room.hotel,

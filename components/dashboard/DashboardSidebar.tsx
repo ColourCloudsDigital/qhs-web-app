@@ -26,9 +26,7 @@ import {
   ShieldCheckIcon,
   PaintBrushIcon,
   DocumentTextIcon,
-  WifiIcon,
   QrCodeIcon,
-  VideoCameraIcon,
 } from '@heroicons/react/24/outline';
 import { Cookie, PlusCircleIcon } from 'lucide-react';
 import { getMenuItems, getLogoBySite } from '@/lib/dashboard-utils';
@@ -62,9 +60,7 @@ const iconComponents = {
   DocumentTextIcon,
   Cookie,
   PlusCircleIcon,
-  WifiIcon,
   QrCodeIcon,
-  VideoCameraIcon,
 };
 
 const DashboardSidebar = ({ 
@@ -109,8 +105,8 @@ const DashboardSidebar = ({
       // For the Premium subscription plan, include all modules
       // In a real implementation, we would fetch these from the API
       setModules([
-        'WIFI', 'QR_MENU', 'CCTV', 'FACILITY_MANAGEMENT', 
-        'ANALYTICS', 'KEYCARD', 'POS'
+        'QR_MENU', 'FACILITY_MANAGEMENT', 
+        'ANALYTICS', 'POS'
       ]);
       
       // Uncomment this section to fetch the modules from the API when ready

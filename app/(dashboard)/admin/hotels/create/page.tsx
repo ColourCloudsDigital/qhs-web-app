@@ -26,9 +26,6 @@ const defaultFormData: HotelFormData = {
   primaryColor: '#1e3a8a',
   secondaryColor: '#f59e0b',
   fontFamily: 'Poppins, sans-serif',
-  wifiEnabled: true,
-  networkName: '',
-  bandwidthLimit: 10,
   isActive: true,
 };
 
@@ -101,11 +98,6 @@ export default function CreateHotelPage() {
           primaryColor: data.primaryColor,
           secondaryColor: data.secondaryColor,
           fontFamily: data.fontFamily,
-        },
-        wifiConfig: {
-          networkName: data.networkName,
-          isEnabled: data.wifiEnabled,
-          bandwidthLimit: data.bandwidthLimit,
         },
       };
       

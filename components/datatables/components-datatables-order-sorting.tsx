@@ -2,8 +2,6 @@
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { useEffect, useState } from 'react';
 import sortBy from 'lodash/sortBy';
-import { useSelector } from 'react-redux';
-import { IRootState } from '@/store';
 const rowData = [
     {
         id: 1,
@@ -508,7 +506,7 @@ const rowData = [
 ];
 
 const ComponentsDatatablesOrderSorting = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
 
     const [page, setPage] = useState(1);
     const PAGE_SIZES = [10, 20, 30, 50, 100];

@@ -11,20 +11,20 @@ const ComponentsSweetAlertsDynamic = () => {
             confirmButtonText: 'Show my public IP',
             text: 'Your public IP will be received via AJAX request',
             showLoaderOnConfirm: true,
-            customClass: 'sweet-alerts',
+            customClass: { popup: 'sweet-alerts' },
             preConfirm: async () => {
                 try {
                     const response = await fetch(ipAPI);
                     const data = await response.json();
                     Swal.fire({
                         title: data.ip,
-                        customClass: 'sweet-alerts',
+                        customClass: { popup: 'sweet-alerts' },
                     });
                 } catch {
                     Swal.fire({
                         icon: 'error',
                         title: 'Unable to get your public IP',
-                        customClass: 'sweet-alerts',
+                        customClass: { popup: 'sweet-alerts' },
                     });
                 }
             },
@@ -43,20 +43,20 @@ const showAlert = async () => {
         confirmButtonText: 'Show my public IP',
         text: 'Your public IP will be received via AJAX request',
         showLoaderOnConfirm: true,
-        customClass: 'sweet-alerts',
+        customClass: { popup: 'sweet-alerts' },
         preConfirm: async () => {
             try {
                 const response = await fetch(ipAPI);
                 const data = await response.json();
                 Swal.fire({
                     title: data.ip,
-                    customClass: 'sweet-alerts',
+                    customClass: { popup: 'sweet-alerts' },
                 });
             } catch {
                 Swal.fire({
                     icon: 'error',
                     title: 'Unable to get your public IP',
-                    customClass: 'sweet-alerts',
+                    customClass: { popup: 'sweet-alerts' },
                 });
             }
         },

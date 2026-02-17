@@ -14,20 +14,20 @@ export async function GET(req: NextRequest) {
       'vendors'
     ];
     
-    const results: Record<string, { exists: boolean, count?: number }> = {};
+    const results: Record<string, { exists: boolean, count?: number, error?: string }> = {};
     
     // Check each table
     for (const table of tables) {
       try {
         const [rows] = await pool.query(`SHOW TABLES LIKE '${table}'`);
-        const exists = rows.length > 0;
+        const exists = Array.isArray(rows) && rows.length > 0;
         
         if (exists) {
           // Count records in the table
           const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM ${table}`);
           results[table] = { 
             exists,
-            count: countRows[0].count
+            count: (countRows as any[])[0].count
           };
         } else {
           results[table] = { exists };
@@ -49,9 +49,9 @@ export async function GET(req: NextRequest) {
          LIMIT 1`
       );
       
-      results.vendorData = rows.length > 0 ? rows[0] : null;
+      results.vendorData = Array.isArray(rows) && rows.length > 0 ? (rows as any[])[0] : null;
     } catch (error) {
-      results.vendorData = { error: 'Failed to query vendor data' };
+      results.vendorData = { exists: false, error: 'Failed to query vendor data' };
     }
     
     return NextResponse.json({

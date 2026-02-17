@@ -1,6 +1,5 @@
 import pool from '@/lib/db';
 import { TaskStatus, TaskPriority, TaskCategory } from '@/lib/types/enums'
-import { Prisma } from '@prisma/client';
 import { calculateNextOccurrence } from '@/lib/utils';
 
 interface TaskCommentInput {
@@ -203,56 +202,12 @@ static async getTaskById(taskId: string) {
    * Create a recurring task series
    */
   static async createRecurringTask(
-    taskData: Prisma.FacilityTaskCreateInput, 
+    taskData: any, 
     pattern: RecurringPatternInput,
     userId: string
   ) {
-    // Create the parent/template task
-    const parentTask = await prisma.facilityTask.create({
-      data: {
-        ...taskData,
-        isRecurring: true,
-        recurringPattern: JSON.stringify(pattern),
-        createdById: userId
-      }
-    });
-
-    // Generate the first occurrence
-    const baseDate = new Date(taskData.dueDate as Date);
-    let occurrences = 1;
-    const endDate = pattern.endDate ? new Date(pattern.endDate) : null;
-    const maxOccurrences = pattern.endAfterOccurrences || 10; // Default to 10 if not specified
-
-    // Schedule the first few occurrences
-    const childTasks = [];
-    let currentDate = baseDate;
-
-    while (occurrences < maxOccurrences) {
-      // Calculate the next occurrence date
-      currentDate = calculateNextOccurrence(currentDate, pattern);
-      
-      // Stop if we've reached the end date
-      if (endDate && currentDate > endDate) break;
-      
-      // Create the child task
-      const childTask = await prisma.facilityTask.create({
-        data: {
-          ...taskData,
-          dueDate: currentDate,
-          parentTaskId: parentTask.id,
-          isRecurring: false,
-          createdById: userId
-        }
-      });
-      
-      childTasks.push(childTask);
-      occurrences++;
-    }
-
-    return {
-      parentTask,
-      childTasks
-    };
+    // This functionality requires database implementation
+    throw new Error('Recurring tasks not yet implemented with MySQL');
   }
 
   /**

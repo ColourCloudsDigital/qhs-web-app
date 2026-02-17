@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import BookingsList from '../components/BookingsList'; 
 import VendorBookingsHeader from '../components/VendorBookingsHeader';
 import BookingsAnalytics from '../components/BookingsAnalytics';

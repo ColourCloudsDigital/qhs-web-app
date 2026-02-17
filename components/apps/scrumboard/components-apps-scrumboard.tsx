@@ -8,14 +8,14 @@ import IconPlusCircle from '@/components/icon/icon-plus-circle';
 import IconTag from '@/components/icon/icon-tag';
 import IconTrashLines from '@/components/icon/icon-trash-lines';
 import IconX from '@/components/icon/icon-x';
-import { IRootState } from '@/store';
 import { Transition, Dialog } from '@headlessui/react';
 import React, { Fragment, useState } from 'react';
-import { useSelector } from 'react-redux';
 import { ReactSortable } from 'react-sortablejs';
 import Swal from 'sweetalert2';
 
 const ComponentsAppsScrumBoard = () => {
+    const isRtl = false; // RTL support removed
+
     const [projectList, setProjectList] = useState<any>([
         {
             id: 1,
@@ -79,7 +79,6 @@ const ComponentsAppsScrumBoard = () => {
             tasks: [],
         },
     ]);
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
     const changeValue = (e: any) => {
         const { value, id } = e.target;
         setParams({ ...params, [id]: value });

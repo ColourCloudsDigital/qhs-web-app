@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 
 export async function GET(
@@ -55,7 +55,7 @@ export async function GET(
           { status: 403 }
         );
       }
-    } else if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+    } else if (session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -90,7 +90,7 @@ export async function GET(
     
     // Count physical rooms
     let totalRooms = 0;
-    rooms.forEach(room => {
+    rooms.forEach((room: any) => {
       if (room.roomNumbers) {
         try {
           const roomNumbersArray = JSON.parse(room.roomNumbers as string);
@@ -161,7 +161,7 @@ export async function GET(
     });
     
     // Count bookings for each date
-    bookings.forEach(booking => {
+    bookings.forEach((booking: any) => {
       const bookingStart = new Date(booking.checkInDate);
       const bookingEnd = new Date(booking.checkOutDate);
       

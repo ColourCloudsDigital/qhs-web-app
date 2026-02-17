@@ -13,13 +13,13 @@ import IconStar from '@/components/icon/icon-star';
 import IconTrashLines from '@/components/icon/icon-trash-lines';
 import IconUser from '@/components/icon/icon-user';
 import IconX from '@/components/icon/icon-x';
-import { IRootState } from '@/store';
 import { Transition, Dialog } from '@headlessui/react';
 import React, { Fragment, useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
 import Swal from 'sweetalert2';
 
 const ComponentsAppsNotes = () => {
+    const isRtl = false; // RTL support removed
+
     const [notesList, setNoteList] = useState([
         {
             id: 1,
@@ -368,8 +368,6 @@ const ComponentsAppsNotes = () => {
     useEffect(() => {
         searchNotes();
     }, [selectedTab, notesList]);
-
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
 
     return (
         <div>

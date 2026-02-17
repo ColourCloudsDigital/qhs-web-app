@@ -7,13 +7,11 @@ import 'swiper/css/pagination';
 import { Navigation, Pagination, Autoplay } from 'swiper';
 import IconCaretDown from '@/components/icon/icon-caret-down';
 import PanelCodeHighlight from '@/components/panel-code-highlight';
-import { IRootState } from '@/store';
-import { useSelector } from 'react-redux';
-
 const ComponentsCarouselAutoplay = () => {
+    const themeConfig = { rtlClass: 'ltr' }; // RTL support removed
+
     const items = ['carousel1.jpeg', 'carousel2.jpeg', 'carousel3.jpeg'];
 
-    const themeConfig = useSelector((state: IRootState) => state.themeConfig);
     return (
         <PanelCodeHighlight
             title="Autoplay"

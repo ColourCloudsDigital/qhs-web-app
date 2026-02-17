@@ -7,10 +7,11 @@ import ScrollToTop from '@/components/layouts/scroll-to-top';
 import Setting from '@/components/layouts/setting';
 import Sidebar from '@/components/layouts/sidebar';
 import Portals from '@/components/portals';
+import { ThemeConfigProvider } from '@/contexts/ThemeConfigContext';
 
 export default function DefaultLayout({ children }: { children: React.ReactNode }) {
     return (
-        <>
+        <ThemeConfigProvider>
             {/* BEGIN MAIN CONTAINER */}
             <div className="relative">
                 <Overlay />
@@ -40,6 +41,6 @@ export default function DefaultLayout({ children }: { children: React.ReactNode 
                     </div>
                 </MainContainer>
             </div>
-        </>
+        </ThemeConfigProvider>
     );
 }

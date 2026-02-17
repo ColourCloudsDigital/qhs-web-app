@@ -7,13 +7,10 @@ import 'swiper/css/pagination';
 import { Navigation, Pagination } from 'swiper';
 import IconCaretDown from '@/components/icon/icon-caret-down';
 import PanelCodeHighlight from '@/components/panel-code-highlight';
-import { IRootState } from '@/store';
-import { useSelector } from 'react-redux';
-
 const ComponentsCarouselMultipleSlides = () => {
-    const items = ['carousel1.jpeg', 'carousel2.jpeg', 'carousel3.jpeg'];
-    const themeConfig = useSelector((state: IRootState) => state.themeConfig);
+    const themeConfig = { rtlClass: 'ltr' }; // RTL support removed
 
+    const items = ['carousel1.jpeg', 'carousel2.jpeg', 'carousel3.jpeg'];
     return (
         <PanelCodeHighlight
             title="Multiple Slides"
@@ -25,8 +22,6 @@ import 'swiper/css/pagination';
 import { Navigation, Pagination } from 'swiper';
 
 const items = ['carousel1.jpeg', 'carousel2.jpeg', 'carousel3.jpeg'];
-const themeConfig = useSelector((state: IRootState) => state.themeConfig);
-
 <Swiper
     id="slider4"
     modules={[Navigation, Pagination]}

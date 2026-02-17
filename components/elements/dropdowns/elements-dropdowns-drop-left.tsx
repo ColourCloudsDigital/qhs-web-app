@@ -2,18 +2,14 @@
 import Dropdown from '@/components/dropdown';
 import IconCaretDown from '@/components/icon/icon-caret-down';
 import PanelCodeHighlight from '@/components/panel-code-highlight';
-import { IRootState } from '@/store';
 import React from 'react';
-import { useSelector } from 'react-redux';
-
 const ElementsDropdownsDropLeft = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
+
     return (
         <PanelCodeHighlight
             title="Dropleft"
             codeHighlight={`import Dropdown from '@/components/dropdown';
-
-const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
 
 <div className="dropdown">
     <Dropdown

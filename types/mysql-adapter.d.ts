@@ -178,7 +178,6 @@ export interface BookingModel extends BaseModel {
   status: string;
   paymentStatus: string;
   specialRequests?: string | null;
-  wifiCredentials?: string | null;
   
   // Relations (populated when included)
   hotel?: HotelModel;

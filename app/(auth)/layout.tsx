@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { Nunito } from 'next/font/google';
 import '@/styles/tailwind.css';
+import { ThemeConfigProvider } from '@/contexts/ThemeConfigContext';
 
 export const metadata: Metadata = {
   title: 'Qaras Hotels - Authentication',
@@ -20,10 +21,12 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${nunito.variable} min-h-screen bg-gray-100 font-sans dark:bg-gray-900`}>
-      <div className="flex min-h-screen flex-col">
-        <main className="flex-grow">{children}</main>
+    <ThemeConfigProvider>
+      <div className={`${nunito.variable} min-h-screen bg-gray-100 font-sans dark:bg-gray-900`}>
+        <div className="flex min-h-screen flex-col">
+          <main className="flex-grow">{children}</main>
+        </div>
       </div>
-    </div>
+    </ThemeConfigProvider>
   );
 }

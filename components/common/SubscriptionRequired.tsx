@@ -9,27 +9,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Map module types to friendly names
-const moduleNames: Record<ModuleType, string> = {
-  ROOM_BOOKING: 'Room Booking',
+const moduleNames: Partial<Record<ModuleType, string>> = {
+  MENU: 'QR Menu',
+  MAINTENANCE: 'Facility Management',
+  ANALYTICS: 'Analytics',
   FACILITY_MANAGEMENT: 'Facility Management',
-  KEYCARD: 'Keycard Access',
-  CCTV: 'CCTV Management',
-  WIFI: 'WiFi Management',
-  QR_MENU: 'QR Menu',
-  WHITE_LABEL: 'White Label',
-  BLOG: 'Blog',
 };
 
 // Map module types to descriptions
-const moduleDescriptions: Record<ModuleType, string> = {
-  ROOM_BOOKING: "List rooms and manage bookings for your property",
+const moduleDescriptions: Partial<Record<ModuleType, string>> = {
+  MENU: "Create digital menus with QR codes for your restaurant",
+  MAINTENANCE: "Manage maintenance tasks and track facility operations",
+  ANALYTICS: "View detailed analytics and reports for your property",
   FACILITY_MANAGEMENT: "Manage maintenance tasks and track facility operations",
-  KEYCARD: "Issue and manage keycards for your rooms and facilities",
-  CCTV: "Monitor and manage security cameras throughout your property",
-  WIFI: "Create and manage WiFi credentials for your guests",
-  QR_MENU: "Create digital menus with QR codes for your restaurant",
-  WHITE_LABEL: "Customize your hotel's branding within the app",
-  BLOG: "Publish blog posts and articles about your property",
 };
 
 interface SubscriptionRequiredProps {
@@ -54,12 +46,12 @@ export default function SubscriptionRequired({ moduleType }: SubscriptionRequire
           </div>
           <CardTitle className="text-xl">Subscription Required</CardTitle>
           <CardDescription>
-            {moduleNames[moduleType]} module is not included in your current plan
+            {moduleNames[moduleType] || moduleType} module is not included in your current plan
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           <p className="text-gray-600 mb-4">
-            {moduleDescriptions[moduleType]}
+            {moduleDescriptions[moduleType] || 'This feature requires a subscription upgrade'}
           </p>
           <p className="text-sm text-gray-500">
             Upgrade your subscription to access this feature and much more

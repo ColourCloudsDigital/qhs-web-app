@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
-import prisma from '@/lib/prisma';
 import { BookingStatus } from '@/lib/types/enums';
 
 export async function GET(
@@ -116,7 +115,7 @@ export async function GET(
     });
     
     // Get room IDs from room units
-    const roomUnitIds = bookedRoomIds.map((b: any) => b.roomUnitId).filter(id => id);
+    const roomUnitIds = bookedRoomIds.map((b: any) => b.roomUnitId).filter((id: any) => id);
     let bookedRoomIdsSet = new Set();
     
     if (roomUnitIds.length > 0) {

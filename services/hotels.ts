@@ -27,8 +27,6 @@ export interface HotelCreateInput {
   vendorId: string;
   amenities?: string[];
   whitelabelConfig?: any;
-  wifiConfig?: any;
-  cctvConfig?: any;
 }
 
 export interface HotelUpdateInput {
@@ -47,8 +45,6 @@ export interface HotelUpdateInput {
   vendorId?: string;
   amenities?: string[];
   whitelabelConfig?: any;
-  wifiConfig?: any;
-  cctvConfig?: any;
   isActive?: boolean;
 }
 
@@ -428,20 +424,14 @@ export class HotelService {
     const whitelabelConfigString = data.whitelabelConfig ? 
       JSON.stringify(data.whitelabelConfig) : null;
     
-    const wifiConfigString = data.wifiConfig ? 
-      JSON.stringify(data.wifiConfig) : null;
-    
-    const cctvConfigString = data.cctvConfig ? 
-      JSON.stringify(data.cctvConfig) : null;
-    
     try {
       // Create the hotel first
       const [result] = await pool.query(
         `INSERT INTO hotels (
           name, description, address, city, state, country, zipCode, 
           phone, email, website, images, rating, vendorId,
-          whitelabelConfig, wifiConfig, cctvConfig
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          whitelabelConfig
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.name,
           data.description || '',
@@ -456,9 +446,7 @@ export class HotelService {
           imagesString,
           data.rating || 0,
           data.vendorId,
-          whitelabelConfigString,
-          wifiConfigString,
-          cctvConfigString
+          whitelabelConfigString
         ]
       );
       
@@ -610,40 +598,6 @@ export class HotelService {
       } catch (err: any) {
         // Column doesn't exist, log a warning
         console.warn('Column whitelabelConfig does not exist in hotels table. Skipping this field.');
-        // Don't add this field to the update
-      }
-    }
-    
-    if (data.wifiConfig) {
-      // Check if the field exists in the database first
-      try {
-        // Try a simple query to see if the column exists
-        await pool.query(
-          'SELECT wifiConfig FROM hotels LIMIT 1'
-        );
-        // If it succeeds, add the field to update
-        updateFields.push('wifiConfig = ?');
-        updateValues.push(JSON.stringify(data.wifiConfig));
-      } catch (err: any) {
-        // Column doesn't exist, log a warning
-        console.warn('Column wifiConfig does not exist in hotels table. Skipping this field.');
-        // Don't add this field to the update
-      }
-    }
-    
-    if (data.cctvConfig) {
-      // Check if the field exists in the database first
-      try {
-        // Try a simple query to see if the column exists
-        await pool.query(
-          'SELECT cctvConfig FROM hotels LIMIT 1'
-        );
-        // If it succeeds, add the field to update
-        updateFields.push('cctvConfig = ?');
-        updateValues.push(JSON.stringify(data.cctvConfig));
-      } catch (err: any) {
-        // Column doesn't exist, log a warning
-        console.warn('Column cctvConfig does not exist in hotels table. Skipping this field.');
         // Don't add this field to the update
       }
     }

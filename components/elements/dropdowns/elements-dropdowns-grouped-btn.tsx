@@ -2,18 +2,14 @@
 import Dropdown from '@/components/dropdown';
 import IconCaretDown from '@/components/icon/icon-caret-down';
 import PanelCodeHighlight from '@/components/panel-code-highlight';
-import { IRootState } from '@/store';
 import React from 'react';
-import { useSelector } from 'react-redux';
-
 const ElementsDropdownsGroupedBtn = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
+
     return (
         <PanelCodeHighlight
             title="Grouped Dropdown Buttons"
             codeHighlight={`import Dropdown from '@/components/dropdown';
-
-const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
 
 <div className="relative inline-flex align-middle">
     <button type="button" className="btn btn-secondary ltr:rounded-r-none rtl:rounded-l-none">

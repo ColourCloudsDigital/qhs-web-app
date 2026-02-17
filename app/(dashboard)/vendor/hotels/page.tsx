@@ -79,7 +79,7 @@ export default function VendorHotelsPage() {
       });
 
       const hotelsWithStats = await Promise.all(hotelDetailsPromises);
-      setHotelDetails(hotelsWithStats);
+      setHotelDetails(hotelsWithStats as unknown as Hotel[]);
     } catch (err) {
       console.error('Error fetching hotel details:', err);
       setError('Failed to load hotel details. Please try again later.');

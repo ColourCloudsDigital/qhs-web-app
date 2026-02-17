@@ -78,7 +78,6 @@ export default function WalkInForm({ hotelId, onSuccess }: WalkInFormProps) {
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [totalAmount, setTotalAmount] = useState(0);
   const [amountPaid, setAmountPaid] = useState(0);
-  const [issueKeycard, setIssueKeycard] = useState(true);
   
   // UI state
   const [loading, setLoading] = useState(false);
@@ -276,8 +275,7 @@ export default function WalkInForm({ hotelId, onSuccess }: WalkInFormProps) {
             checkOutDate,
             numberOfGuests,
             specialRequests,
-            totalAmount,
-            issueKeycard
+            totalAmount
           },
           payment: {
             paymentMethod,
@@ -317,7 +315,6 @@ export default function WalkInForm({ hotelId, onSuccess }: WalkInFormProps) {
       setPaymentMethod('CASH');
       setAmountPaid(0);
       setCreateAccount(false);
-      setIssueKeycard(true);
       setSpecialRequests('');
       
       // Notify parent if needed
@@ -609,7 +606,7 @@ export default function WalkInForm({ hotelId, onSuccess }: WalkInFormProps) {
                 onChange={handleRoomSelect}
                 options={availableRooms.map(room => ({
                   value: room.id,
-                  label: `Room ${room.roomNumber} - ${room.type} (${formatCurrency(room.price)})`
+                  label: `Room ${room.roomNumber} - ${room.type} (${formatCurrency(room.price || 0)})`
                 }))}
                 placeholder="Select a room"
                 loading={roomsLoading}
@@ -735,14 +732,6 @@ export default function WalkInForm({ hotelId, onSuccess }: WalkInFormProps) {
           </div>
           
           <div className="space-y-3 pt-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="issue-keycard" 
-                checked={issueKeycard} 
-                onCheckedChange={(checked) => setIssueKeycard(checked as boolean)} 
-              />
-              <Label htmlFor="issue-keycard" className="text-sm font-normal">Issue keycard automatically</Label>
-            </div>
           </div>
         </div>
       )}

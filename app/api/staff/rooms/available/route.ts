@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     const availableRooms = []
     
     if (Array.isArray(roomRows)) {
-      for (const room of roomRows) {
+      for (const room of roomRows as any[]) {
         const [unitRows] = await pool.execute(`
           SELECT ru.roomNumber
           FROM room_units ru

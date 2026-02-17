@@ -21,9 +21,10 @@ interface RoomFormData {
   description: string;
   basePrice: string;
   capacity: string;
-  bedsCount: string;
-  bathroomsCount: string;
-  size: string;
+  bedType: string;
+  bedsCount?: string;
+  bathroomsCount?: string;
+  size?: string;
   images: string[];
   isActive: boolean;
   amenities: string[];
@@ -34,6 +35,7 @@ const defaultFormData: RoomFormData = {
   type: 'standard',
   description: '',
   capacity: '2',
+  bedType: 'single',
   bedsCount: '1',
   bathroomsCount: '1',
   size: '',

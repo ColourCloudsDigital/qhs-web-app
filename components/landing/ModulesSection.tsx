@@ -33,41 +33,8 @@ export default function ModulesSection() {
               Track maintenance, cleaning, and repairs to keep your property in top condition.
             </p>
           </div>
-          <div className="rounded-lg bg-white p-6 shadow-md transition-transform hover:scale-105 dark:bg-gray-800">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-              </svg>
-            </div>
-            <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">Keycard System</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Manage RFID keycards for secure and convenient room access.
-            </p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow-md transition-transform hover:scale-105 dark:bg-gray-800">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">CCTV Integration</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Monitor your property remotely with integrated IP camera management.
-            </p>
-          </div>
         </div>
         <div className="mt-8 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg bg-white p-6 shadow-md transition-transform hover:scale-105 dark:bg-gray-800">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-              </svg>
-            </div>
-            <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">WiFi Management</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Create one-time WiFi credentials for guests tied to their booking period.
-            </p>
-          </div>
           <div className="rounded-lg bg-white p-6 shadow-md transition-transform hover:scale-105 dark:bg-gray-800">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -7,6 +7,7 @@ import SubscriptionRequired from '@/components/common/SubscriptionRequired';
 import { RowDataPacket } from 'mysql2';
 import { ModuleType } from '@/lib/types/enums';
 import FacilityDashboardClient from './components/FacilityDashboardClient';
+import { Hotel } from '@/models/hotel';
 
 export const metadata: Metadata = {
   title: 'Facility Management Dashboard | Vendor',
@@ -38,7 +39,7 @@ async function getVendorData(userId: string) {
 
     return {
       vendor,
-      hotels: hotels || []
+      hotels: hotels as Hotel[] || []
     };
   } catch (error) {
     console.error('Error fetching vendor data:', error);
@@ -87,9 +88,9 @@ async function getFacilityStats(vendorId: string) {
     ) as [RowDataPacket[], any];
 
     return {
-      staff: staffStats[0] || { totalStaff: 0, activeStaff: 0 },
-      tasks: taskStats[0] || { totalTasks: 0, pendingTasks: 0, inProgressTasks: 0, completedTasks: 0, overdueTasks: 0 },
-      recentTasks: recentTasks || []
+      staff: staffStats[0] as { totalStaff: number; activeStaff: number } || { totalStaff: 0, activeStaff: 0 },
+      tasks: taskStats[0] as { totalTasks: number; pendingTasks: number; inProgressTasks: number; completedTasks: number; overdueTasks: number } || { totalTasks: 0, pendingTasks: 0, inProgressTasks: 0, completedTasks: 0, overdueTasks: 0 },
+      recentTasks: recentTasks as any[] || []
     };
   } catch (error) {
     console.error('Error fetching facility stats:', error);

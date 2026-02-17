@@ -10,7 +10,7 @@ const ComponentsSweetAlertsTitleWithText = () => {
             title: 'The Internet?',
             text: 'That thing is still around?',
             padding: '2em',
-            customClass: 'sweet-alerts',
+            customClass: { popup: 'sweet-alerts' },
         });
     };
 
@@ -25,7 +25,7 @@ const showAlert = async () => {
         title: 'The Internet?',
         text: 'That thing is still around?',
         padding: '2em',
-        customClass: 'sweet-alerts',
+        customClass: { popup: 'sweet-alerts' },
     });
 }
 

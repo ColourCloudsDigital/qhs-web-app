@@ -1,7 +1,6 @@
 'use client';
 import App from '@/App';
-import store from '@/store';
-import { Provider } from 'react-redux';
+import { ThemeConfigProvider } from '@/contexts/ThemeConfigContext';
 import React, { ReactNode, Suspense } from 'react';
 import { appWithI18Next } from 'ni18n';
 import { ni18nConfig } from 'ni18n.config.ts';
@@ -13,14 +12,12 @@ interface IProps {
 
 const ProviderComponent = ({ children }: IProps) => {
     return (
-        <Provider store={store}>
+        <ThemeConfigProvider>
             <Suspense fallback={<Loading />}>
                 <App>{children} </App>
             </Suspense>
-        </Provider>
+        </ThemeConfigProvider>
     );
 };
 
 export default ProviderComponent;
-// todo
-// export default appWithI18Next(ProviderComponent, ni18nConfig);

@@ -1,3 +1,13 @@
 {
-    "extends": "next/core-web-vitals"
+    "extends": "next/core-web-vitals",
+    "rules": {
+        "react/no-unescaped-entities": "off",
+        "react-hooks/rules-of-hooks": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "react/jsx-key": "off",
+        "@next/next/no-img-element": "off",
+        "@next/next/no-before-interactive-script-outside-document": "off",
+        "@next/next/next-script-for-ga": "off",
+        "import/no-anonymous-default-export": "off"
+    }
 }

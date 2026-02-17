@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
-import { UserRole, BookingStatus } from '@/lib/types/enums';
+import { UserRole, BookingStatus, NotificationType } from '@/lib/types/enums';
 import NotificationService from '@/lib/services/notification.service';
 
 export async function POST(
@@ -192,7 +192,7 @@ export async function POST(
               {
                 title: 'Guest Checked In',
                 content: `${customerName} has been checked in to room ${booking.roomNumber} by vendor`,
-                type: 'BOOKING',
+                type: NotificationType.BOOKING,
                 senderId: session.user.id,
                 metadata: {
                   bookingId: params.bookingId,

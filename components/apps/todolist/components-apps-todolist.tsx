@@ -15,16 +15,16 @@ import IconThumbUp from '@/components/icon/icon-thumb-up';
 import IconTrashLines from '@/components/icon/icon-trash-lines';
 import IconUser from '@/components/icon/icon-user';
 import IconX from '@/components/icon/icon-x';
-import { IRootState } from '@/store';
 import { Transition, Dialog } from '@headlessui/react';
 import React, { Fragment, useEffect, useState } from 'react';
 import ReactQuill from 'react-quill';
-import { useSelector } from 'react-redux';
 import Swal from 'sweetalert2';
 import 'react-quill/dist/quill.snow.css';
 import PerfectScrollbar from 'react-perfect-scrollbar';
 
 const ComponentsAppsTodoList = () => {
+    const isRtl = false; // RTL support removed
+
     const defaultParams = {
         id: null,
         title: '',
@@ -590,8 +590,6 @@ const ComponentsAppsTodoList = () => {
             padding: '10px 20px',
         });
     };
-
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
 
     return (
         <div>

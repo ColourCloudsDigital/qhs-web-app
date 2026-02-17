@@ -34,7 +34,7 @@ export default function NotificationPrompt({ onClose }: NotificationPromptProps)
               applicationServerKey: urlBase64ToUint8Array(
                 // This is your VAPID public key from your server
                 process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
-              )
+              ) as BufferSource
             });
             
             console.log('Push subscription:', subscription);

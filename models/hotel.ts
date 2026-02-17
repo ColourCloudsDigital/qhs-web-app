@@ -19,8 +19,6 @@ export interface Hotel {
   
   // Module-specific fields
   whitelabelConfig?: WhitelabelConfig;
-  wifiConfig?: WifiConfig;
-  cctvConfig?: CCTVConfig;
 }
 
 export interface WhitelabelConfig {
@@ -29,27 +27,6 @@ export interface WhitelabelConfig {
   secondaryColor?: string;
   fontFamily?: string;
   customDomain?: string;
-}
-
-export interface WifiConfig {
-  networkName: string;
-  isEnabled: boolean;
-  bandwidthLimit?: number; // in Mbps
-}
-
-export interface CCTVConfig {
-  isEnabled: boolean;
-  cameras: Camera[];
-}
-
-export interface Camera {
-  id: string;
-  name: string;
-  location: string;
-  ipAddress: string;
-  username: string;
-  password: string;
-  isActive: boolean;
 }
 
 export interface Room {

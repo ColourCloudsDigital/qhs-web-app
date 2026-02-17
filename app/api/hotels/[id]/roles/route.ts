@@ -29,17 +29,17 @@ export async function GET(
 
     // Build WHERE clause
     let whereClause = 'WHERE r.hotelId = ?';
-    const params: any[] = [hotelId];
+    const queryParams: any[] = [hotelId];
 
     if (search) {
       whereClause += ' AND (r.name LIKE ? OR r.description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
+      queryParams.push(`%${search}%`, `%${search}%`);
     }
 
     // Get total count
     const [countResult] = await pool.query(
       `SELECT COUNT(*) as total FROM roles r ${whereClause}`,
-      params
+      queryParams
     ) as [RowDataPacket[], any];
 
     const total = countResult[0]?.total || 0;
@@ -51,7 +51,7 @@ export async function GET(
        ${whereClause}
        ORDER BY r.name ASC
        LIMIT ? OFFSET ?`,
-      [...params, pageSize, offset]
+      [...queryParams, pageSize, offset]
     ) as [RowDataPacket[], any];
 
     return NextResponse.json({

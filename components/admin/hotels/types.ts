@@ -31,9 +31,6 @@ export interface HotelFormData {
   primaryColor: string;
   secondaryColor: string;
   fontFamily: string;
-  wifiEnabled: boolean;
-  networkName: string;
-  bandwidthLimit: number;
   isActive: boolean;
 }
 

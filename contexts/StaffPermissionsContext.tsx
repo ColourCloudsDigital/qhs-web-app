@@ -16,6 +16,7 @@ interface StaffData {
   vendorId?: string;
   vendorName?: string;
   isActive: boolean;
+  createdAt?: string;
 }
 
 interface StaffPermissionsContextType {

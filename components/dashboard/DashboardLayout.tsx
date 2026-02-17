@@ -62,6 +62,8 @@ const DashboardLayout = ({
 
   // Toggle sidebar collapsed state
   const toggleSidebarCollapse = () => {
+    const isDark = false; // Dark mode detection removed
+
     if (allowCollapse) {
       const newState = !sidebarCollapsed;
       setSidebarCollapsed(newState);

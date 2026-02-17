@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { RoomTypeService } from '@/services/room-types';
 import { RoomService } from '@/services/rooms';
 import { UserRole } from '@/lib/types/enums';

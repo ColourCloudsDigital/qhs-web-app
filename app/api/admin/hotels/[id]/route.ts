@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { UserRole } from '@/lib/types/enums';
 import { HotelService } from '@/services/hotels';
 import pool from '@/lib/db';
@@ -79,17 +79,6 @@ export async function GET(
           primaryColor: "#1e3a8a",
           secondaryColor: "#f59e0b",
           fontFamily: "Poppins, sans-serif"
-        },
-        wifiConfig: hotel.wifiConfig ? (() => {
-          try {
-            return JSON.parse(hotel.wifiConfig);
-          } catch (e) {
-            return null;
-          }
-        })() : {
-          networkName: "",
-          isEnabled: true,
-          bandwidthLimit: 10
         },
         status: hotel.status || 'ACTIVE',
         rating: typeof hotel.rating === 'number' ? hotel.rating : 

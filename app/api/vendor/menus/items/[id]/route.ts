@@ -71,7 +71,7 @@ export async function PUT(
       description: data.description,
       price: data.price !== undefined ? parseFloat(data.price) : undefined,
       discountedPrice: data.discountedPrice !== undefined 
-        ? (data.discountedPrice ? parseFloat(data.discountedPrice) : null) 
+        ? (data.discountedPrice ? parseFloat(data.discountedPrice) : undefined) 
         : undefined,
       image: data.image,
       ingredients: data.ingredients,
@@ -81,10 +81,10 @@ export async function PUT(
       isGlutenFree: data.isGlutenFree,
       isSpicy: data.isSpicy,
       calories: data.calories !== undefined 
-        ? (data.calories ? parseInt(data.calories) : null) 
+        ? (data.calories ? parseInt(data.calories) : undefined) 
         : undefined,
       preparationTime: data.preparationTime !== undefined 
-        ? (data.preparationTime ? parseInt(data.preparationTime) : null) 
+        ? (data.preparationTime ? parseInt(data.preparationTime) : undefined) 
         : undefined,
       displayOrder: data.displayOrder,
       isAvailable: data.isAvailable,

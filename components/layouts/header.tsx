@@ -1,9 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useThemeConfig } from '@/contexts/ThemeConfigContext';
 import Link from 'next/link';
-import { IRootState } from '@/store';
-import { toggleTheme, toggleSidebar, toggleRTL } from '@/store/themeConfigSlice';
 import Dropdown from '@/components/dropdown';
 import IconMenu from '@/components/icon/icon-menu';
 import IconCalendar from '@/components/icon/icon-calendar';
@@ -36,7 +34,7 @@ import { getTranslation } from '@/i18n';
 
 const Header = () => {
     const pathname = usePathname();
-    const dispatch = useDispatch();
+    const { themeConfig, toggleTheme, toggleSidebar, toggleRTL } = useThemeConfig();
     const router = useRouter();
     const { t, i18n } = getTranslation();
 
@@ -68,14 +66,13 @@ const Header = () => {
         }
     }, [pathname]);
 
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = themeConfig.rtlClass === 'rtl';
 
-    const themeConfig = useSelector((state: IRootState) => state.themeConfig);
     const setLocale = (flag: string) => {
         if (flag.toLowerCase() === 'ae') {
-            dispatch(toggleRTL('rtl'));
+            toggleRTL('rtl');
         } else {
-            dispatch(toggleRTL('ltr'));
+            toggleRTL('ltr');
         }
         router.refresh();
     };
@@ -157,7 +154,7 @@ const Header = () => {
                         <button
                             type="button"
                             className="collapse-icon flex flex-none rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary ltr:ml-2 rtl:mr-2 dark:bg-dark/40 dark:text-[#d0d2d6] dark:hover:bg-dark/60 dark:hover:text-primary lg:hidden"
-                            onClick={() => dispatch(toggleSidebar())}
+                            onClick={() => toggleSidebar()}
                         >
                             <IconMenu className="h-5 w-5" />
                         </button>
@@ -217,7 +214,7 @@ const Header = () => {
                                         themeConfig.theme === 'light' &&
                                         'flex items-center rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:hover:bg-dark/60'
                                     }`}
-                                    onClick={() => dispatch(toggleTheme('dark'))}
+                                    onClick={() => toggleTheme('dark')}
                                 >
                                     <IconSun />
                                 </button>
@@ -230,7 +227,7 @@ const Header = () => {
                                         themeConfig.theme === 'dark' &&
                                         'flex items-center rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:hover:bg-dark/60'
                                     }`}
-                                    onClick={() => dispatch(toggleTheme('system'))}
+                                    onClick={() => toggleTheme('system')}
                                 >
                                     <IconMoon />
                                 </button>
@@ -241,7 +238,7 @@ const Header = () => {
                                         themeConfig.theme === 'system' &&
                                         'flex items-center rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:hover:bg-dark/60'
                                     }`}
-                                    onClick={() => dispatch(toggleTheme('light'))}
+                                    onClick={() => toggleTheme('light')}
                                 >
                                     <IconLaptop />
                                 </button>

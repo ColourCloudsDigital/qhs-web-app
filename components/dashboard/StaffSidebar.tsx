@@ -26,9 +26,7 @@ import {
   ShieldCheckIcon,
   PaintBrushIcon,
   DocumentTextIcon,
-  WifiIcon,
   QrCodeIcon,
-  VideoCameraIcon,
   CheckCircleIcon,
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
@@ -64,9 +62,7 @@ const iconComponents = {
   DocumentTextIcon,
   Cookie,
   PlusCircleIcon,
-  WifiIcon,
   QrCodeIcon,
-  VideoCameraIcon,
   CheckCircleIcon,
   ClipboardDocumentListIcon,
 };

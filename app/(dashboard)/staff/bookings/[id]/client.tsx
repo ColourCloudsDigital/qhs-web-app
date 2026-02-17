@@ -21,15 +21,15 @@ import {
 } from 'lucide-react';
 import { BookingStatus, PaymentStatus } from '@/lib/types/enums';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import BookingStatusBadge from '../../components/BookingStatusBadge';
-import PaymentStatusBadge from '../../components/PaymentStatusBadge';
-import BookingActionButtons from '../../components/BookingActionButtons';
-import CustomerInfoCard from '../../components/CustomerInfoCard';
-import BookingRoomDetails from '../../components/BookingRoomDetails';
-import BookingPaymentDetails from '../../components/BookingPaymentDetails';
+import BookingStatusBadge from '../../../vendor/components/BookingStatusBadge';
+import PaymentStatusBadge from '../../../vendor/components/PaymentStatusBadge';
+import BookingActionButtons from '../../../vendor/components/BookingActionButtons';
+import CustomerInfoCard from '../../../vendor/components/CustomerInfoCard';
+import BookingRoomDetails from '../../../vendor/components/BookingRoomDetails';
+import BookingPaymentDetails from '../../../vendor/components/BookingPaymentDetails';
 import BookingDocuments from '../../components/BookingDocuments';
-import BookingNotes from '../../components/BookingNotes';
-import BookingStatusUpdateModal from '../../components/BookingStatusUpdateModal';
+import BookingNotes from '../../../vendor/components/BookingNotes';
+import BookingStatusUpdateModal from '../../../vendor/components/BookingStatusUpdateModal';
 
 interface BookingDetailClientProps {
   booking: any;

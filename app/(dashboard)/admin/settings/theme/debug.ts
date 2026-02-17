@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
-import { ThemeSettings } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Try to get all theme settings records
-    let themeSettings: ThemeSettings[] = [];
+    let themeSettings: any[] = [];
     if (tableExists) {
       themeSettings = await prisma.themeSettings.findMany();
     }

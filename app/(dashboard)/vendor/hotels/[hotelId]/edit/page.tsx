@@ -77,11 +77,6 @@ export default function EditHotelPage({ params }: EditHotelPageProps) {
           secondaryColor: data.secondaryColor,
           fontFamily: data.fontFamily,
         },
-        wifiConfig: {
-          networkName: data.networkName,
-          isEnabled: data.wifiEnabled,
-          bandwidthLimit: data.bandwidthLimit,
-        },
       };
       
       // Remove rating field as vendors cannot update this
@@ -150,9 +145,6 @@ export default function EditHotelPage({ params }: EditHotelPageProps) {
     primaryColor: hotel.whitelabelConfig?.primaryColor || '#1e3a8a',
     secondaryColor: hotel.whitelabelConfig?.secondaryColor || '#f59e0b',
     fontFamily: hotel.whitelabelConfig?.fontFamily || 'Poppins, sans-serif',
-    wifiEnabled: hotel.wifiConfig?.isEnabled || true,
-    networkName: hotel.wifiConfig?.networkName || '',
-    bandwidthLimit: hotel.wifiConfig?.bandwidthLimit || 10,
     isActive: hotel.isActive !== undefined ? hotel.isActive : true,
   };
   

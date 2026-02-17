@@ -10,7 +10,7 @@ const ComponentsSweetAlertsSuccess = () => {
             title: 'Good job!',
             text: 'You clicked the!',
             padding: '2em',
-            customClass: 'sweet-alerts',
+            customClass: { popup: 'sweet-alerts' },
         });
     };
     return (
@@ -23,7 +23,7 @@ const showAlert = async () => {
         title: 'Good job!',
         text: 'You clicked the!',
         padding: '2em',
-        customClass: 'sweet-alerts',
+        customClass: { popup: 'sweet-alerts' },
     });
 };
 

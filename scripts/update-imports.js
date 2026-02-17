@@ -65,7 +65,7 @@ const updateMultipleImports = (filePath) => {
       const enumImports = imports.filter(imp => 
         ['UserRole', 'BookingStatus', 'PaymentStatus', 'PaymentMethod', 
          'NotificationType', 'NotificationStatus', 'TaskStatus', 'TaskPriority', 
-         'TaskCategory', 'MaintenanceType', 'ModuleType', 'KeycardType'].includes(imp)
+         'TaskCategory', 'MaintenanceType', 'ModuleType'].includes(imp)
       );
       
       if (enumImports.length > 0) {

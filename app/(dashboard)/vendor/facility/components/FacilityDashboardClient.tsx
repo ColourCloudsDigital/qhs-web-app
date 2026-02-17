@@ -63,6 +63,10 @@ interface Task {
     id: string;
     name: string;
   };
+  hotel?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface FacilityDashboardClientProps {
@@ -273,7 +277,7 @@ export default function FacilityDashboardClient({ hotels, stats: initialStats }:
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{task.title || 'Untitled Task'}</p>
                       <p className="text-xs text-muted-foreground">
-                        {task.hotelName || 'Hotel'} • Due {task.due_date ? formatDate(task.due_date) : 'No due date'}
+                        {task.hotel?.name || 'Hotel'} • Due {task.dueDate ? formatDate(task.dueDate) : 'No due date'}
                       </p>
                     </div>
                     <Badge className={getPriorityColor(task.priority || 'MEDIUM')}>

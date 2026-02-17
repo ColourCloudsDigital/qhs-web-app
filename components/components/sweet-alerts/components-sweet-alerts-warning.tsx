@@ -12,10 +12,10 @@ const ComponentsSweetAlertsWarning = () => {
             showCancelButton: true,
             confirmButtonText: 'Delete',
             padding: '2em',
-            customClass: 'sweet-alerts',
+            customClass: { popup: 'sweet-alerts' },
         }).then((result) => {
             if (result.value) {
-                Swal.fire({ title: 'Deleted!', text: 'Your file has been deleted.', icon: 'success', customClass: 'sweet-alerts' });
+                Swal.fire({ title: 'Deleted!', text: 'Your file has been deleted.', icon: 'success', customClass: { popup: 'sweet-alerts' } });
             }
         });
     };
@@ -32,10 +32,10 @@ const showAlert = async () => {
         showCancelButton: true,
         confirmButtonText: 'Delete',
         padding: '2em',
-        customClass: 'sweet-alerts',
+        customClass: { popup: 'sweet-alerts' },
     }).then((result) => {
         if (result.value) {
-            Swal.fire({ title: 'Deleted!', text: 'Your file has been deleted.', icon: 'success', customClass: 'sweet-alerts' });
+            Swal.fire({ title: 'Deleted!', text: 'Your file has been deleted.', icon: 'success', customClass: { popup: 'sweet-alerts' } });
         }
     });
 }

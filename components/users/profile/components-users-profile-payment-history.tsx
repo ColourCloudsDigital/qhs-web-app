@@ -1,12 +1,9 @@
 'use client';
 import Dropdown from '@/components/dropdown';
 import IconHorizontalDots from '@/components/icon/icon-horizontal-dots';
-import { IRootState } from '@/store';
 import React from 'react';
-import { useSelector } from 'react-redux';
-
 const ComponentsUsersProfilePaymentHistory = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = false; // RTL support removed
 
     return (
         <div className="panel">

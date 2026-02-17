@@ -2,29 +2,26 @@
 import Dropdown from '@/components/dropdown';
 import IconCaretDown from '@/components/icon/icon-caret-down';
 import { getTranslation } from '@/i18n';
-import { IRootState } from '@/store';
-import { toggleRTL } from '@/store/themeConfigSlice';
+import { useThemeConfig } from '@/contexts/ThemeConfigContext';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 
 interface LanguageDropdownProps {
     className?: string;
 }
 
 const LanguageDropdown = ({ className = '' }: LanguageDropdownProps) => {
-    const dispatch = useDispatch();
+    const { themeConfig, toggleRTL } = useThemeConfig();
     const router = useRouter();
     const { i18n } = getTranslation();
 
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+    const isRtl = themeConfig.rtlClass === 'rtl';
 
-    const themeConfig = useSelector((state: IRootState) => state.themeConfig);
     const setLocale = (flag: string) => {
         if (flag.toLowerCase() === 'ae') {
-            dispatch(toggleRTL('rtl'));
+            toggleRTL('rtl');
         } else {
-            dispatch(toggleRTL('ltr'));
+            toggleRTL('ltr');
         }
         router.refresh();
     };

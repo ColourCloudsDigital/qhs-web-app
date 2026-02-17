@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcrypt";
-import prisma from "@/lib/prisma";
+import pool from "@/lib/db";
 import { UserRole, SubscriptionPlan } from "@/lib/types/enums";
 import crypto from "crypto";
 import { emailService } from "@/lib/services/email.service";
@@ -56,23 +56,18 @@ export async function POST(request: NextRequest) {
 
     // If vendor, get the free plan for default assignment
     let freePlan = null;
-    freePlan = await prisma.subscriptionPlan.findFirst({
-      where: {
-        name: 'Free Plan',
-        isActive: true,
-      }
-    });
+    const [freePlanRows] = await pool.query(
+      `SELECT * FROM subscription_plans WHERE name = ? AND isActive = 1 LIMIT 1`,
+      ['Free Plan']
+    );
+    freePlan = (freePlanRows as any[])[0] || null;
 
     if (!freePlan) {
       // Fallback to the cheapest plan if Free Plan doesn't exist
-      freePlan = await prisma.subscriptionPlan.findFirst({
-        where: {
-          isActive: true,
-        },
-        orderBy: {
-          price: 'asc'
-        }
-      });
+      const [cheapestPlanRows] = await pool.query(
+        `SELECT * FROM subscription_plans WHERE isActive = 1 ORDER BY price ASC LIMIT 1`
+      );
+      freePlan = (cheapestPlanRows as any[])[0] || null;
     }
 
     if (!freePlan) {

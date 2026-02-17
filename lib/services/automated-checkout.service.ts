@@ -98,14 +98,14 @@ export const automatedCheckoutService = {
               await this.sendAutomatedCheckoutEmail(booking);
             } catch (notificationError) {
               console.error(`Failed to send checkout notification for booking ${booking.id}:`, notificationError);
-              result.errors.push(`Notification failed for booking ${booking.id}: ${notificationError.message}`);
+              result.errors.push(`Notification failed for booking ${booking.id}: ${notificationError instanceof Error ? notificationError.message : 'Unknown error'}`);
             }
           }
 
           result.processedBookings++;
         } catch (bookingError) {
           console.error(`Failed to process booking ${booking.id}:`, bookingError);
-          result.errors.push(`Failed to process booking ${booking.id}: ${bookingError.message}`);
+          result.errors.push(`Failed to process booking ${booking.id}: ${bookingError instanceof Error ? bookingError.message : 'Unknown error'}`);
         }
       }
 
@@ -117,7 +117,7 @@ export const automatedCheckoutService = {
     } catch (error) {
       await connection.rollback();
       console.error('Error in automated checkout process:', error);
-      result.errors.push(`Transaction failed: ${error.message}`);
+      result.errors.push(`Transaction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return result;
     } finally {
       connection.release();
@@ -298,8 +298,7 @@ export const automatedCheckoutService = {
           phone: hotel?.phone || '',
           email: hotel?.hotelEmail || '',
           currency: 'NGN'
-        },
-        isCheckoutConfirmation: true
+        }
       });
     } catch (error) {
       console.error('Failed to send automated checkout email:', error);

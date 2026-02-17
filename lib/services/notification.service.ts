@@ -654,6 +654,87 @@ export class NotificationService {
       return [];
     }
   }
+
+  /**
+   * Mark a notification as read
+   */
+  static async markAsRead(notificationId: string, userId: string) {
+    try {
+      const now = new Date();
+      
+      const [result] = await pool.query(
+        `UPDATE notifications 
+         SET status = ?, updatedAt = ?
+         WHERE id = ? AND userId = ?`,
+        [NotificationStatus.READ, now, notificationId, userId]
+      );
+
+      const affectedRows = (result as any).affectedRows;
+      
+      if (affectedRows === 0) {
+        throw new Error('Notification not found or access denied');
+      }
+
+      console.log(`[NotificationService] Marked notification ${notificationId} as read for user ${userId}`);
+      return { success: true, message: 'Notification marked as read' };
+    } catch (error) {
+      console.error('[NotificationService] Error marking notification as read:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Archive a notification
+   */
+  static async archiveNotification(notificationId: string, userId: string) {
+    try {
+      const now = new Date();
+      
+      const [result] = await pool.query(
+        `UPDATE notifications 
+         SET status = ?, updatedAt = ?
+         WHERE id = ? AND userId = ?`,
+        [NotificationStatus.ARCHIVED, now, notificationId, userId]
+      );
+
+      const affectedRows = (result as any).affectedRows;
+      
+      if (affectedRows === 0) {
+        throw new Error('Notification not found or access denied');
+      }
+
+      console.log(`[NotificationService] Archived notification ${notificationId} for user ${userId}`);
+      return { success: true, message: 'Notification archived' };
+    } catch (error) {
+      console.error('[NotificationService] Error archiving notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a notification
+   */
+  static async deleteNotification(notificationId: string, userId: string) {
+    try {
+      const [result] = await pool.query(
+        `DELETE FROM notifications 
+         WHERE id = ? AND userId = ?`,
+        [notificationId, userId]
+      );
+
+      const affectedRows = (result as any).affectedRows;
+      
+      if (affectedRows === 0) {
+        throw new Error('Notification not found or access denied');
+      }
+
+      console.log(`[NotificationService] Deleted notification ${notificationId} for user ${userId}`);
+      return { success: true, message: 'Notification deleted' };
+    } catch (error) {
+      console.error('[NotificationService] Error deleting notification:', error);
+      throw error;
+    }
+  }
 }
 
 export const notificationService = NotificationService;

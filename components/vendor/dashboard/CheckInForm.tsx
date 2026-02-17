@@ -49,7 +49,6 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
   const [idNumber, setIdNumber] = useState('');
   
   // Additional options
-  const [issueKeycard, setIssueKeycard] = useState(true);
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
   const [notes, setNotes] = useState('');
   
@@ -125,7 +124,6 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
         body: JSON.stringify({
           idType,
           idNumber,
-          issueKeycard,
           sendWelcomeEmail,
           notes,
         }),
@@ -144,7 +142,6 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
       setSelectedBooking(null);
       setIdType('NIN');
       setIdNumber('');
-      setIssueKeycard(true);
       setSendWelcomeEmail(true);
       setNotes('');
       
@@ -314,20 +311,11 @@ export default function CheckInForm({ hotelId, onSuccess }: CheckInFormProps) {
           <div className="space-y-3 border-t border-gray-200 pt-3 dark:border-gray-700">
             <div className="flex items-center space-x-2">
               <Checkbox 
-                id="issue-keycard" 
-                checked={issueKeycard} 
-                onCheckedChange={(checked) => setIssueKeycard(checked as boolean)} 
-              />
-              <Label htmlFor="issue-keycard" className="text-sm font-normal">Issue keycard automatically</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
                 id="send-email" 
                 checked={sendWelcomeEmail} 
                 onCheckedChange={(checked) => setSendWelcomeEmail(checked as boolean)} 
               />
-              <Label htmlFor="send-email" className="text-sm font-normal">Send welcome email with WiFi details</Label>
+              <Label htmlFor="send-email" className="text-sm font-normal">Send welcome email</Label>
             </div>
           </div>
           

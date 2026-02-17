@@ -53,9 +53,9 @@ export default function TaskHeader({
         </div>
         
         <div className="space-x-2">
-          {status !== 'COMPLETED' && status !== 'CANCELLED' && (
+          {status !== TaskStatus.COMPLETED && status !== TaskStatus.CANCELLED && (
             <Button 
-              onClick={() => onStatusChange('COMPLETED')} 
+              onClick={() => onStatusChange(TaskStatus.COMPLETED)} 
               disabled={isUpdatingStatus}
               className="bg-green-600 hover:bg-green-700"
             >
@@ -68,9 +68,9 @@ export default function TaskHeader({
             </Button>
           )}
           
-          {status === 'PENDING' && (
+          {status === TaskStatus.PENDING && (
             <Button 
-              onClick={() => onStatusChange('IN_PROGRESS')} 
+              onClick={() => onStatusChange(TaskStatus.IN_PROGRESS)} 
               disabled={isUpdatingStatus}
               className="bg-blue-600 hover:bg-blue-700"
             >

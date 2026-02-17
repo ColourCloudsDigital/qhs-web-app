@@ -38,11 +38,11 @@ export default function TaskStatsCards({ stats, isLoading }: TaskStatsCardsProps
   
   // Calculate stats
   const totalCount = stats.totalTasks;
-  const pendingCount = getStatusCount('PENDING');
-  const inProgressCount = getStatusCount('IN_PROGRESS');
-  const completedCount = getStatusCount('COMPLETED');
+  const pendingCount = getStatusCount(TaskStatus.PENDING);
+  const inProgressCount = getStatusCount(TaskStatus.IN_PROGRESS);
+  const completedCount = getStatusCount(TaskStatus.COMPLETED);
   const overdueCount = stats.overdueTasks;
-  const highPriorityCount = getPriorityCount('HIGH') + getPriorityCount('URGENT') + getPriorityCount('EMERGENCY');
+  const highPriorityCount = getPriorityCount(TaskPriority.HIGH) + getPriorityCount(TaskPriority.URGENT) + getPriorityCount(TaskPriority.EMERGENCY);
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">

@@ -17,7 +17,7 @@ const ComponentsSweetAlertsHtml = () => {
             cancelButtonText: '<i className="flaticon-cancel-circle"></i> Cancel',
             cancelButtonAriaLabel: 'Thumbs down',
             padding: '2em',
-            customClass: 'sweet-alerts',
+            customClass: { popup: 'sweet-alerts' },
         });
     };
 
@@ -39,7 +39,7 @@ const showAlert = async () => {
         cancelButtonText: '<i className="flaticon-cancel-circle"></i> Cancel',
         cancelButtonAriaLabel: 'Thumbs down',
         padding: '2em',
-        customClass: 'sweet-alerts',
+        customClass: { popup: 'sweet-alerts' },
     });
 }
 

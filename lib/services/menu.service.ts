@@ -686,6 +686,241 @@ export class MenuService {
       return { desktop: 0, mobile: 0, tablet: 0, unknown: 0, totalViews: 0 };
     }
   }
+
+  /**
+   * Regenerate QR code for a menu
+   */
+  async regenerateQRCode(menuId: string): Promise<{ qrCode: string; menuUrl: string }> {
+    try {
+      console.log(`[MENU SERVICE] Regenerating QR code for menu: ${menuId}`);
+      
+      // First, check if this is a valid menu/hotel ID
+      const [hotelRows] = await pool.query<RowDataPacket[]>(
+        'SELECT id, name FROM hotels WHERE id = ?',
+        [menuId]
+      );
+      
+      if (hotelRows.length === 0) {
+        throw new Error('Hotel not found');
+      }
+      
+      const hotel = hotelRows[0];
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const menuUrl = `${baseUrl}/menu/${menuId}`;
+      
+      // Generate new QR code using the QR code service
+      const { generateMenuQRCode } = await import('./qrcode.service');
+      const qrCode = await generateMenuQRCode(menuId, baseUrl);
+      
+      console.log(`[MENU SERVICE] Successfully regenerated QR code for hotel: ${hotel.name}`);
+      
+      return {
+        qrCode,
+        menuUrl
+      };
+    } catch (error) {
+      console.error('[MENU SERVICE] Error regenerating QR code:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get menu by QR ID (which is the hotel ID)
+   */
+  async getMenuByQrId(qrId: string): Promise<{ 
+    id: string; 
+    name: string; 
+    isActive: boolean; 
+    categories: (MenuCategory & { items: MenuItem[] })[]; 
+    settings: MenuSettings | null 
+  }> {
+    try {
+      console.log(`[MENU SERVICE] Getting menu by QR ID: ${qrId}`);
+      
+      // First, check if this is a valid hotel ID
+      const [hotelRows] = await pool.query<RowDataPacket[]>(
+        'SELECT id, name, isActive FROM hotels WHERE id = ?',
+        [qrId]
+      );
+      
+      if (hotelRows.length === 0) {
+        throw new Error('Menu not found');
+      }
+      
+      const hotel = hotelRows[0];
+      
+      // Get the full menu data
+      const menuData = await this.getFullMenu(qrId);
+      
+      return {
+        id: hotel.id,
+        name: hotel.name,
+        isActive: Boolean(hotel.isActive),
+        categories: menuData.categories,
+        settings: menuData.settings
+      };
+    } catch (error) {
+      console.error('[MENU SERVICE] Error getting menu by QR ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get menus for a hotel with pagination
+   */
+  async getMenus(hotelId: string, options: { page: number; limit: number; search: string }): Promise<{
+    menus: any[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    try {
+      console.log(`[MENU SERVICE] Getting menus for hotel: ${hotelId}`);
+      
+      // For now, we treat each hotel as having one menu (the hotel's menu)
+      // This method returns the hotel's menu data in a paginated format
+      
+      const { page, limit, search } = options;
+      const offset = (page - 1) * limit;
+      
+      // Get hotel information
+      let whereClause = 'WHERE id = ?';
+      let params = [hotelId];
+      
+      if (search) {
+        whereClause += ' AND name LIKE ?';
+        params.push(`%${search}%`);
+      }
+      
+      const [hotelRows] = await pool.query<RowDataPacket[]>(
+        `SELECT id, name, isActive, createdAt, updatedAt FROM hotels ${whereClause} LIMIT ? OFFSET ?`,
+        [...params, limit, offset]
+      );
+      
+      // Get total count
+      const [countRows] = await pool.query<RowDataPacket[]>(
+        `SELECT COUNT(*) as total FROM hotels ${whereClause}`,
+        params
+      );
+      
+      const total = countRows[0].total;
+      const totalPages = Math.ceil(total / limit);
+      
+      // Format the results as "menus"
+      const menus = await Promise.all(hotelRows.map(async (hotel: any) => {
+        const categories = await this.getCategoriesByHotelId(hotel.id);
+        const settings = await this.getMenuSettings(hotel.id);
+        
+        return {
+          id: hotel.id,
+          name: hotel.name,
+          hotelId: hotel.id,
+          isActive: Boolean(hotel.isActive),
+          categoriesCount: categories.length,
+          settings: settings,
+          createdAt: hotel.createdAt,
+          updatedAt: hotel.updatedAt
+        };
+      }));
+      
+      return {
+        menus,
+        total,
+        page,
+        limit,
+        totalPages
+      };
+    } catch (error) {
+      console.error('[MENU SERVICE] Error getting menus:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new menu (which is essentially setting up menu categories for a hotel)
+   */
+  async createMenu(data: {
+    hotelId: string;
+    name: string;
+    description?: string;
+    categories: Array<{
+      name: string;
+      description?: string;
+      items?: Array<{
+        name: string;
+        description?: string;
+        price: number;
+        [key: string]: any;
+      }>;
+    }>;
+  }): Promise<{
+    id: string;
+    name: string;
+    hotelId: string;
+    categories: string[];
+  }> {
+    try {
+      console.log(`[MENU SERVICE] Creating menu for hotel: ${data.hotelId}`);
+      
+      // Verify hotel exists
+      const [hotelRows] = await pool.query<RowDataPacket[]>(
+        'SELECT id, name FROM hotels WHERE id = ?',
+        [data.hotelId]
+      );
+      
+      if (hotelRows.length === 0) {
+        throw new Error('Hotel not found');
+      }
+      
+      const createdCategories: string[] = [];
+      
+      // Create categories and their items
+      for (let i = 0; i < data.categories.length; i++) {
+        const categoryData = data.categories[i];
+        
+        const categoryId = await this.createCategory({
+          hotelId: data.hotelId,
+          name: categoryData.name,
+          description: categoryData.description || '',
+          displayOrder: i + 1,
+          isActive: true
+        });
+        
+        createdCategories.push(categoryId);
+        
+        // Create items for this category if provided
+        if (categoryData.items && categoryData.items.length > 0) {
+          for (let j = 0; j < categoryData.items.length; j++) {
+            const itemData = categoryData.items[j];
+            const { name, description, price, ...otherItemData } = itemData;
+            
+            await this.createMenuItem({
+              categoryId,
+              name,
+              description: description || '',
+              price,
+              displayOrder: j + 1,
+              isAvailable: true,
+              ...otherItemData // Include any additional properties
+            });
+          }
+        }
+      }
+      
+      console.log(`[MENU SERVICE] Successfully created menu with ${createdCategories.length} categories`);
+      
+      return {
+        id: data.hotelId, // Use hotel ID as menu ID
+        name: data.name,
+        hotelId: data.hotelId,
+        categories: createdCategories
+      };
+    } catch (error) {
+      console.error('[MENU SERVICE] Error creating menu:', error);
+      throw error;
+    }
+  }
 }
 
 export default new MenuService();

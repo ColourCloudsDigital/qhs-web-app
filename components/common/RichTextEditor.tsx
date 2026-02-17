@@ -44,13 +44,13 @@ export default function RichTextEditor({
 
       <Editor
         apiKey="t7tdk27us35qbe43isy9xdgx7ujezpllk7k3z209vthj8a7m"
-        onInit={(evt, editor) => {
+        onInit={(evt: any, editor: any) => {
           editorRef.current = editor;
           setIsEditorLoaded(true);
         }}
         initialValue={value}
         value={value}
-        onEditorChange={(newValue) => onChange(newValue)}
+        onEditorChange={(newValue: any) => onChange(newValue)}
         init={{
           height,
           min_height: minHeight,

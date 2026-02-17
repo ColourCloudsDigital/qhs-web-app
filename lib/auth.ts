@@ -3,30 +3,44 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcrypt';
 import pool from '@/lib/db';
 import { UserRole } from '@/lib/types/enums';
+import { RowDataPacket } from 'mysql2';
 
 // Get auth settings from the database
 const getAuthSettings = async () => {
   try {
     const query = `
-      SELECT \`key\`, value 
-      FROM settings 
-      WHERE category = 'security'
-      AND \`key\` IN ('jwt_expiry', 'refresh_token_expiry', 'allow_signup', 'require_email_verification')
+      SELECT 
+        jwtExpiry,
+        sessionTimeout,
+        twoFactorAuthEnabled,
+        loginAttempts,
+        lockoutDuration
+      FROM security_settings 
+      LIMIT 1
     `;
     
     const [rows]: [any[], any] = await pool.query(query);
     
-    return rows.reduce((acc: any, row: any) => {
-      acc[row.key] = row.value;
-      return acc;
-    }, {});
+    if (rows.length === 0) {
+      // Return defaults if no settings found
+      return {
+        jwtExpiry: 86400, // 1 day in seconds
+        sessionTimeout: 3600, // 1 hour in seconds
+        twoFactorAuthEnabled: false,
+        loginAttempts: 5,
+        lockoutDuration: 30,
+      };
+    }
+    
+    return rows[0];
   } catch (error) {
     console.error('Error fetching auth settings:', error);
     return {
-      jwt_expiry: '1d',
-      refresh_token_expiry: '7d',
-      allow_signup: 'true',
-      require_email_verification: 'true',
+      jwtExpiry: 86400, // 1 day in seconds
+      sessionTimeout: 3600, // 1 hour in seconds
+      twoFactorAuthEnabled: false,
+      loginAttempts: 5,
+      lockoutDuration: 30,
     };
   }
 };
@@ -34,7 +48,7 @@ const getAuthSettings = async () => {
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60, // 1 day
+    maxAge: 24 * 60 * 60, // 1 day (will be overridden by settings if available)
   },
   pages: {
     signIn: '/login',
@@ -57,7 +71,6 @@ export const authOptions: NextAuthOptions = {
         try {
           // Get auth settings from database
           const settings = await getAuthSettings();
-          const requireEmailVerification = settings.require_email_verification === 'true';
           
           const userQuery = `
             SELECT
@@ -67,7 +80,7 @@ export const authOptions: NextAuthOptions = {
               c.id as customerId,
               s.id as staffId
             FROM users u
-            LEFT JOIN superadmins sa ON u.id = sa.userId
+            LEFT JOIN super_admins sa ON u.id = sa.userId
             LEFT JOIN vendors v ON u.id = v.userId
             LEFT JOIN customers c ON u.id = c.userId
             LEFT JOIN staff s ON u.id = s.userId
@@ -94,8 +107,8 @@ export const authOptions: NextAuthOptions = {
             throw new Error('ACCOUNT_INACTIVE');
           }
 
-          // Check email verification
-          if (requireEmailVerification && !dbUser.emailVerified && process.env.NODE_ENV !== 'development') {
+          // Check email verification (only in production)
+          if (!dbUser.emailVerified && process.env.NODE_ENV !== 'development') {
             console.log(`Login failed: User ${credentials.email} email not verified.`);
             throw new Error('EMAIL_NOT_VERIFIED');
           }
@@ -160,23 +173,6 @@ export const authOptions: NextAuthOptions = {
         token.staffId = (user as any).staffId;
       }
       
-      // Check for impersonation data in headers (if available)
-      // const headers = (req as any)?.headers;
-      // if (headers && headers['x-impersonation-data']) {
-      //   try {
-      //     const impersonationData = JSON.parse(headers['x-impersonation-data'] as string);
-      //     if (impersonationData && impersonationData.userRole) {
-      //       // When impersonating, use the role from impersonation data
-      //       // but keep the admin's ID for reference
-      //       token.originalRole = token.role;
-      //       token.role = impersonationData.userRole;
-      //       token.isImpersonating = true;
-      //     }
-      //   } catch (e) {
-      //     console.error('Error parsing impersonation data:', e);
-      //   }
-      // }
-      
       return token;
     },
     async session({ session, token }) {
@@ -187,17 +183,12 @@ export const authOptions: NextAuthOptions = {
         session.user.vendorId = token.vendorId as string | undefined;
         session.user.customerId = token.customerId as string | undefined;
         session.user.staffId = token.staffId as string | undefined;
-        
-        // Add impersonation data to session
-        // if (token.isImpersonating) {
-        //   (session.user as any).isImpersonating = true;
-        //   (session.user as any).originalRole = token.originalRole;
-        // }
       }
       return session;
     },
   },
   debug: process.env.NODE_ENV === 'development',
+  secret: process.env.NEXTAUTH_SECRET,
   events: {
     async signIn({ user }) {
       // Add any custom login event logic here

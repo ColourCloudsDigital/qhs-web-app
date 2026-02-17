@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { HotelService } from '@/services/hotels';
 import { UserRole } from '@/lib/types/enums';
 import pool from '@/lib/db';

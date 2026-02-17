@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { BookingStatus, PaymentStatus, PaymentMethod, UserRole, NotificationType } from '@/lib/types/enums';
@@ -290,26 +290,6 @@ export async function POST(request: NextRequest) {
         
         console.log(`[API] Updated room unit status to occupied: ${roomUnitId}`);
         
-        // Issue keycard if requested
-        if (specialRequests && specialRequests.includes('issueKeycard')) {
-          // Find an available keycard
-          const availableKeycard = await pool.query(
-            `SELECT kc.* FROM keycards kc WHERE kc.hotelId = ? AND kc.isActive = 1 AND kc.isConfigured = 1 AND kc.assignedToId IS NULL AND kc.staffId IS NULL`,
-            [hotelId]
-          );
-          
-          if (availableKeycard && (availableKeycard as any[]).length > 0) {
-            const keycard = (availableKeycard as any[])[0];
-            
-            await connection.query(
-              `UPDATE keycards SET assignedToId = ?, validFrom = ?, validTo = ? WHERE id = ?`,
-              [bookingId, checkInDateObj, checkOutDateObj, keycard.id]
-            );
-            
-            console.log(`[API] Updated keycard status to assigned: ${keycard.id}`);
-          }
-        }
-        
         // Send confirmation email if we have customer email
         if (guestEmail) {
           try {
@@ -356,7 +336,7 @@ export async function POST(request: NextRequest) {
                 {
                   title: 'New Walk-in Booking',
                   content: `New walk-in booking created for ${customerName} in room ${roomUnit.roomNumber}`,
-                  type: 'BOOKING',
+                  type: NotificationType.BOOKING,
                   senderId: session.user.id,
                   metadata: {
                     bookingId,

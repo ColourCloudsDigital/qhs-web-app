@@ -148,22 +148,22 @@ export default function TaskDetailsTab({
         <div>
           <h3 className="text-sm font-semibold mb-2">Change Status</h3>
           <div className="flex flex-wrap gap-2">
-            {status !== 'PENDING' && (
+            {status !== TaskStatus.PENDING && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => onStatusChange('PENDING')}
+                onClick={() => onStatusChange(TaskStatus.PENDING)}
                 disabled={isUpdatingStatus}
               >
                 Mark as Pending
               </Button>
             )}
             
-            {status !== 'IN_PROGRESS' && (
+            {status !== TaskStatus.IN_PROGRESS && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => onStatusChange('IN_PROGRESS')}
+                onClick={() => onStatusChange(TaskStatus.IN_PROGRESS)}
                 disabled={isUpdatingStatus}
                 className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
               >
@@ -171,11 +171,11 @@ export default function TaskDetailsTab({
               </Button>
             )}
             
-            {status !== 'ON_HOLD' && (
+            {status !== TaskStatus.ON_HOLD && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => onStatusChange('ON_HOLD')}
+                onClick={() => onStatusChange(TaskStatus.ON_HOLD)}
                 disabled={isUpdatingStatus}
                 className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
               >
@@ -183,11 +183,11 @@ export default function TaskDetailsTab({
               </Button>
             )}
             
-            {status !== 'COMPLETED' && (
+            {status !== TaskStatus.COMPLETED && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => onStatusChange('COMPLETED')}
+                onClick={() => onStatusChange(TaskStatus.COMPLETED)}
                 disabled={isUpdatingStatus}
                 className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
               >

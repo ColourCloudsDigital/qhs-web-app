@@ -1,5 +1,17 @@
 import pool from '@/lib/db';
-import { SMTPConfiguration } from '@prisma/client';
+
+interface SMTPConfiguration {
+  id: string;
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  fromEmail?: string;
+  fromName?: string;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export const settingsService = {
   /**
@@ -7,12 +19,11 @@ export const settingsService = {
    */
   async getSMTPConfig(): Promise<SMTPConfiguration | null> {
     // Get the default SMTP configuration
-    const smtpConfig = await prisma.sMTPConfiguration.findFirst({
-      where: {
-        isDefault: true,
-      },
-    });
-
+    const [rows] = await pool.query(
+      `SELECT * FROM smtp_configurations WHERE isDefault = 1 LIMIT 1`
+    );
+    
+    const smtpConfig = (rows as any[])[0] || null;
     return smtpConfig;
   },
 

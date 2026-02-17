@@ -22,10 +22,7 @@ import IconTrashLines from '@/components/icon/icon-trash-lines';
 import IconUserPlus from '@/components/icon/icon-user-plus';
 import IconVideo from '@/components/icon/icon-video';
 import PerfectScrollbar from 'react-perfect-scrollbar';
-import { IRootState } from '@/store';
 import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
-
 const contactList = [
     {
         userId: 1,
@@ -255,8 +252,8 @@ const loginUser = {
 };
 
 const ComponentsAppsChat = () => {
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
-    const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
+    const isRtl = false; // RTL support removed
+    const isDark = false; // Dark mode detection removed
 
     const [isShowChatMenu, setIsShowChatMenu] = useState(false);
     const [searchUser, setSearchUser] = useState('');
