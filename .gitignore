@@ -15,6 +15,10 @@
 
 # production
 /build
+.next/
+
+# compression files
+*.zip
 
 # misc
 .DS_Store
