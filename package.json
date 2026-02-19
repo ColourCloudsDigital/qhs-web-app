@@ -16,8 +16,7 @@
         "type-check": "tsc --noEmit",
         "db:migrate": "node scripts/db-migrate.js",
         "verify": "node scripts/verify-components.mjs",
-        "build:analyze": "ANALYZE=true next build",
-        "postbuild": "next-sitemap"
+        "build:analyze": "ANALYZE=true next build"
     },
     "dependencies": {
         "@emotion/react": "^11.10.6",
