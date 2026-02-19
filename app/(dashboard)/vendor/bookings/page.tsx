@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description: 'Manage your hotel bookings and reservations.',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function VendorBookingsPage({
   searchParams,
 }: {

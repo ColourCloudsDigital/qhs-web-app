@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description: 'Manage user roles and permissions for your facility',
 };
 
+export const dynamic = 'force-dynamic';
+
 // Fetch vendor hotels
 async function getVendorHotels() {
   const cookieHeader = cookies().getAll().map(c => `${c.name}=${c.value}`).join('; ');
