@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 import { getUserVendorId } from '@/lib/utils/vendor';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -35,7 +35,7 @@ async function getVendorHotels() {
 }
 
 // Dynamically load TabsClient (client-only)
-const TabsClient = dynamic(() => import('../components/TabsClient'), { ssr: false });
+const TabsClient = dynamicImport(() => import('../components/TabsClient'), { ssr: false });
 
 export default async function UserRolesPage() {
   const session = await getServerSession(authOptions);
