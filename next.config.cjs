@@ -1,48 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: false, // Fix ESLint errors instead of ignoring
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: false, // Fix TypeScript errors instead of ignoring
+    ignoreBuildErrors: false,
   },
   reactStrictMode: true,
+  swcMinify: true,
   
-  // Optimized webpack configuration for production
-  webpack: (config, { dev, isServer }) => {
-    // Development optimizations
-    if (dev) {
-      config.cache = {
-        type: 'memory',
-      };
-    }
-    
-    // Production optimizations
-    if (!dev) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-            },
-          },
-        },
-      };
-    }
-    
-    // Disable webpack cache for server-side compilation in development
-    if (dev && isServer) {
-      config.cache = false;
-    }
-    
-    return config;
-  },
-  
-  // Image optimization for VPS hosting
+  // Image optimization
   images: {
     domains: ['localhost', 'qarashotels.com.ng', 'qarashotels.com'],
     remotePatterns: [
@@ -55,31 +22,20 @@ const nextConfig = {
         hostname: '**',
       },
     ],
-    // Optimize for VPS hosting
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60,
   },
   
   // External packages configuration
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'bcrypt'],
-    // Enable optimized package imports
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    serverComponentsExternalPackages: ['bcrypt', 'mysql2'],
   },
   
-  // VPS-optimized output (remove standalone for VPS)
-  // output: 'standalone', // Remove this for VPS hosting
-  
-  // Add compression and performance optimizations
+  // Performance optimizations
   compress: true,
   poweredByHeader: false,
   
-  // Environment-specific configurations
-  env: {
-    CUSTOM_KEY: process.env.NODE_ENV,
-  },
-  
-  // Add proper headers for VPS hosting
+  // Security headers
   async headers() {
     return [
       {
