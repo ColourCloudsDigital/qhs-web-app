@@ -12,10 +12,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is staff
-    const staff = await prisma.staff.findUnique({
-      where: { userId: session.user.id },
-      include: { hotel: true }
-    })
+    const [staffRows] = await pool.query(
+      `SELECT s.*, h.name as hotelName 
+       FROM staff s 
+       JOIN hotels h ON s.hotelId = h.id 
+       WHERE s.userId = ?`,
+      [session.user.id]
+    );
+
+    const staff = (staffRows as any[])[0];
 
     if (!staff) {
       return NextResponse.json({ error: 'Staff access required' }, { status: 403 })

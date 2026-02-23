@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
-import { BookingStatus } from '@/lib/types/enums';
 
 export async function GET(
   request: NextRequest,
@@ -23,34 +22,27 @@ export async function GET(
     
     // Check permission
     if (session.user.role === 'VENDOR') {
-      const hotel = await prisma.hotel.findFirst({
-        where: {
-          id: hotelId,
-          vendor: {
-            user: {
-              id: session.user.id
-            }
-          }
-        }
-      });
+      const [hotelRows] = await pool.query(
+        `SELECT h.id FROM hotels h 
+         JOIN vendors v ON h.vendorId = v.id 
+         WHERE h.id = ? AND v.userId = ?`,
+        [hotelId, session.user.id]
+      );
       
-      if (!hotel) {
+      if ((hotelRows as any[]).length === 0) {
         return NextResponse.json(
           { error: 'Hotel not found or you do not have access to this hotel' },
           { status: 404 }
         );
       }
     } else if (session.user.role === 'STAFF') {
-      const staff = await prisma.staff.findFirst({
-        where: {
-          user: {
-            id: session.user.id
-          },
-          hotelId: hotelId
-        }
-      });
+      const [staffRows] = await pool.query(
+        `SELECT s.id FROM staff s 
+         WHERE s.userId = ? AND s.hotelId = ?`,
+        [session.user.id, hotelId]
+      );
       
-      if (!staff) {
+      if ((staffRows as any[]).length === 0) {
         return NextResponse.json(
           { error: 'You do not have access to this hotel' },
           { status: 403 }
@@ -94,64 +86,53 @@ export async function GET(
     }
     
     // Find rooms that are available for the given date range
-    const bookedRoomIds = await prisma.booking.findMany({
-      where: {
-        hotelId: hotelId,
-        status: {
-          in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN]
-        },
-        NOT: {
-          OR: [
-            // Booking ends before check-in
-            { checkOutDate: { lte: checkInDate } },
-            // Booking starts after check-out
-            { checkInDate: { gte: checkOutDate } }
-          ]
-        }
-      },
-      select: {
-        roomUnitId: true
-      }
-    });
+    const [bookedRoomRows] = await pool.query(
+      `SELECT DISTINCT roomUnitId FROM bookings 
+       WHERE hotelId = ? 
+       AND status IN ('CONFIRMED', 'CHECKED_IN')
+       AND NOT (
+         checkOutDate <= ? OR checkInDate >= ?
+       )
+       AND roomUnitId IS NOT NULL`,
+      [hotelId, checkInDate, checkOutDate]
+    );
     
     // Get room IDs from room units
-    const roomUnitIds = bookedRoomIds.map((b: any) => b.roomUnitId).filter((id: any) => id);
-    let bookedRoomIdsSet = new Set();
+    const roomUnitIds = (bookedRoomRows as any[]).map((b: any) => b.roomUnitId);
+    let bookedRoomIds: string[] = [];
     
     if (roomUnitIds.length > 0) {
-      const roomUnits = await prisma.query(
-        'SELECT roomId FROM room_units WHERE id IN (?)',
-        [roomUnitIds]
+      const placeholders = roomUnitIds.map(() => '?').join(',');
+      const [roomUnitRows] = await pool.query(
+        `SELECT roomId FROM room_units WHERE id IN (${placeholders})`,
+        roomUnitIds
       );
-      bookedRoomIdsSet = new Set(roomUnits.map((ru: any) => ru.roomId));
+      bookedRoomIds = (roomUnitRows as any[]).map((ru: any) => ru.roomId);
     }
     
-    // Get all rooms in the hotel
-    const rooms = await prisma.room.findMany({
-      where: {
-        hotelId: hotelId,
-        // Filter out rooms in maintenance
-        status: {
-          not: 'maintenance'
-        },
-        // Filter out rooms that are already booked in the date range
-        NOT: {
-          id: {
-            in: Array.from(bookedRoomIdsSet)
-          }
-        }
-      },
-      include: {
-        amenities: {
-          include: {
-            amenity: true
-          }
-        }
-      }
-    });
+    // Get all rooms in the hotel that are not booked
+    let roomQuery = `
+      SELECT r.*, GROUP_CONCAT(CONCAT(a.name, ':', a.icon) SEPARATOR '|') as amenities_data
+      FROM rooms r
+      LEFT JOIN room_amenities ra ON r.id = ra.roomId
+      LEFT JOIN amenities a ON ra.amenityId = a.id
+      WHERE r.hotelId = ? 
+      AND r.status != 'maintenance'
+    `;
+    let queryParams = [hotelId];
+    
+    if (bookedRoomIds.length > 0) {
+      const placeholders = bookedRoomIds.map(() => '?').join(',');
+      roomQuery += ` AND r.id NOT IN (${placeholders})`;
+      queryParams.push(...bookedRoomIds);
+    }
+    
+    roomQuery += ' GROUP BY r.id';
+    
+    const [roomRows] = await pool.query(roomQuery, queryParams);
     
     // Format room data
-    const availableRooms = rooms.map((room: any) => {
+    const availableRooms = (roomRows as any[]).map((room: any) => {
       // Parse and select the first room number 
       let roomNumber = '';
       if (room.roomNumbers) {
@@ -166,6 +147,15 @@ export async function GET(
         roomNumber = room.name;
       }
       
+      // Parse amenities
+      let amenities: any[] = [];
+      if (room.amenities_data) {
+        amenities = room.amenities_data.split('|').map((amenityStr: string) => {
+          const [name, icon] = amenityStr.split(':');
+          return { name, icon };
+        });
+      }
+      
       return {
         id: room.id,
         name: room.name,
@@ -176,7 +166,7 @@ export async function GET(
         discountedPrice: room.discountedPrice,
         images: room.images ? JSON.parse(room.images as string) : [],
         status: room.status,
-        amenities: room.amenities.map((ra: any) => ra.amenity)
+        amenities
       };
     });
     

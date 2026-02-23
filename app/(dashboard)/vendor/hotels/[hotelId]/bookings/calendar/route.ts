@@ -22,34 +22,27 @@ export async function GET(
     
     // Check access permissions
     if (session.user.role === 'VENDOR') {
-      const hotel = await prisma.hotel.findFirst({
-        where: {
-          id: hotelId,
-          vendor: {
-            user: {
-              id: session.user.id
-            }
-          }
-        }
-      });
+      const [hotelRows] = await pool.query(
+        `SELECT h.id FROM hotels h 
+         JOIN vendors v ON h.vendorId = v.id 
+         WHERE h.id = ? AND v.userId = ?`,
+        [hotelId, session.user.id]
+      );
       
-      if (!hotel) {
+      if ((hotelRows as any[]).length === 0) {
         return NextResponse.json(
           { error: 'Hotel not found or you do not have access to this hotel' },
           { status: 404 }
         );
       }
     } else if (session.user.role === 'STAFF') {
-      const staff = await prisma.staff.findFirst({
-        where: {
-          user: {
-            id: session.user.id
-          },
-          hotelId: hotelId
-        }
-      });
+      const [staffRows] = await pool.query(
+        `SELECT s.id FROM staff s 
+         WHERE s.userId = ? AND s.hotelId = ?`,
+        [session.user.id, hotelId]
+      );
       
-      if (!staff) {
+      if ((staffRows as any[]).length === 0) {
         return NextResponse.json(
           { error: 'You do not have access to this hotel' },
           { status: 403 }
@@ -78,19 +71,14 @@ export async function GET(
     }
     
     // Get total rooms in the hotel
-    const rooms = await prisma.room.findMany({
-      where: {
-        hotelId: hotelId
-      },
-      select: {
-        id: true,
-        roomNumbers: true
-      }
-    });
+    const [roomRows] = await pool.query(
+      'SELECT id, roomNumbers FROM rooms WHERE hotelId = ?',
+      [hotelId]
+    );
     
     // Count physical rooms
     let totalRooms = 0;
-    rooms.forEach((room: any) => {
+    (roomRows as any[]).forEach((room: any) => {
       if (room.roomNumbers) {
         try {
           const roomNumbersArray = JSON.parse(room.roomNumbers as string);
@@ -105,49 +93,17 @@ export async function GET(
     });
     
     // Get bookings within the date range
-    const bookings = await prisma.booking.findMany({
-      where: {
-        hotelId: hotelId,
-        OR: [
-          {
-            // Bookings that start within the date range
-            checkInDate: {
-              gte: startDate,
-              lte: endDate
-            }
-          },
-          {
-            // Bookings that end within the date range
-            checkOutDate: {
-              gte: startDate,
-              lte: endDate
-            }
-          },
-          {
-            // Bookings that span the entire date range
-            AND: [
-              {
-                checkInDate: {
-                  lt: startDate
-                }
-              },
-              {
-                checkOutDate: {
-                  gt: endDate
-                }
-              }
-            ]
-          }
-        ]
-      },
-      select: {
-        id: true,
-        checkInDate: true,
-        checkOutDate: true,
-        roomId: true,
-        status: true
-      }
-    });
+    const [bookingRows] = await pool.query(
+      `SELECT id, checkInDate, checkOutDate, roomId, status 
+       FROM bookings 
+       WHERE hotelId = ? 
+       AND (
+         (checkInDate >= ? AND checkInDate <= ?) OR
+         (checkOutDate >= ? AND checkOutDate <= ?) OR
+         (checkInDate < ? AND checkOutDate > ?)
+       )`,
+      [hotelId, startDate, endDate, startDate, endDate, startDate, endDate]
+    );
     
     // Group bookings by date
     const bookingsByDate = new Map<string, { count: number, occupiedRooms: Set<string> }>();
@@ -161,7 +117,7 @@ export async function GET(
     });
     
     // Count bookings for each date
-    bookings.forEach((booking: any) => {
+    (bookingRows as any[]).forEach((booking: any) => {
       const bookingStart = new Date(booking.checkInDate);
       const bookingEnd = new Date(booking.checkOutDate);
       

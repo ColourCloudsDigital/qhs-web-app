@@ -55,9 +55,11 @@ class AnalyticsService {
    */
   async getSettings(): Promise<AnalyticsSettings> {
     try {
-      const settings = await prisma.analyticsSettings.findFirst({
-        where: { isActive: true },
-      });
+      const [rows] = await pool.query(
+        'SELECT * FROM analytics_settings WHERE isActive = true LIMIT 1'
+      );
+
+      const settings = (rows as any[])[0];
 
       if (!settings) {
         return defaultSettings;
@@ -79,30 +81,32 @@ class AnalyticsService {
    */
   async updateSettings(settings: AnalyticsSettings): Promise<void> {
     try {
-      const existingSettings = await prisma.analyticsSettings.findFirst({
-        where: { isActive: true },
-      });
+      const [existingRows] = await pool.query(
+        'SELECT * FROM analytics_settings WHERE isActive = true LIMIT 1'
+      );
+
+      const existingSettings = (existingRows as any[])[0];
 
       const data = {
         googleAnalytics: JSON.stringify(settings.googleAnalytics),
         metaTags: JSON.stringify(settings.metaTags),
         customTracking: JSON.stringify(settings.customTracking),
         isActive: true,
-        updatedAt: new Date(),
       };
 
       if (existingSettings) {
-        await prisma.analyticsSettings.update({
-          where: { id: existingSettings.id },
-          data,
-        });
+        await pool.query(
+          `UPDATE analytics_settings 
+           SET googleAnalytics = ?, metaTags = ?, customTracking = ?, isActive = ?, updatedAt = NOW() 
+           WHERE id = ?`,
+          [data.googleAnalytics, data.metaTags, data.customTracking, data.isActive, existingSettings.id]
+        );
       } else {
-        await prisma.analyticsSettings.create({
-          data: {
-            ...data,
-            createdAt: new Date(),
-          },
-        });
+        await pool.query(
+          `INSERT INTO analytics_settings (id, googleAnalytics, metaTags, customTracking, isActive, createdAt, updatedAt) 
+           VALUES (UUID(), ?, ?, ?, ?, NOW(), NOW())`,
+          [data.googleAnalytics, data.metaTags, data.customTracking, data.isActive]
+        );
       }
     } catch (error) {
       console.error('Error updating analytics settings:', error);

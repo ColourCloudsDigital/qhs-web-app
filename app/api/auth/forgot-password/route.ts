@@ -16,9 +16,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    const [rows] = await pool.query(
+      'SELECT id, email, name FROM users WHERE email = ?',
+      [email]
+    );
+
+    const user = (rows as any[])[0];
 
     // For security reasons, don't reveal if the email exists or not
     if (!user) {
@@ -33,13 +36,10 @@ export async function POST(request: NextRequest) {
     const resetExpires = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
 
     // Save token to user
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        resetToken,
-        resetExpires,
-      } as any, // Type assertion to work around Prisma types
-    });
+    await pool.query(
+      'UPDATE users SET resetToken = ?, resetExpires = ?, updatedAt = NOW() WHERE id = ?',
+      [resetToken, resetExpires, user.id]
+    );
 
     // Send reset email
     await emailService.sendPasswordResetEmail({

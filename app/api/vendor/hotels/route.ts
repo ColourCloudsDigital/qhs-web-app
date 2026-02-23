@@ -62,25 +62,22 @@ export async function GET(req: NextRequest) {
       }
       
       // Get the staff's assigned hotel
-      const staff = await prisma.staff.findUnique({
-        where: { id: staffId },
-        select: { hotelId: true }
-      });
+      const [staffRows] = await pool.query(
+        'SELECT hotelId FROM staff WHERE id = ?',
+        [staffId]
+      );
+      
+      const staff = (staffRows as any[])[0];
       
       if (staff && staff.hotelId) {
         // For staff, just return this one hotel
-        const hotel = await prisma.hotel.findUnique({
-          where: { id: staff.hotelId },
-          select: {
-            id: true,
-            name: true,
-            city: true,
-            state: true,
-            country: true,
-            images: true,
-            isActive: true,
-          }
-        });
+        const [hotelRows] = await pool.query(
+          `SELECT id, name, city, state, country, images, isActive 
+           FROM hotels WHERE id = ?`,
+          [staff.hotelId]
+        );
+        
+        const hotel = (hotelRows as any[])[0];
         
         if (hotel) {
           // Format the hotel data

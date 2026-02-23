@@ -53,7 +53,6 @@ export async function GET(
       }
     }
     
-    // Get hotel stats using MySQL instead of Prisma
     try {
       // 1. Count rooms
       const [roomCountResults] = await pool.query(

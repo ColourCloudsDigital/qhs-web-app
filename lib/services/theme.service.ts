@@ -44,12 +44,12 @@ class ThemeService {
    */
   async getThemeSettings(): Promise<ThemeSettings> {
     try {
-      // Check if ThemeSettings table exists by attempting a query
+      // Check if theme_settings table exists by attempting a query
       let tableExists = true;
       try {
-        await prisma.$queryRaw`SELECT 1 FROM ThemeSettings LIMIT 1`;
+        await pool.query('SELECT 1 FROM theme_settings LIMIT 1');
       } catch (error) {
-        console.log('ThemeSettings table might not exist yet, returning defaults');
+        console.log('theme_settings table might not exist yet, returning defaults');
         tableExists = false;
       }
       
@@ -58,9 +58,11 @@ class ThemeService {
       }
 
       // Get theme settings from database
-      const themeSettings = await prisma.themeSettings.findFirst({
-        where: { isActive: true }
-      });
+      const [rows] = await pool.query(
+        'SELECT * FROM theme_settings WHERE isActive = true LIMIT 1'
+      );
+
+      const themeSettings = (rows as any[])[0];
 
       // Return default settings if none found
       if (!themeSettings) {
@@ -94,19 +96,21 @@ class ThemeService {
    */
   async updateThemeSettings(settings: ThemeSettings): Promise<ThemeSettings> {
     try {
-      // Check if ThemeSettings table exists by attempting a query
+      // Check if theme_settings table exists by attempting a query
       let tableExists = true;
       try {
-        await prisma.$queryRaw`SELECT 1 FROM ThemeSettings LIMIT 1`;
+        await pool.query('SELECT 1 FROM theme_settings LIMIT 1');
       } catch (error) {
-        console.error('ThemeSettings table does not exist. Please run the migration first.');
-        throw new Error('ThemeSettings table not found in database. Run the migration first.');
+        console.error('theme_settings table does not exist. Please run the migration first.');
+        throw new Error('theme_settings table not found in database. Run the migration first.');
       }
 
       // Find existing settings
-      const existingSettings = await prisma.themeSettings.findFirst({
-        where: { isActive: true }
-      });
+      const [existingRows] = await pool.query(
+        'SELECT * FROM theme_settings WHERE isActive = true LIMIT 1'
+      );
+
+      const existingSettings = (existingRows as any[])[0];
 
       // Prepare data for update or create
       const data = {
@@ -123,22 +127,55 @@ class ThemeService {
 
       if (existingSettings) {
         // Update existing settings
-        const updated = await prisma.themeSettings.update({
-          where: { id: existingSettings.id },
-          data: {
-            ...data,
-            updatedAt: new Date()
-          }
-        });
+        await pool.query(
+          `UPDATE theme_settings 
+           SET colorPalette = ?, typography = ?, buttons = ?, layout = ?, 
+               customCSS = ?, logoUrl = ?, faviconUrl = ?, loginBannerUrl = ?, 
+               isActive = ?, updatedAt = NOW() 
+           WHERE id = ?`,
+          [
+            data.colorPalette,
+            data.typography,
+            data.buttons,
+            data.layout,
+            data.customCSS,
+            data.logoUrl,
+            data.faviconUrl,
+            data.loginBannerUrl,
+            data.isActive,
+            existingSettings.id
+          ]
+        );
         
-        return this.transformThemeSettingsResponse(updated);
+        const [updatedRows] = await pool.query(
+          'SELECT * FROM theme_settings WHERE id = ?',
+          [existingSettings.id]
+        );
+        
+        return this.transformThemeSettingsResponse((updatedRows as any[])[0]);
       } else {
         // Create new settings
-        const created = await prisma.themeSettings.create({
-          data
-        });
+        await pool.query(
+          `INSERT INTO theme_settings (id, colorPalette, typography, buttons, layout, customCSS, logoUrl, faviconUrl, loginBannerUrl, isActive, createdAt, updatedAt) 
+           VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [
+            data.colorPalette,
+            data.typography,
+            data.buttons,
+            data.layout,
+            data.customCSS,
+            data.logoUrl,
+            data.faviconUrl,
+            data.loginBannerUrl,
+            data.isActive
+          ]
+        );
         
-        return this.transformThemeSettingsResponse(created);
+        const [createdRows] = await pool.query(
+          'SELECT * FROM theme_settings WHERE isActive = true LIMIT 1'
+        );
+        
+        return this.transformThemeSettingsResponse((createdRows as any[])[0]);
       }
     } catch (error) {
       console.error('Error updating theme settings:', error);
@@ -151,53 +188,51 @@ class ThemeService {
    */
   async resetThemeSettings(): Promise<ThemeSettings> {
     try {
-      // Check if ThemeSettings table exists
+      // Check if theme_settings table exists
       let tableExists = true;
       try {
-        await prisma.$queryRaw`SELECT 1 FROM ThemeSettings LIMIT 1`;
+        await pool.query('SELECT 1 FROM theme_settings LIMIT 1');
       } catch (error) {
-        console.log('ThemeSettings table does not exist yet');
+        console.log('theme_settings table does not exist yet');
         tableExists = false;
       }
       
       if (tableExists) {
         // Find existing settings
-        const existingSettings = await prisma.themeSettings.findFirst({
-          where: { isActive: true }
-        });
+        const [existingRows] = await pool.query(
+          'SELECT * FROM theme_settings WHERE isActive = true LIMIT 1'
+        );
+
+        const existingSettings = (existingRows as any[])[0];
 
         if (existingSettings) {
           // Update with default values
-          const data = {
-            colorPalette: JSON.stringify(defaultThemeSettings.colorPalette),
-            typography: JSON.stringify(defaultThemeSettings.typography),
-            buttons: JSON.stringify(defaultThemeSettings.buttons),
-            layout: JSON.stringify(defaultThemeSettings.layout),
-            customCSS: null,
-            logoUrl: null,
-            faviconUrl: null,
-            loginBannerUrl: null,
-          };
-
-          await prisma.themeSettings.update({
-            where: { id: existingSettings.id },
-            data
-          });
+          await pool.query(
+            `UPDATE theme_settings 
+             SET colorPalette = ?, typography = ?, buttons = ?, layout = ?, 
+                 customCSS = NULL, logoUrl = NULL, faviconUrl = NULL, loginBannerUrl = NULL, 
+                 updatedAt = NOW() 
+             WHERE id = ?`,
+            [
+              JSON.stringify(defaultThemeSettings.colorPalette),
+              JSON.stringify(defaultThemeSettings.typography),
+              JSON.stringify(defaultThemeSettings.buttons),
+              JSON.stringify(defaultThemeSettings.layout),
+              existingSettings.id
+            ]
+          );
         } else {
           // Create default settings if none exist
-          await prisma.themeSettings.create({
-            data: {
-              colorPalette: JSON.stringify(defaultThemeSettings.colorPalette),
-              typography: JSON.stringify(defaultThemeSettings.typography),
-              buttons: JSON.stringify(defaultThemeSettings.buttons),
-              layout: JSON.stringify(defaultThemeSettings.layout),
-              customCSS: null,
-              logoUrl: null,
-              faviconUrl: null,
-              loginBannerUrl: null,
-              isActive: true,
-            }
-          });
+          await pool.query(
+            `INSERT INTO theme_settings (id, colorPalette, typography, buttons, layout, customCSS, logoUrl, faviconUrl, loginBannerUrl, isActive, createdAt, updatedAt) 
+             VALUES (UUID(), ?, ?, ?, ?, NULL, NULL, NULL, NULL, true, NOW(), NOW())`,
+            [
+              JSON.stringify(defaultThemeSettings.colorPalette),
+              JSON.stringify(defaultThemeSettings.typography),
+              JSON.stringify(defaultThemeSettings.buttons),
+              JSON.stringify(defaultThemeSettings.layout)
+            ]
+          );
         }
       }
 

@@ -2,35 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 /**
- * GET /api/legal
- * Public route to fetch all published legal documents
+ * GET /api/legal/[slug]
+ * Public route to fetch a specific published legal document by slug
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest, { params }: { params: { slug: string } }) {
   try {
-    const documents = await prisma.legalDocument.findMany({
-      where: {
-        isPublished: true, // Only return published documents
-      },
-      orderBy: {
-        type: 'asc', // Order by document type
-      },
-      select: {
-        id: true,
-        type: true,
-        title: true,
-        slug: true,
-        version: true,
-        effectiveDate: true,
-        updatedAt: true,
-        // Don't include content to reduce payload size
-      },
-    });
+    const [rows] = await pool.query(
+      `SELECT id, type, title, slug, content, version, effectiveDate, updatedAt 
+       FROM legal_documents 
+       WHERE slug = ? AND isPublished = true`,
+      [params.slug]
+    );
 
-    return NextResponse.json(documents);
+    const document = (rows as any[])[0];
+
+    if (!document) {
+      return NextResponse.json(
+        { error: 'Document not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(document);
   } catch (error) {
-    console.error('Error fetching legal documents:', error);
+    console.error('Error fetching legal document:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch legal documents' },
+      { error: 'Failed to fetch legal document' },
       { status: 500 }
     );
   }

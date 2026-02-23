@@ -38,12 +38,12 @@ export async function GET(req: NextRequest) {
       }
       
       // Check hotel ownership
-      const [vendorHotels] = await pool.query(
+      const [vendorHotelRows] = await pool.query(
         'SELECT id FROM hotels WHERE vendorId = ?',
         [vendorId]
       );
       
-      const vendorHotelIds = (vendorHotels as any[]).map(h => String(h.id));
+      const vendorHotelIds = (vendorHotelRows as any[]).map(h => String(h.id));
       if (!vendorHotelIds.includes(String(hotelId))) {
         return NextResponse.json({ error: 'You do not have permission to access rooms for this hotel' }, { status: 403 });
       }
@@ -122,30 +122,39 @@ export async function POST(req: NextRequest) {
       const roomNumbersString = JSON.stringify(roomData.roomNumbers);
       
       // Create the room
-      const newRoom = await prisma.room.create({
-        data: {
-          name: roomData.name,
-          type: roomData.type,
-          description: roomData.description,
-          capacity: roomData.capacity,
-          pricePerNight: roomData.pricePerNight,
-          discountedPrice: roomData.discountedPrice,
-          status: roomData.status,
-          hotelId: roomData.hotelId,
-          images: imagesString,
-          roomNumbers: roomNumbersString,
-        },
-      });
+      const [roomResult] = await pool.query(
+        `INSERT INTO rooms (id, name, type, description, capacity, pricePerNight, discountedPrice, status, hotelId, images, roomNumbers, createdAt, updatedAt) 
+         VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [
+          roomData.name,
+          roomData.type,
+          roomData.description,
+          roomData.capacity,
+          roomData.pricePerNight,
+          roomData.discountedPrice,
+          roomData.status,
+          roomData.hotelId,
+          imagesString,
+          roomNumbersString
+        ]
+      );
+
+      const roomId = (roomResult as any).insertId;
+
+      // Get the created room
+      const [newRoomRows] = await pool.query(
+        'SELECT * FROM rooms WHERE id = ?',
+        [roomId]
+      );
+      const newRoom = (newRoomRows as any[])[0];
       
       // Add amenities if provided
       if (roomData.amenities && roomData.amenities.length > 0) {
         for (const amenityId of roomData.amenities) {
-          await prisma.roomAmenity.create({
-            data: {
-              roomId: newRoom.id,
-              amenityId,
-            },
-          });
+          await pool.query(
+            'INSERT INTO room_amenities (id, roomId, amenityId, createdAt, updatedAt) VALUES (UUID(), ?, ?, NOW(), NOW())',
+            [newRoom.id, amenityId]
+          );
         }
       }
       
@@ -178,10 +187,10 @@ export async function POST(req: NextRequest) {
       
       // Update with room numbers if provided
       if (data.roomNumbers && Array.isArray(data.roomNumbers)) {
-        await prisma.room.update({
-          where: { id: room.id },
-          data: { roomNumbers: JSON.stringify(data.roomNumbers) }
-        });
+        await pool.query(
+          'UPDATE rooms SET roomNumbers = ?, updatedAt = NOW() WHERE id = ?',
+          [JSON.stringify(data.roomNumbers), room.id]
+        );
         
         room.roomNumbers = data.roomNumbers;
       }

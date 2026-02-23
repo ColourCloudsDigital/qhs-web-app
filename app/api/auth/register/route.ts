@@ -30,14 +30,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-      include: {} // Add empty include to satisfy type requirements
-    });
+    const [existingRows] = await pool.query(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
 
-    if (existingUser) {
+    if ((existingRows as any[]).length > 0) {
       return NextResponse.json(
         { message: "Email already in use" },
         { status: 400 }
@@ -57,7 +55,7 @@ export async function POST(request: NextRequest) {
     // If vendor, get the free plan for default assignment
     let freePlan = null;
     const [freePlanRows] = await pool.query(
-      `SELECT * FROM subscription_plans WHERE name = ? AND isActive = 1 LIMIT 1`,
+      'SELECT * FROM subscription_plans WHERE name = ? AND isActive = 1 LIMIT 1',
       ['Free Plan']
     );
     freePlan = (freePlanRows as any[])[0] || null;
@@ -65,7 +63,7 @@ export async function POST(request: NextRequest) {
     if (!freePlan) {
       // Fallback to the cheapest plan if Free Plan doesn't exist
       const [cheapestPlanRows] = await pool.query(
-        `SELECT * FROM subscription_plans WHERE isActive = 1 ORDER BY price ASC LIMIT 1`
+        'SELECT * FROM subscription_plans WHERE isActive = 1 ORDER BY price ASC LIMIT 1'
       );
       freePlan = (cheapestPlanRows as any[])[0] || null;
     }
@@ -74,39 +72,52 @@ export async function POST(request: NextRequest) {
       console.warn("No active subscription plan found. Creating vendor without a plan.");
     }
 
-    // Create user in a transaction to ensure all related records are created
-    const result = await prisma.$transaction(async () => {
+    // Start transaction
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
       // Create the base user with verification fields
-      const user = await prisma.user.create({
-        data: {
-          name,
-          email,
-          password: hashedPassword,
-          role: userRole,
-          // Add verification fields
-          verificationToken,
-          verificationExpires,
-        },
-      });
+      const [userResult] = await connection.query(
+        `INSERT INTO users (id, name, email, password, role, verificationToken, verificationExpires, createdAt, updatedAt) 
+         VALUES (UUID(), ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [name, email, hashedPassword, userRole, verificationToken, verificationExpires]
+      );
+
+      const userId = (userResult as any).insertId;
+
+      // Get the created user
+      const [userRows] = await connection.query(
+        'SELECT * FROM users WHERE id = ?',
+        [userId]
+      );
+      const user = (userRows as any[])[0];
 
       // Create vendor record with the provided hotel information
       const now = new Date();
       const endDate = freePlan ? calculateEndDate(now, freePlan.billingCycle) : undefined;
       
-      await prisma.query(
-        'INSERT INTO vendors (userId, companyName, businessAddress, businessPhone, taxId, subscriptionPlanId, subscriptionStatus, subscriptionStartDate, subscriptionEndDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      await connection.query(
+        `INSERT INTO vendors (id, userId, companyName, businessAddress, businessPhone, taxId, subscriptionPlanId, subscriptionStatus, subscriptionStartDate, subscriptionEndDate, createdAt, updatedAt) 
+         VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [user.id, companyName || name, businessAddress, businessPhone, taxId, freePlan?.id, 'active', now, endDate]
       );
 
-      return user;
-    });
+      await connection.commit();
+      connection.release();
 
-    // Send welcome email
-    await emailService.sendWelcomeEmail(result.email, result.name);
+      // Send welcome email
+      await emailService.sendWelcomeEmail(user.email, user.name);
 
-    // Return the created user (without password)
-    const { password: _, ...userWithoutPassword } = result;
-    return NextResponse.json(userWithoutPassword, { status: 201 });
+      // Return the created user (without password)
+      const { password: _, ...userWithoutPassword } = user;
+      return NextResponse.json(userWithoutPassword, { status: 201 });
+    } catch (error) {
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(

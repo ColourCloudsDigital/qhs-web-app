@@ -12,10 +12,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is staff
-    const staff = await prisma.staff.findUnique({
-      where: { userId: session.user.id },
-      include: { hotel: true }
-    })
+    const [staffRows] = await pool.query(
+      `SELECT s.*, h.name as hotelName, u.name as userName
+       FROM staff s 
+       JOIN hotels h ON s.hotelId = h.id 
+       JOIN users u ON s.userId = u.id
+       WHERE s.userId = ?`,
+      [session.user.id]
+    );
+
+    const staff = (staffRows as any[])[0];
 
     if (!staff) {
       return NextResponse.json({ error: 'Staff access required' }, { status: 403 })
@@ -40,7 +46,7 @@ export async function GET(request: NextRequest) {
         type: 'occupancy',
         description: 'Room occupancy analysis for the past week',
         dateRange: '2024-01-15 to 2024-01-21',
-        generatedBy: staff.user.name || 'Staff',
+        generatedBy: staff.userName || 'Staff',
         createdAt: '2024-01-22T08:00:00Z',
         status: 'generated',
         fileUrl: '/reports/occupancy-week-3.pdf'
@@ -61,7 +67,7 @@ export async function GET(request: NextRequest) {
         type: 'payment',
         description: 'Payment success rates and transaction analysis',
         dateRange: '2024-01-01 to 2024-01-21',
-        generatedBy: staff.user.name || 'Staff',
+        generatedBy: staff.userName || 'Staff',
         createdAt: '2024-01-22T14:15:00Z',
         status: 'failed'
       }

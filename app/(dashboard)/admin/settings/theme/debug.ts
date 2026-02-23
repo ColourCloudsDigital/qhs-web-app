@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     let tableExists = false;
     try {
       // This query will throw an error if the table doesn't exist
-      await prisma.$queryRaw`SELECT 1 FROM ThemeSettings LIMIT 1`;
+      await pool.query('SELECT 1 FROM ThemeSettings LIMIT 1');
       tableExists = true;
     } catch (error) {
       console.error('ThemeSettings table might not exist:', error);
@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
     // Try to get all theme settings records
     let themeSettings: any[] = [];
     if (tableExists) {
-      themeSettings = await prisma.themeSettings.findMany();
+      const [rows] = await pool.query('SELECT * FROM ThemeSettings');
+      themeSettings = rows as any[];
     }
     
     return NextResponse.json({
@@ -66,17 +67,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Create a bare minimum theme settings record
-    const result = await prisma.themeSettings.create({
-      data: {
-        colorPalette: JSON.stringify({ primary: '#000000' }),
-        typography: JSON.stringify({ fontFamily: 'Arial' }),
-        buttons: JSON.stringify({ borderRadius: '0' }),
-        layout: JSON.stringify({ containerWidth: '100%' }),
-        isActive: true
-      }
-    });
+    const [result] = await pool.query(
+      `INSERT INTO ThemeSettings (colorPalette, typography, buttons, layout, isActive, createdAt, updatedAt) 
+       VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
+        JSON.stringify({ primary: '#000000' }),
+        JSON.stringify({ fontFamily: 'Arial' }),
+        JSON.stringify({ borderRadius: '0' }),
+        JSON.stringify({ containerWidth: '100%' }),
+        true
+      ]
+    );
 
-    return NextResponse.json({ success: true, id: result.id });
+    return NextResponse.json({ success: true, id: (result as any).insertId });
   } catch (error) {
     console.error('Debug create error:', error);
     return NextResponse.json({
@@ -97,9 +100,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete all theme settings
-    const count = await prisma.themeSettings.deleteMany({});
+    const [result] = await pool.query('DELETE FROM ThemeSettings');
 
-    return NextResponse.json({ success: true, deletedCount: count.count });
+    return NextResponse.json({ success: true, deletedCount: (result as any).affectedRows });
   } catch (error) {
     console.error('Debug delete error:', error);
     return NextResponse.json({

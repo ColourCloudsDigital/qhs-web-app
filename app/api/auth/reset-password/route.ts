@@ -15,15 +15,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user with the token
-    const user = await prisma.user.findFirst({
-      where: {
-        // Use type assertion for new fields
-        resetToken: token,
-        resetExpires: {
-          gt: new Date(),
-        },
-      } as any,
-    });
+    const [rows] = await pool.query(
+      'SELECT id FROM users WHERE resetToken = ? AND resetExpires > NOW()',
+      [token]
+    );
+
+    const user = (rows as any[])[0];
 
     if (!user) {
       return NextResponse.json(
@@ -36,14 +33,10 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hash(password, 10);
 
     // Update user with new password
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        resetToken: null,
-        resetExpires: null,
-      } as any, // Type assertion
-    });
+    await pool.query(
+      'UPDATE users SET password = ?, resetToken = NULL, resetExpires = NULL, updatedAt = NOW() WHERE id = ?',
+      [hashedPassword, user.id]
+    );
 
     return NextResponse.json(
       { message: 'Password reset successfully' },

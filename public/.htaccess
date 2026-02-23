@@ -1,24 +1,32 @@
-# .htaccess for Next.js App Router on Hostinger VPS
-# This handles client-side routing and prevents 403 errors
+# .htaccess for Next.js on Hostinger VPS
+# This proxies requests to the Node.js server
 
 # Enable URL rewriting
 RewriteEngine On
 
-# Handle Next.js static files
+# Proxy all requests to Node.js server running on port 3000
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/_next/
-RewriteCond %{REQUEST_URI} !^/api/
-RewriteCond %{REQUEST_URI} !^/favicon\.ico$
-RewriteCond %{REQUEST_URI} !^/manifest\.json$
-RewriteCond %{REQUEST_URI} !^/service-worker\.js$
-RewriteCond %{REQUEST_URI} !^/offline\.html$
-RewriteCond %{REQUEST_URI} !^/assets/
-RewriteCond %{REQUEST_URI} !^/uploads/
-RewriteCond %{REQUEST_URI} !\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif)$
+RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
 
-# Redirect all other requests to index.html for client-side routing
-RewriteRule ^(.*)$ /index.html [L,QSA]
+# Security headers
+<IfModule mod_headers.c>
+    Header always append X-Frame-Options DENY
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Prevent access to sensitive files
+<Files ".env*">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "*.config.*">
+    Order allow,deny
+    Deny from all
+</Files>
 
 # Security headers
 <IfModule mod_headers.c>

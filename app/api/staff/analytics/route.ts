@@ -12,10 +12,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is staff
-    const staff = await prisma.staff.findUnique({
-      where: { userId: session.user.id },
-      include: { hotel: true }
-    })
+    const [staffRows] = await pool.query(
+      `SELECT s.*, h.name as hotelName 
+       FROM staff s 
+       JOIN hotels h ON s.hotelId = h.id 
+       WHERE s.userId = ?`,
+      [session.user.id]
+    );
+
+    const staff = (staffRows as any[])[0];
 
     if (!staff) {
       return NextResponse.json({ error: 'Staff access required' }, { status: 403 })
@@ -46,76 +51,67 @@ export async function GET(request: NextRequest) {
     }
 
     // Get revenue data
-    const payments = await prisma.payment.findMany({
-      where: {
-        OR: [
-          { vendorId: staff.hotelId },
-          { 
-            booking: {
-              hotelId: staff.hotelId
-            }
-          }
-        ],
-        status: 'completed',
-        createdAt: {
-          gte: startDate,
-          lte: endDate
-        }
-      },
-      include: {
-        booking: true
-      }
-    })
+    const [paymentRows] = await pool.query(
+      `SELECT p.*, b.hotelId 
+       FROM payments p 
+       LEFT JOIN bookings b ON p.bookingId = b.id 
+       WHERE (p.vendorId = ? OR b.hotelId = ?) 
+       AND p.status = 'completed' 
+       AND p.createdAt >= ? AND p.createdAt <= ?`,
+      [staff.hotelId, staff.hotelId, startDate, endDate]
+    );
 
     // Get booking data
-    const bookings = await prisma.booking.findMany({
-      where: {
-        hotelId: staff.hotelId,
-        createdAt: {
-          gte: startDate,
-          lte: endDate
-        }
-      }
-    })
+    const [bookingRows] = await pool.query(
+      `SELECT * FROM bookings 
+       WHERE hotelId = ? 
+       AND createdAt >= ? AND createdAt <= ?`,
+      [staff.hotelId, startDate, endDate]
+    );
 
     // Get room data for occupancy calculation
-    const rooms = await prisma.room.findMany({
-      where: { hotelId: staff.hotelId },
-      include: {
-        roomUnits: true
-      }
-    })
+    const [roomRows] = await pool.query(
+      'SELECT id FROM rooms WHERE hotelId = ?',
+      [staff.hotelId]
+    );
 
-    const totalRoomUnits = rooms.reduce((sum: number, room: any) => sum + room.roomUnits.length, 0)
+    const [roomUnitRows] = await pool.query(
+      `SELECT ru.* FROM room_units ru 
+       JOIN rooms r ON ru.roomId = r.id 
+       WHERE r.hotelId = ?`,
+      [staff.hotelId]
+    );
+
+    const totalRoomUnits = (roomUnitRows as any[]).length;
 
     // Process revenue data by date
-    const revenueByDate = new Map()
-    const bookingsByDate = new Map()
+    const revenueByDate = new Map();
+    const bookingsByDate = new Map();
 
-    payments.forEach((payment: any) => {
-      const date = payment.createdAt.toISOString().split('T')[0]
-      const current = revenueByDate.get(date) || 0
-      revenueByDate.set(date, current + payment.amount)
-    })
+    (paymentRows as any[]).forEach((payment: any) => {
+      const date = payment.createdAt.toISOString().split('T')[0];
+      const current = revenueByDate.get(date) || 0;
+      revenueByDate.set(date, current + payment.amount);
+    });
 
-    bookings.forEach((booking: any) => {
-      const date = booking.createdAt.toISOString().split('T')[0]
-      const current = bookingsByDate.get(date) || 0
-      bookingsByDate.set(date, current + 1)
-    })
+    (bookingRows as any[]).forEach((booking: any) => {
+      const date = booking.createdAt.toISOString().split('T')[0];
+      const current = bookingsByDate.get(date) || 0;
+      bookingsByDate.set(date, current + 1);
+    });
 
     // Generate date range array
-    const dateArray = []
-    const currentDate = new Date(startDate)
+    const dateArray = [];
+    const currentDate = new Date(startDate);
     
     while (currentDate <= endDate) {
-      const dateStr = currentDate.toISOString().split('T')[0]
+      const dateStr = currentDate.toISOString().split('T')[0];
       dateArray.push({
         date: dateStr,
         revenue: revenueByDate.get(dateStr) || 0,
         bookings: bookingsByDate.get(dateStr) || 0
-      })
-      currentDate.setDate(currentDate.getDate() + 1)
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     // Mock occupancy data (in a real app, you'd calculate this from actual bookings and room availability)
@@ -124,7 +120,7 @@ export async function GET(request: NextRequest) {
       occupancy: Math.floor(Math.random() * 40) + 60, // Mock data between 60-100%
       available: Math.floor(Math.random() * 40) + 10,
       occupied: Math.floor(Math.random() * 80) + 20
-    }))
+    }));
 
     return NextResponse.json({
       revenue: dateArray,

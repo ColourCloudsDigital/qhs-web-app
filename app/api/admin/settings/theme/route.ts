@@ -75,10 +75,10 @@ const defaultThemeSettings = {
 // Check if ThemeSettings table exists
 async function checkThemeSettingsTable() {
   try {
-    await prisma.$queryRaw`SELECT 1 FROM ThemeSettings LIMIT 1`;
+    await pool.query('SELECT 1 FROM theme_settings LIMIT 1');
     return true;
   } catch (error) {
-    console.log('ThemeSettings table does not exist yet');
+    console.log('theme_settings table does not exist yet');
     return false;
   }
 }
@@ -90,17 +90,16 @@ async function checkThemeSettingsTable() {
 export async function GET(request: NextRequest) {
   try {
     // Get theme settings from database
-    const [settings] = await pool.query(`
-      SELECT * FROM theme_settings LIMIT 1
-    `);
+    const [rows] = await pool.query('SELECT * FROM theme_settings LIMIT 1');
+    const settings = (rows as any[])[0];
     
     // If no settings exist, create default settings
-    if (!settings || (settings as any[]).length === 0) {
+    if (!settings) {
       const [result] = await pool.query(`
         INSERT INTO theme_settings (
           id, activeTheme, fontFamily, primaryColor, secondaryColor,
           accentColor, textColor, backgroundColor, buttonStyle, cardStyle,
-          darkModeEnabled
+          darkModeEnabled, createdAt, updatedAt
         ) VALUES (
           UUID(), 
           'default',
@@ -112,36 +111,36 @@ export async function GET(request: NextRequest) {
           '#FFFFFF',
           'rounded',
           'standard',
-          TRUE
+          TRUE,
+          NOW(),
+          NOW()
         )
       `);
       
-      const [newSettings] = await pool.query(`
-        SELECT * FROM theme_settings LIMIT 1
-      `);
+      const [newRows] = await pool.query('SELECT * FROM theme_settings LIMIT 1');
+      const newSettings = (newRows as any[])[0];
       
-      return NextResponse.json((newSettings as any[])[0]);
+      return NextResponse.json(newSettings);
     }
     
     // Parse any JSON fields if needed
-    const themeSettings = (settings as any[])[0];
-    if (themeSettings.headerStyle) {
+    if (settings.headerStyle) {
       try {
-        themeSettings.headerStyle = JSON.parse(themeSettings.headerStyle);
+        settings.headerStyle = JSON.parse(settings.headerStyle);
       } catch (e) {
-        themeSettings.headerStyle = null;
+        settings.headerStyle = null;
       }
     }
     
-    if (themeSettings.footerStyle) {
+    if (settings.footerStyle) {
       try {
-        themeSettings.footerStyle = JSON.parse(themeSettings.footerStyle);
+        settings.footerStyle = JSON.parse(settings.footerStyle);
       } catch (e) {
-        themeSettings.footerStyle = null;
+        settings.footerStyle = null;
       }
     }
     
-    return NextResponse.json(themeSettings);
+    return NextResponse.json(settings);
   } catch (error) {
     console.error('Error fetching theme settings:', error);
     return NextResponse.json(
@@ -179,16 +178,15 @@ export async function PUT(request: NextRequest) {
     }
     
     // Get theme settings
-    const [settings] = await pool.query(`
-      SELECT * FROM theme_settings LIMIT 1
-    `);
+    const [rows] = await pool.query('SELECT * FROM theme_settings LIMIT 1');
+    const settings = (rows as any[])[0];
     
     // Update or create settings
-    if (settings && (settings as any[]).length > 0) {
-      const settingsId = (settings as any[])[0].id;
+    if (settings) {
+      const settingsId = settings.id;
       
       // Build UPDATE query dynamically
-      let updateQuery = `UPDATE theme_settings SET `;
+      let updateQuery = 'UPDATE theme_settings SET ';
       const updateValues = [];
       const fieldsToUpdate = [
         'activeTheme', 'fontFamily', 'primaryColor', 'secondaryColor',
@@ -210,12 +208,13 @@ export async function PUT(request: NextRequest) {
       
       await pool.query(updateQuery, updateValues);
       
-      const [updatedSettings] = await pool.query(`
-        SELECT * FROM theme_settings WHERE id = ?
-      `, [settingsId]);
+      const [updatedRows] = await pool.query(
+        'SELECT * FROM theme_settings WHERE id = ?',
+        [settingsId]
+      );
       
       // Parse JSON fields for response
-      const themeSettings = (updatedSettings as any[])[0];
+      const themeSettings = (updatedRows as any[])[0];
       if (themeSettings.headerStyle) {
         try {
           themeSettings.headerStyle = JSON.parse(themeSettings.headerStyle);
@@ -250,19 +249,20 @@ export async function PUT(request: NextRequest) {
         }
       }
       
+      fields.push('createdAt', 'updatedAt');
+      placeholders.push('NOW()', 'NOW()');
+      
       const query = `
         INSERT INTO theme_settings (${fields.join(', ')})
         VALUES (${placeholders.join(', ')})
       `;
       
-      const [result] = await pool.query(query, values);
+      await pool.query(query, values);
       
-      const [newSettings] = await pool.query(`
-        SELECT * FROM theme_settings LIMIT 1
-      `);
+      const [newRows] = await pool.query('SELECT * FROM theme_settings LIMIT 1');
       
       // Parse JSON fields for response
-      const themeSettings = (newSettings as any[])[0];
+      const themeSettings = (newRows as any[])[0];
       if (themeSettings.headerStyle) {
         try {
           themeSettings.headerStyle = JSON.parse(themeSettings.headerStyle);

@@ -22,7 +22,6 @@ export async function GET(
     const hotelId = params.id;
 
     try {
-      // Use direct MySQL pool query instead of Prisma
       // First get the hotel basic info
       const [hotelRows] = await pool.query(
         `SELECT h.*, u.name as vendorName

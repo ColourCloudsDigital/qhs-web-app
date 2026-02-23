@@ -20,6 +20,9 @@
 # compression files
 *.zip
 
+# others
+*.sql
+
 # misc
 .DS_Store
 *.pem
@@ -45,3 +48,6 @@ next-env.d.ts
 public/uploads/*
 !public/uploads/.gitkeep
 node_modules
+
+# backup files
+public.bak/

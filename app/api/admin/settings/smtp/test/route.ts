@@ -36,14 +36,11 @@ export async function POST(request: NextRequest) {
     
     // If no password provided, try to fetch existing password from DB
     if (!actualPassword) {
-      const existingConfig = await prisma.sMTPConfiguration.findFirst({
-        where: {
-          isDefault: true,
-        },
-        select: {
-          password: true
-        }
-      });
+      const [rows] = await pool.query(
+        'SELECT password FROM smtp_configurations WHERE isDefault = true LIMIT 1'
+      );
+      
+      const existingConfig = (rows as any[])[0];
       
       if (existingConfig) {
         actualPassword = existingConfig.password;

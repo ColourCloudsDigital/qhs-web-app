@@ -37,11 +37,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    const document = await prisma.legalDocument.findUnique({
-      where: {
-        id: params.id,
-      },
-    });
+    const [rows] = await pool.query(
+      'SELECT * FROM legal_documents WHERE id = ?',
+      [params.id]
+    );
+
+    const document = (rows as any[])[0];
 
     if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
@@ -75,25 +76,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const validatedData = legalDocumentUpdateSchema.parse(body);
 
     // Check if the document exists
-    const existingDocument = await prisma.legalDocument.findUnique({
-      where: {
-        id: params.id,
-      },
-    });
+    const [existingRows] = await pool.query(
+      'SELECT * FROM legal_documents WHERE id = ?',
+      [params.id]
+    );
+
+    const existingDocument = (existingRows as any[])[0];
 
     if (!existingDocument) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
     // Check if slug is unique (except for this document)
-    const slugExists = await prisma.legalDocument.findFirst({
-      where: {
-        slug: validatedData.slug,
-        id: { not: params.id },
-      },
-    });
+    const [slugRows] = await pool.query(
+      'SELECT id FROM legal_documents WHERE slug = ? AND id != ?',
+      [validatedData.slug, params.id]
+    );
 
-    if (slugExists) {
+    if ((slugRows as any[]).length > 0) {
       return NextResponse.json(
         { error: 'A document with this slug already exists' },
         { status: 400 }
@@ -101,21 +101,30 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Update the document
-    const updatedDocument = await prisma.legalDocument.update({
-      where: {
-        id: params.id,
-      },
-      data: {
-        type: validatedData.type,
-        title: validatedData.title,
-        slug: validatedData.slug,
-        content: validatedData.content,
-        version: validatedData.version,
-        isPublished: validatedData.isPublished,
-        effectiveDate: new Date(validatedData.effectiveDate),
-        updatedAt: new Date(),
-      },
-    });
+    await pool.query(
+      `UPDATE legal_documents 
+       SET type = ?, title = ?, slug = ?, content = ?, version = ?, 
+           isPublished = ?, effectiveDate = ?, updatedAt = NOW()
+       WHERE id = ?`,
+      [
+        validatedData.type,
+        validatedData.title,
+        validatedData.slug,
+        validatedData.content,
+        validatedData.version,
+        validatedData.isPublished,
+        new Date(validatedData.effectiveDate),
+        params.id
+      ]
+    );
+
+    // Get updated document
+    const [updatedRows] = await pool.query(
+      'SELECT * FROM legal_documents WHERE id = ?',
+      [params.id]
+    );
+
+    const updatedDocument = (updatedRows as any[])[0];
 
     return NextResponse.json(updatedDocument);
   } catch (error) {
@@ -147,22 +156,22 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if the document exists
-    const existingDocument = await prisma.legalDocument.findUnique({
-      where: {
-        id: params.id,
-      },
-    });
+    const [existingRows] = await pool.query(
+      'SELECT * FROM legal_documents WHERE id = ?',
+      [params.id]
+    );
+
+    const existingDocument = (existingRows as any[])[0];
 
     if (!existingDocument) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
     // Delete the document
-    await prisma.legalDocument.delete({
-      where: {
-        id: params.id,
-      },
-    });
+    await pool.query(
+      'DELETE FROM legal_documents WHERE id = ?',
+      [params.id]
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

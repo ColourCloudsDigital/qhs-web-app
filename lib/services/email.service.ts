@@ -385,11 +385,11 @@ class EmailService {
    */
   private async getSmtpConfig(): Promise<SMTPConfig | null> {
     try {
-      const config = await prisma.sMTPConfiguration.findFirst({
-        where: {
-          isDefault: true,
-        },
-      });
+      const [rows] = await pool.query(
+        'SELECT * FROM smtp_configurations WHERE isDefault = true LIMIT 1'
+      );
+
+      const config = (rows as any[])[0];
 
       if (!config) {
         console.error('No SMTP configuration found');

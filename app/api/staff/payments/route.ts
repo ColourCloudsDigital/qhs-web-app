@@ -12,10 +12,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is staff
-    const staff = await prisma.staff.findUnique({
-      where: { userId: session.user.id },
-      include: { hotel: true }
-    })
+    const [staffRows] = await pool.query(
+      `SELECT s.*, h.name as hotelName 
+       FROM staff s 
+       JOIN hotels h ON s.hotelId = h.id 
+       WHERE s.userId = ?`,
+      [session.user.id]
+    );
+
+    const staff = (staffRows as any[])[0];
 
     if (!staff) {
       return NextResponse.json({ error: 'Staff access required' }, { status: 403 })
@@ -26,37 +31,30 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    const whereClause: any = {
-      OR: [
-        { vendorId: staff.hotelId },
-        { 
-          booking: {
-            hotelId: staff.hotelId
-          }
-        }
-      ]
-    }
+    let whereClause = `(p.vendorId = ? OR b.hotelId = ?)`;
+    let queryParams = [staff.hotelId, staff.hotelId];
 
     if (status && status !== 'all') {
-      whereClause.status = status
+      whereClause += ` AND p.status = ?`;
+      queryParams.push(status);
     }
 
-    const payments = await prisma.payment.findMany({
-      where: whereClause,
-      include: {
-        booking: {
-          include: {
-            customer: true
-          }
-        },
-        customer: true
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset
-    })
+    const [paymentRows] = await pool.query(
+      `SELECT p.*, 
+              b.id as bookingReference,
+              c1.firstName as customerFirstName, c1.lastName as customerLastName,
+              c2.firstName as bookingCustomerFirstName, c2.lastName as bookingCustomerLastName
+       FROM payments p 
+       LEFT JOIN bookings b ON p.bookingId = b.id 
+       LEFT JOIN customers c1 ON p.customer_id = c1.id
+       LEFT JOIN customers c2 ON b.customerId = c2.id
+       WHERE ${whereClause}
+       ORDER BY p.createdAt DESC 
+       LIMIT ? OFFSET ?`,
+      [...queryParams, limit, offset]
+    );
 
-    const formattedPayments = payments.map((payment: any) => ({
+    const formattedPayments = (paymentRows as any[]).map((payment: any) => ({
       id: payment.id,
       bookingId: payment.bookingId,
       amount: payment.amount,
@@ -71,17 +69,23 @@ export async function GET(request: NextRequest) {
       subscriptionPlanId: payment.subscription_plan_id,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
-      customerName: payment.customer?.firstName && payment.customer?.lastName 
-        ? `${payment.customer.firstName} ${payment.customer.lastName}`
-        : payment.booking?.customer?.firstName && payment.booking?.customer?.lastName
-        ? `${payment.booking.customer.firstName} ${payment.booking.customer.lastName}`
+      customerName: payment.customerFirstName && payment.customerLastName 
+        ? `${payment.customerFirstName} ${payment.customerLastName}`
+        : payment.bookingCustomerFirstName && payment.bookingCustomerLastName
+        ? `${payment.bookingCustomerFirstName} ${payment.bookingCustomerLastName}`
         : null,
-      bookingReference: payment.booking?.id
-    }))
+      bookingReference: payment.bookingReference
+    }));
 
-    const total = await prisma.payment.count({
-      where: whereClause
-    })
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) as total 
+       FROM payments p 
+       LEFT JOIN bookings b ON p.bookingId = b.id 
+       WHERE ${whereClause}`,
+      queryParams.slice(0, -2) // Remove limit and offset from count query
+    );
+
+    const total = (countRows as any[])[0].total;
 
     return NextResponse.json({
       payments: formattedPayments,

@@ -43,11 +43,13 @@ export const subscriptionService = {
   async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     try {
       // Get all active subscription plans
-      const plans = await prisma.query(`
+      const [rows] = await pool.query(`
         SELECT * FROM subscription_plans 
         WHERE isActive = TRUE 
         ORDER BY price ASC
-      `) as MySQLRow[];
+      `);
+
+      const plans = rows as MySQLRow[];
 
       // Transform the subscription plans data
       const transformedPlans = plans.map((plan: MySQLRow) => {
@@ -88,11 +90,13 @@ export const subscriptionService = {
    */
   async getModules(): Promise<Module[]> {
     try {
-      const modules = await prisma.query(`
+      const [rows] = await pool.query(`
         SELECT * FROM modules 
         WHERE isActive = TRUE 
         ORDER BY name ASC
-      `) as MySQLRow[];
+      `);
+
+      const modules = rows as MySQLRow[];
 
       return modules.map((module: MySQLRow) => ({
         id: module.id,
@@ -115,9 +119,11 @@ export const subscriptionService = {
   async getSubscriptionPlanById(id: string) {
     try {
       // Get the plan
-      const plans = await prisma.query(`
+      const [rows] = await pool.query(`
         SELECT * FROM subscription_plans WHERE id = ? LIMIT 1
-      `, [id]) as MySQLRow[];
+      `, [id]);
+      
+      const plans = rows as MySQLRow[];
       
       if (!plans || plans.length === 0) {
         return null;
@@ -156,12 +162,14 @@ export const subscriptionService = {
   async getVendorSubscription(vendorId: string) {
     try {
       // Get vendor with subscription plan
-      const vendors = await prisma.query(`
+      const [rows] = await pool.query(`
         SELECT v.*, sp.* 
         FROM vendors v
         LEFT JOIN subscription_plans sp ON v.subscriptionPlanId = sp.id
         WHERE v.id = ? LIMIT 1
-      `, [vendorId]) as MySQLRow[];
+      `, [vendorId]);
+      
+      const vendors = rows as MySQLRow[];
       
       if (!vendors || vendors.length === 0 || !vendors[0].subscriptionPlanId) {
         return null;
@@ -226,11 +234,17 @@ export const subscriptionService = {
     
     try {
       // Begin transaction
-      return await prisma.$transaction(async () => {
+      const connection = await pool.getConnection();
+      
+      try {
+        await connection.beginTransaction();
+
         // Verify the plan exists
-        const plans = await prisma.query(`
+        const [planRows] = await connection.query(`
           SELECT * FROM subscription_plans WHERE id = ? LIMIT 1
-        `, [planId]) as MySQLRow[];
+        `, [planId]);
+
+        const plans = planRows as MySQLRow[];
 
         if (!plans || plans.length === 0) {
           throw new Error('Subscription plan not found');
@@ -260,6 +274,8 @@ export const subscriptionService = {
           updateValues.push(status);
         }
         
+        updateFields.push('updatedAt = NOW()');
+        
         // Add vendor ID at the end of values for WHERE clause
         updateValues.push(vendorId);
         
@@ -269,27 +285,35 @@ export const subscriptionService = {
           WHERE id = ?
         `;
         
-        await prisma.query(updateQuery, updateValues);
+        await connection.query(updateQuery, updateValues);
 
         // If there's a payment reference, log the subscription payment
         if (paymentReference) {
-          await prisma.query(`
+          await connection.query(`
             INSERT INTO subscription_payments 
-            (vendorId, subscriptionPlanId, amount, paymentReference, status, paymentDate)
-            VALUES (?, ?, ?, ?, 'COMPLETED', NOW())
+            (id, vendorId, subscriptionPlanId, amount, paymentReference, status, paymentDate, createdAt, updatedAt)
+            VALUES (UUID(), ?, ?, ?, ?, 'COMPLETED', NOW(), NOW(), NOW())
           `, [vendorId, planId, parseFloat(plan.price), paymentReference]);
         }
 
+        await connection.commit();
+
         // Get updated vendor data
-        const updatedVendors = await prisma.query(`
+        const [updatedRows] = await pool.query(`
           SELECT v.*, sp.* 
           FROM vendors v
           LEFT JOIN subscription_plans sp ON v.subscriptionPlanId = sp.id
           WHERE v.id = ? LIMIT 1
-        `, [vendorId]) as MySQLRow[];
+        `, [vendorId]);
         
+        const updatedVendors = updatedRows as MySQLRow[];
         return updatedVendors[0];
-      });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
     } catch (error) {
       console.error(`Error updating subscription for vendor ${vendorId}:`, error);
       throw error;
@@ -328,19 +352,20 @@ export const subscriptionService = {
   async cancelSubscription(vendorId: string, reason?: string) {
     try {
       // Update vendor's subscription status
-      await prisma.query(`
+      await pool.query(`
         UPDATE vendors
         SET 
           subscriptionStatus = 'cancelled',
-          cancelReason = ?
+          cancelReason = ?,
+          updatedAt = NOW()
         WHERE id = ?
       `, [reason || null, vendorId]);
 
       // Log cancellation in subscription history
-      await prisma.query(`
+      await pool.query(`
         INSERT INTO subscription_history
-        (vendorId, action, notes, timestamp)
-        VALUES (?, 'CANCELLED', ?, NOW())
+        (id, vendorId, action, notes, timestamp, createdAt, updatedAt)
+        VALUES (UUID(), ?, 'CANCELLED', ?, NOW(), NOW(), NOW())
       `, [vendorId, reason || 'Subscription cancelled']);
 
       return { success: true };
@@ -355,13 +380,15 @@ export const subscriptionService = {
    */
   async getVendorPaymentHistory(vendorId: string) {
     try {
-      const payments = await prisma.query(`
+      const [rows] = await pool.query(`
         SELECT sp.*, p.name as planName
         FROM subscription_payments sp
         JOIN subscription_plans p ON sp.subscriptionPlanId = p.id
         WHERE sp.vendorId = ?
         ORDER BY sp.paymentDate DESC
-      `, [vendorId]) as MySQLRow[];
+      `, [vendorId]);
+
+      const payments = rows as MySQLRow[];
 
       return payments.map((payment: MySQLRow) => ({
         id: payment.id,

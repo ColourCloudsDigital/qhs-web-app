@@ -16,9 +16,11 @@ export async function GET() {
     }
     
     // Get flutterwave configuration from database
-    const flutterwaveConfig = await prisma.flutterwaveConfiguration.findFirst({
-      where: { isDefault: true }
-    });
+    const [rows] = await pool.query(
+      'SELECT * FROM flutterwave_configurations WHERE isDefault = true LIMIT 1'
+    );
+    
+    const flutterwaveConfig = (rows as any[])[0];
     
     // For security, don't return the secretKey and encryptionKey in the response
     if (flutterwaveConfig) {
@@ -53,30 +55,55 @@ export async function PUT(request: NextRequest) {
     // Check if we're setting this config as default
     if (data.isDefault) {
       // Reset isDefault on all other configs
-      await prisma.flutterwaveConfiguration.updateMany({
-        where: { isDefault: true },
-        data: { isDefault: false }
-      });
+      await pool.query(
+        'UPDATE flutterwave_configurations SET isDefault = false WHERE isDefault = true'
+      );
       
       // If Flutterwave is default, Paystack shouldn't be
-      await prisma.paystackConfiguration.updateMany({
-        where: { isDefault: true },
-        data: { isDefault: false }
-      });
+      await pool.query(
+        'UPDATE paystack_configurations SET isDefault = false WHERE isDefault = true'
+      );
     }
     
     // Get existing flutterwave configuration
-    const existingConfig = await prisma.flutterwaveConfiguration.findFirst();
+    const [existingRows] = await pool.query(
+      'SELECT * FROM flutterwave_configurations LIMIT 1'
+    );
+    const existingConfig = (existingRows as any[])[0];
     
     // Update or create configuration
     let updatedConfig;
     if (existingConfig) {
-      updatedConfig = await prisma.flutterwaveConfiguration.update({
-        where: { id: existingConfig.id },
-        data
-      });
+      const updateFields = Object.keys(data).map(key => `${key} = ?`).join(', ');
+      const updateValues = Object.values(data);
+      
+      await pool.query(
+        `UPDATE flutterwave_configurations SET ${updateFields}, updatedAt = NOW() WHERE id = ?`,
+        [...updateValues, existingConfig.id]
+      );
+      
+      // Get updated config
+      const [updatedRows] = await pool.query(
+        'SELECT * FROM flutterwave_configurations WHERE id = ?',
+        [existingConfig.id]
+      );
+      updatedConfig = (updatedRows as any[])[0];
     } else {
-      updatedConfig = await prisma.flutterwaveConfiguration.create({ data });
+      const fields = Object.keys(data).join(', ');
+      const placeholders = Object.keys(data).map(() => '?').join(', ');
+      const values = Object.values(data);
+      
+      const [result] = await pool.query(
+        `INSERT INTO flutterwave_configurations (${fields}, createdAt, updatedAt) VALUES (${placeholders}, NOW(), NOW())`,
+        values
+      );
+      
+      // Get created config
+      const [createdRows] = await pool.query(
+        'SELECT * FROM flutterwave_configurations WHERE id = ?',
+        [(result as any).insertId]
+      );
+      updatedConfig = (createdRows as any[])[0];
     }
     
     // For security, don't return the secretKey and encryptionKey in the response

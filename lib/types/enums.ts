@@ -1,4 +1,4 @@
-// Enum types previously imported from Prisma
+
 
 export enum UserRole {
   ADMIN = "ADMIN",

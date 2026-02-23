@@ -20,7 +20,7 @@ export const settingsService = {
   async getSMTPConfig(): Promise<SMTPConfiguration | null> {
     // Get the default SMTP configuration
     const [rows] = await pool.query(
-      `SELECT * FROM smtp_configurations WHERE isDefault = 1 LIMIT 1`
+      'SELECT * FROM smtp_configurations WHERE isDefault = 1 LIMIT 1'
     );
     
     const smtpConfig = (rows as any[])[0] || null;
@@ -39,28 +39,41 @@ export const settingsService = {
     fromName?: string;
   }): Promise<SMTPConfiguration> {
     // Check if there's an existing default configuration
-    const existingConfig = await prisma.sMTPConfiguration.findFirst({
-      where: {
-        isDefault: true,
-      },
-    });
+    const [existingRows] = await pool.query(
+      'SELECT * FROM smtp_configurations WHERE isDefault = true LIMIT 1'
+    );
+
+    const existingConfig = (existingRows as any[])[0];
 
     if (existingConfig) {
       // Update existing configuration
-      return await prisma.sMTPConfiguration.update({
-        where: {
-          id: existingConfig.id,
-        },
-        data,
-      });
+      await pool.query(
+        `UPDATE smtp_configurations 
+         SET host = ?, port = ?, username = ?, password = ?, fromEmail = ?, fromName = ?, updatedAt = NOW() 
+         WHERE id = ?`,
+        [data.host, data.port, data.username, data.password, data.fromEmail, data.fromName, existingConfig.id]
+      );
+
+      const [updatedRows] = await pool.query(
+        'SELECT * FROM smtp_configurations WHERE id = ?',
+        [existingConfig.id]
+      );
+
+      return (updatedRows as any[])[0];
     } else {
       // Create new configuration
-      return await prisma.sMTPConfiguration.create({
-        data: {
-          ...data,
-          isDefault: true,
-        },
-      });
+      const [result] = await pool.query(
+        `INSERT INTO smtp_configurations (id, host, port, username, password, fromEmail, fromName, isDefault, createdAt, updatedAt) 
+         VALUES (UUID(), ?, ?, ?, ?, ?, ?, true, NOW(), NOW())`,
+        [data.host, data.port, data.username, data.password, data.fromEmail, data.fromName]
+      );
+
+      const [newRows] = await pool.query(
+        'SELECT * FROM smtp_configurations WHERE id = ?',
+        [(result as any).insertId]
+      );
+
+      return (newRows as any[])[0];
     }
   },
 
@@ -105,7 +118,9 @@ export const settingsService = {
    * Get app settings
    */
   async getAppSettings() {
-    const settings = await prisma.appSetting.findFirst();
+    const [rows] = await pool.query('SELECT * FROM app_settings LIMIT 1');
+    const settings = (rows as any[])[0];
+    
     return settings || {
       defaultTaxRate: 5.0,
       defaultCommissionRate: 10.0,
@@ -123,22 +138,54 @@ export const settingsService = {
     isMaintenanceMode?: boolean;
     maintenanceMessage?: string;
   }) {
-    const existingSettings = await prisma.appSetting.findFirst();
+    const [existingRows] = await pool.query('SELECT * FROM app_settings LIMIT 1');
+    const existingSettings = (existingRows as any[])[0];
 
     if (existingSettings) {
-      return await prisma.appSetting.update({
-        where: { id: existingSettings.id },
-        data,
-      });
+      const updateFields = [];
+      const updateValues = [];
+      
+      if (data.defaultTaxRate !== undefined) {
+        updateFields.push('defaultTaxRate = ?');
+        updateValues.push(data.defaultTaxRate);
+      }
+      if (data.defaultCommissionRate !== undefined) {
+        updateFields.push('defaultCommissionRate = ?');
+        updateValues.push(data.defaultCommissionRate);
+      }
+      if (data.isMaintenanceMode !== undefined) {
+        updateFields.push('isMaintenanceMode = ?');
+        updateValues.push(data.isMaintenanceMode);
+      }
+      if (data.maintenanceMessage !== undefined) {
+        updateFields.push('maintenanceMessage = ?');
+        updateValues.push(data.maintenanceMessage);
+      }
+      
+      updateFields.push('updatedAt = NOW()');
+      updateValues.push(existingSettings.id);
+
+      await pool.query(
+        `UPDATE app_settings SET ${updateFields.join(', ')} WHERE id = ?`,
+        updateValues
+      );
+
+      const [updatedRows] = await pool.query('SELECT * FROM app_settings WHERE id = ?', [existingSettings.id]);
+      return (updatedRows as any[])[0];
     } else {
-      return await prisma.appSetting.create({
-        data: {
-          defaultTaxRate: data.defaultTaxRate ?? 5.0,
-          defaultCommissionRate: data.defaultCommissionRate ?? 10.0,
-          isMaintenanceMode: data.isMaintenanceMode ?? false,
-          maintenanceMessage: data.maintenanceMessage,
-        },
-      });
+      await pool.query(
+        `INSERT INTO app_settings (id, defaultTaxRate, defaultCommissionRate, isMaintenanceMode, maintenanceMessage, createdAt, updatedAt) 
+         VALUES (UUID(), ?, ?, ?, ?, NOW(), NOW())`,
+        [
+          data.defaultTaxRate ?? 5.0,
+          data.defaultCommissionRate ?? 10.0,
+          data.isMaintenanceMode ?? false,
+          data.maintenanceMessage
+        ]
+      );
+
+      const [newRows] = await pool.query('SELECT * FROM app_settings LIMIT 1');
+      return (newRows as any[])[0];
     }
   },
 
@@ -146,10 +193,10 @@ export const settingsService = {
    * Get Paystack configuration
    */
   async getPaystackConfig() {
-    const config = await prisma.paystackConfiguration.findFirst({
-      where: { isDefault: true },
-    });
-    return config;
+    const [rows] = await pool.query(
+      'SELECT * FROM paystack_configurations WHERE isDefault = true LIMIT 1'
+    );
+    return (rows as any[])[0] || null;
   },
 
   /**
@@ -167,26 +214,46 @@ export const settingsService = {
     transferEnabled?: boolean;
     subscriptionEnabled?: boolean;
   }) {
-    const existingConfig = await prisma.paystackConfiguration.findFirst({
-      where: { isDefault: true },
-    });
+    const [existingRows] = await pool.query(
+      'SELECT * FROM paystack_configurations WHERE isDefault = true LIMIT 1'
+    );
+    const existingConfig = (existingRows as any[])[0];
 
     if (existingConfig) {
-      return await prisma.paystackConfiguration.update({
-        where: { id: existingConfig.id },
-        data,
-      });
+      const updateFields = Object.keys(data).map(key => `${key} = ?`).join(', ');
+      const updateValues = Object.values(data);
+      
+      await pool.query(
+        `UPDATE paystack_configurations SET ${updateFields}, updatedAt = NOW() WHERE id = ?`,
+        [...updateValues, existingConfig.id]
+      );
+
+      const [updatedRows] = await pool.query(
+        'SELECT * FROM paystack_configurations WHERE id = ?',
+        [existingConfig.id]
+      );
+      return (updatedRows as any[])[0];
     } else {
-      return await prisma.paystackConfiguration.create({
-        data: {
-          ...data,
-          isDefault: true,
-          isLive: data.isLive ?? false,
-          chargeCardEnabled: data.chargeCardEnabled ?? true,
-          transferEnabled: data.transferEnabled ?? false,
-          subscriptionEnabled: data.subscriptionEnabled ?? false,
-        },
-      });
+      const fields = Object.keys(data).join(', ');
+      const placeholders = Object.keys(data).map(() => '?').join(', ');
+      const values = Object.values(data);
+
+      await pool.query(
+        `INSERT INTO paystack_configurations (id, ${fields}, isDefault, isLive, chargeCardEnabled, transferEnabled, subscriptionEnabled, createdAt, updatedAt) 
+         VALUES (UUID(), ${placeholders}, true, ?, ?, ?, ?, NOW(), NOW())`,
+        [
+          ...values,
+          data.isLive ?? false,
+          data.chargeCardEnabled ?? true,
+          data.transferEnabled ?? false,
+          data.subscriptionEnabled ?? false
+        ]
+      );
+
+      const [newRows] = await pool.query(
+        'SELECT * FROM paystack_configurations WHERE isDefault = true LIMIT 1'
+      );
+      return (newRows as any[])[0];
     }
   },
 
@@ -194,10 +261,10 @@ export const settingsService = {
    * Get Flutterwave configuration
    */
   async getFlutterwaveConfig() {
-    const config = await prisma.flutterwaveConfiguration.findFirst({
-      where: { isDefault: true },
-    });
-    return config;
+    const [rows] = await pool.query(
+      'SELECT * FROM flutterwave_configurations WHERE isDefault = true LIMIT 1'
+    );
+    return (rows as any[])[0] || null;
   },
 
   /**
@@ -216,31 +283,51 @@ export const settingsService = {
   }) {
     // If setting this as default, make sure to unset other default gateways
     if (data.isDefault) {
-      await prisma.paystackConfiguration.updateMany({
-        where: { isDefault: true },
-        data: { isDefault: false }
-      });
+      await pool.query(
+        'UPDATE paystack_configurations SET isDefault = false WHERE isDefault = true'
+      );
     }
 
-    const existingConfig = await prisma.flutterwaveConfiguration.findFirst({
-      where: { isDefault: true },
-    });
+    const [existingRows] = await pool.query(
+      'SELECT * FROM flutterwave_configurations WHERE isDefault = true LIMIT 1'
+    );
+    const existingConfig = (existingRows as any[])[0];
 
     if (existingConfig) {
-      return await prisma.flutterwaveConfiguration.update({
-        where: { id: existingConfig.id },
-        data,
-      });
+      const updateFields = Object.keys(data).map(key => `${key} = ?`).join(', ');
+      const updateValues = Object.values(data);
+      
+      await pool.query(
+        `UPDATE flutterwave_configurations SET ${updateFields}, updatedAt = NOW() WHERE id = ?`,
+        [...updateValues, existingConfig.id]
+      );
+
+      const [updatedRows] = await pool.query(
+        'SELECT * FROM flutterwave_configurations WHERE id = ?',
+        [existingConfig.id]
+      );
+      return (updatedRows as any[])[0];
     } else {
-      return await prisma.flutterwaveConfiguration.create({
-        data: {
-          ...data,
-          isDefault: data.isDefault ?? false,
-          isLive: data.isLive ?? false,
-          chargeCardEnabled: data.chargeCardEnabled ?? true,
-          transferEnabled: data.transferEnabled ?? false,
-        },
-      });
+      const fields = Object.keys(data).join(', ');
+      const placeholders = Object.keys(data).map(() => '?').join(', ');
+      const values = Object.values(data);
+
+      await pool.query(
+        `INSERT INTO flutterwave_configurations (id, ${fields}, isDefault, isLive, chargeCardEnabled, transferEnabled, createdAt, updatedAt) 
+         VALUES (UUID(), ${placeholders}, ?, ?, ?, ?, NOW(), NOW())`,
+        [
+          ...values,
+          data.isDefault ?? false,
+          data.isLive ?? false,
+          data.chargeCardEnabled ?? true,
+          data.transferEnabled ?? false
+        ]
+      );
+
+      const [newRows] = await pool.query(
+        'SELECT * FROM flutterwave_configurations WHERE isDefault = true LIMIT 1'
+      );
+      return (newRows as any[])[0];
     }
   },
 
@@ -248,10 +335,11 @@ export const settingsService = {
    * Get hotel payment settings
    */
   async getHotelPaymentSettings(hotelId: string) {
-    const settings = await prisma.hotelPaymentSetting.findUnique({
-      where: { hotelId },
-    });
-    return settings;
+    const [rows] = await pool.query(
+      'SELECT * FROM hotel_payment_settings WHERE hotelId = ? LIMIT 1',
+      [hotelId]
+    );
+    return (rows as any[])[0] || null;
   },
 
   /**
@@ -269,22 +357,42 @@ export const settingsService = {
       accountName?: string;
     }
   ) {
-    const existingSettings = await prisma.hotelPaymentSetting.findUnique({
-      where: { hotelId },
-    });
+    const [existingRows] = await pool.query(
+      'SELECT * FROM hotel_payment_settings WHERE hotelId = ? LIMIT 1',
+      [hotelId]
+    );
+    const existingSettings = (existingRows as any[])[0];
 
     if (existingSettings) {
-      return await prisma.hotelPaymentSetting.update({
-        where: { id: existingSettings.id },
-        data,
-      });
+      const updateFields = Object.keys(data).map(key => `${key} = ?`).join(', ');
+      const updateValues = Object.values(data);
+      
+      await pool.query(
+        `UPDATE hotel_payment_settings SET ${updateFields}, updatedAt = NOW() WHERE id = ?`,
+        [...updateValues, existingSettings.id]
+      );
+
+      const [updatedRows] = await pool.query(
+        'SELECT * FROM hotel_payment_settings WHERE id = ?',
+        [existingSettings.id]
+      );
+      return (updatedRows as any[])[0];
     } else {
-      return await prisma.hotelPaymentSetting.create({
-        data: {
-          hotelId,
-          ...data,
-        },
-      });
+      const fields = ['hotelId', ...Object.keys(data)];
+      const placeholders = fields.map(() => '?').join(', ');
+      const values = [hotelId, ...Object.values(data)];
+
+      await pool.query(
+        `INSERT INTO hotel_payment_settings (id, ${fields.join(', ')}, createdAt, updatedAt) 
+         VALUES (UUID(), ${placeholders}, NOW(), NOW())`,
+        values
+      );
+
+      const [newRows] = await pool.query(
+        'SELECT * FROM hotel_payment_settings WHERE hotelId = ? LIMIT 1',
+        [hotelId]
+      );
+      return (newRows as any[])[0];
     }
   },
   
@@ -292,7 +400,8 @@ export const settingsService = {
    * Get general site settings
    */
   async getGeneralSettings() {
-    let settings = await prisma.siteSettings.findFirst();
+    const [rows] = await pool.query('SELECT * FROM site_settings LIMIT 1');
+    let settings = (rows as any[])[0];
     
     // Return default settings if none exist
     if (!settings) {
@@ -329,27 +438,39 @@ export const settingsService = {
     maintenanceMode?: boolean;
     maintenanceMsg?: string;
   }) {
-    let settings = await prisma.siteSettings.findFirst();
+    const [rows] = await pool.query('SELECT * FROM site_settings LIMIT 1');
+    let settings = (rows as any[])[0];
     
     if (settings) {
-      return await prisma.siteSettings.update({
-        where: { id: settings.id },
-        data,
-      });
+      const updateFields = Object.keys(data).map(key => `${key} = ?`).join(', ');
+      const updateValues = Object.values(data);
+      
+      await pool.query(
+        `UPDATE site_settings SET ${updateFields}, updatedAt = NOW() WHERE id = ?`,
+        [...updateValues, settings.id]
+      );
+
+      const [updatedRows] = await pool.query('SELECT * FROM site_settings WHERE id = ?', [settings.id]);
+      return (updatedRows as any[])[0];
     } else {
-      return await prisma.siteSettings.create({ 
-        data: {
-          siteName: data.siteName || 'Qaras Hotels',
-          siteDescription: data.siteDescription || 'Your ultimate hotel booking platform',
-          favicon: data.favicon || null,
-          logo: data.logo || null,
-          defaultLanguage: data.defaultLanguage || 'en',
-          timezone: data.timezone || 'UTC',
-          defaultCurrency: data.defaultCurrency || 'NGN',
-          maintenanceMode: data.maintenanceMode || false,
-          maintenanceMsg: data.maintenanceMsg || null,
-        } 
-      });
+      await pool.query(
+        `INSERT INTO site_settings (id, siteName, siteDescription, favicon, logo, defaultLanguage, timezone, defaultCurrency, maintenanceMode, maintenanceMsg, createdAt, updatedAt) 
+         VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [
+          data.siteName || 'Qaras Hotels',
+          data.siteDescription || 'Your ultimate hotel booking platform',
+          data.favicon || null,
+          data.logo || null,
+          data.defaultLanguage || 'en',
+          data.timezone || 'UTC',
+          data.defaultCurrency || 'NGN',
+          data.maintenanceMode || false,
+          data.maintenanceMsg || null
+        ]
+      );
+
+      const [newRows] = await pool.query('SELECT * FROM site_settings LIMIT 1');
+      return (newRows as any[])[0];
     }
   },
   
@@ -357,7 +478,8 @@ export const settingsService = {
    * Get cookie settings
    */
   async getCookieSettings() {
-    let settings = await prisma.cookieSettings.findFirst();
+    const [rows] = await pool.query('SELECT * FROM cookie_settings LIMIT 1');
+    let settings = (rows as any[])[0];
     
     // Return default settings if none exist
     if (!settings) {
@@ -392,15 +514,33 @@ export const settingsService = {
    * Update cookie settings
    */
   async updateCookieSettings(data: any) {
-    let settings = await prisma.cookieSettings.findFirst();
+    const [rows] = await pool.query('SELECT * FROM cookie_settings LIMIT 1');
+    let settings = (rows as any[])[0];
     
     if (settings) {
-      return await prisma.cookieSettings.update({
-        where: { id: settings.id },
-        data,
-      });
+      const updateFields = Object.keys(data).map(key => `${key} = ?`).join(', ');
+      const updateValues = Object.values(data);
+      
+      await pool.query(
+        `UPDATE cookie_settings SET ${updateFields}, updatedAt = NOW() WHERE id = ?`,
+        [...updateValues, settings.id]
+      );
+
+      const [updatedRows] = await pool.query('SELECT * FROM cookie_settings WHERE id = ?', [settings.id]);
+      return (updatedRows as any[])[0];
     } else {
-      return await prisma.cookieSettings.create({ data });
+      const fields = Object.keys(data).join(', ');
+      const placeholders = Object.keys(data).map(() => '?').join(', ');
+      const values = Object.values(data);
+
+      await pool.query(
+        `INSERT INTO cookie_settings (id, ${fields}, createdAt, updatedAt) 
+         VALUES (UUID(), ${placeholders}, NOW(), NOW())`,
+        values
+      );
+
+      const [newRows] = await pool.query('SELECT * FROM cookie_settings LIMIT 1');
+      return (newRows as any[])[0];
     }
   },
   
@@ -408,7 +548,8 @@ export const settingsService = {
    * Get SEO settings
    */
   async getSeoSettings() {
-    let settings = await prisma.sEOSettings.findFirst();
+    const [rows] = await pool.query('SELECT * FROM seo_settings LIMIT 1');
+    let settings = (rows as any[])[0];
     
     // Return default settings if none exist
     if (!settings) {
@@ -435,15 +576,33 @@ export const settingsService = {
    * Update SEO settings
    */
   async updateSeoSettings(data: any) {
-    let settings = await prisma.sEOSettings.findFirst();
+    const [rows] = await pool.query('SELECT * FROM seo_settings LIMIT 1');
+    let settings = (rows as any[])[0];
     
     if (settings) {
-      return await prisma.sEOSettings.update({
-        where: { id: settings.id },
-        data,
-      });
+      const updateFields = Object.keys(data).map(key => `${key} = ?`).join(', ');
+      const updateValues = Object.values(data);
+      
+      await pool.query(
+        `UPDATE seo_settings SET ${updateFields}, updatedAt = NOW() WHERE id = ?`,
+        [...updateValues, settings.id]
+      );
+
+      const [updatedRows] = await pool.query('SELECT * FROM seo_settings WHERE id = ?', [settings.id]);
+      return (updatedRows as any[])[0];
     } else {
-      return await prisma.sEOSettings.create({ data });
+      const fields = Object.keys(data).join(', ');
+      const placeholders = Object.keys(data).map(() => '?').join(', ');
+      const values = Object.values(data);
+
+      await pool.query(
+        `INSERT INTO seo_settings (id, ${fields}, createdAt, updatedAt) 
+         VALUES (UUID(), ${placeholders}, NOW(), NOW())`,
+        values
+      );
+
+      const [newRows] = await pool.query('SELECT * FROM seo_settings LIMIT 1');
+      return (newRows as any[])[0];
     }
   },
   
@@ -452,20 +611,16 @@ export const settingsService = {
    */
   async getLegalDocuments(type?: string) {
     if (type) {
-      return await prisma.legalDocument.findFirst({
-        where: { 
-          type: type as any, 
-          isPublished: true 
-        },
-        orderBy: { 
-          updatedAt: 'desc' 
-        }
-      });
+      const [rows] = await pool.query(
+        'SELECT * FROM legal_documents WHERE type = ? AND isPublished = true ORDER BY updatedAt DESC LIMIT 1',
+        [type]
+      );
+      return (rows as any[])[0] || null;
     } else {
-      return await prisma.legalDocument.findMany({
-        where: { isPublished: true },
-        orderBy: { updatedAt: 'desc' }
-      });
+      const [rows] = await pool.query(
+        'SELECT * FROM legal_documents WHERE isPublished = true ORDER BY updatedAt DESC'
+      );
+      return rows as any[];
     }
   },
   
@@ -473,54 +628,87 @@ export const settingsService = {
    * Get a specific legal document
    */
   async getLegalDocument(id: string, adminOnly: boolean = false) {
-    return await prisma.legalDocument.findUnique({
-      where: { 
-        id,
-        // Only admins can see unpublished documents
-        ...(adminOnly ? {} : { isPublished: true })
-      }
-    });
+    let query = 'SELECT * FROM legal_documents WHERE id = ?';
+    const params = [id];
+    
+    if (!adminOnly) {
+      query += ' AND isPublished = true';
+    }
+    
+    const [rows] = await pool.query(query, params);
+    return (rows as any[])[0] || null;
   },
   
   /**
    * Create a new legal document
    */
   async createLegalDocument(data: any) {
-    return await prisma.legalDocument.create({
-      data: {
-        type: data.type,
-        title: data.title,
-        content: data.content,
-        version: data.version || '1.0',
-        isPublished: data.isPublished !== undefined ? data.isPublished : true,
-        effectiveDate: data.effectiveDate ? new Date(data.effectiveDate) : new Date(),
-      }
-    });
+    await pool.query(
+      `INSERT INTO legal_documents (id, type, title, content, version, isPublished, effectiveDate, createdAt, updatedAt) 
+       VALUES (UUID(), ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
+        data.type,
+        data.title,
+        data.content,
+        data.version || '1.0',
+        data.isPublished !== undefined ? data.isPublished : true,
+        data.effectiveDate ? new Date(data.effectiveDate) : new Date()
+      ]
+    );
+
+    const [rows] = await pool.query(
+      'SELECT * FROM legal_documents WHERE title = ? ORDER BY createdAt DESC LIMIT 1',
+      [data.title]
+    );
+    return (rows as any[])[0];
   },
   
   /**
    * Update a legal document
    */
   async updateLegalDocument(id: string, data: any) {
-    return await prisma.legalDocument.update({
-      where: { id },
-      data: {
-        title: data.title,
-        content: data.content,
-        version: data.version,
-        isPublished: data.isPublished,
-        effectiveDate: data.effectiveDate ? new Date(data.effectiveDate) : undefined,
-      }
-    });
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (data.title !== undefined) {
+      updateFields.push('title = ?');
+      updateValues.push(data.title);
+    }
+    if (data.content !== undefined) {
+      updateFields.push('content = ?');
+      updateValues.push(data.content);
+    }
+    if (data.version !== undefined) {
+      updateFields.push('version = ?');
+      updateValues.push(data.version);
+    }
+    if (data.isPublished !== undefined) {
+      updateFields.push('isPublished = ?');
+      updateValues.push(data.isPublished);
+    }
+    if (data.effectiveDate !== undefined) {
+      updateFields.push('effectiveDate = ?');
+      updateValues.push(data.effectiveDate ? new Date(data.effectiveDate) : null);
+    }
+    
+    updateFields.push('updatedAt = NOW()');
+    updateValues.push(id);
+
+    await pool.query(
+      `UPDATE legal_documents SET ${updateFields.join(', ')} WHERE id = ?`,
+      updateValues
+    );
+
+    const [rows] = await pool.query('SELECT * FROM legal_documents WHERE id = ?', [id]);
+    return (rows as any[])[0];
   },
   
   /**
    * Delete a legal document
    */
   async deleteLegalDocument(id: string) {
-    return await prisma.legalDocument.delete({
-      where: { id }
-    });
+    await pool.query('DELETE FROM legal_documents WHERE id = ?', [id]);
+    return { success: true };
   },
 };
 

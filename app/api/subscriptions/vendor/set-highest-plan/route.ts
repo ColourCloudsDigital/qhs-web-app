@@ -37,14 +37,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Get the highest plan (most expensive)
-    const highestPlan = await prisma.subscriptionPlan.findFirst({
-      where: {
-        isActive: true,
-      },
-      orderBy: {
-        price: 'desc',
-      },
-    });
+    const [planRows] = await pool.query(
+      'SELECT * FROM subscription_plans WHERE isActive = true ORDER BY price DESC LIMIT 1'
+    );
+    
+    const highestPlan = (planRows as any[])[0];
     
     if (!highestPlan) {
       return NextResponse.json({ error: 'No active subscription plans found' }, { status: 404 });

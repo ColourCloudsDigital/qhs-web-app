@@ -27,9 +27,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    });
+    const [rows] = await pool.query(
+      'SELECT id, password FROM users WHERE id = ?',
+      [session.user.id]
+    );
+
+    const user = (rows as any[])[0];
 
     if (!user) {
       return NextResponse.json(
@@ -52,12 +55,10 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hash(newPassword, 10);
 
     // Update user with new password
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-      },
-    });
+    await pool.query(
+      'UPDATE users SET password = ?, updatedAt = NOW() WHERE id = ?',
+      [hashedPassword, user.id]
+    );
 
     return NextResponse.json(
       { message: 'Password changed successfully' },

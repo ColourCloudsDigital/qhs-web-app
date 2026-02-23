@@ -33,26 +33,30 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { isPublished } = publishSchema.parse(body);
 
     // Check if the document exists
-    const existingDocument = await prisma.legalDocument.findUnique({
-      where: {
-        id: params.id,
-      },
-    });
+    const [existingRows] = await pool.query(
+      'SELECT * FROM legal_documents WHERE id = ?',
+      [params.id]
+    );
+
+    const existingDocument = (existingRows as any[])[0];
 
     if (!existingDocument) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
     // Update the document's publish status
-    const updatedDocument = await prisma.legalDocument.update({
-      where: {
-        id: params.id,
-      },
-      data: {
-        isPublished,
-        updatedAt: new Date(),
-      },
-    });
+    await pool.query(
+      'UPDATE legal_documents SET isPublished = ?, updatedAt = NOW() WHERE id = ?',
+      [isPublished, params.id]
+    );
+
+    // Get updated document
+    const [updatedRows] = await pool.query(
+      'SELECT * FROM legal_documents WHERE id = ?',
+      [params.id]
+    );
+
+    const updatedDocument = (updatedRows as any[])[0];
 
     return NextResponse.json(updatedDocument);
   } catch (error) {
