@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '@/lib/db';
 import { UserRole } from '@/lib/types/enums';
 import bcrypt from 'bcrypt';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(req: NextRequest) {
   try {

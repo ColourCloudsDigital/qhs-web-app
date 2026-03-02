@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getHotels } from '@/services/hotel.service';
+
+export const dynamic = 'force-dynamic';
+
 
 // Public endpoint to list hotels with basic filters for customer-facing pages
 export async function GET(request: NextRequest) {

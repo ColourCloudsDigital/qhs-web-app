@@ -35,6 +35,9 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   
+  // Output configuration - use standalone for better deployment
+  output: 'standalone',
+  
   // Security headers
   async headers() {
     return [

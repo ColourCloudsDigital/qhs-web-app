@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import pool from '@/lib/db';
 import { availabilityService } from '@/lib/services/availability.service';
 import { customerNotificationService } from '@/lib/services/customer-notification.service';
 import { emailService } from '@/lib/services/email.service';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

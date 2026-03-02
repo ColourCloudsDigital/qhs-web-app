@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { automatedCheckoutService } from '@/lib/services/automated-checkout.service';
+
+export const dynamic = 'force-dynamic';
+
 
 /**
  * POST /api/bookings/automated-checkout

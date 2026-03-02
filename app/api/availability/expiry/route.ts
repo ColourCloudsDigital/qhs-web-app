@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
 
 /**
  * This endpoint should be called periodically (via cron job) to:

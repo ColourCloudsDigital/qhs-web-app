@@ -4,6 +4,11 @@ import { Metadata } from 'next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
 import { FileText } from 'lucide-react';
+import pool from '@/lib/db';
+import { RowDataPacket } from 'mysql2';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 
 interface LegalDocument {
   id: string;
@@ -22,16 +27,15 @@ export const metadata: Metadata = {
 
 async function getLegalDocuments(): Promise<LegalDocument[]> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/legal`, { 
-      cache: 'no-store'
-    });
+    // Fetch directly from database instead of API route during build
+    const [documents] = await pool.query<RowDataPacket[]>(`
+      SELECT id, type, title, slug, version, effectiveDate, updatedAt 
+      FROM legal_documents 
+      WHERE isPublished = 1
+      ORDER BY type ASC
+    `);
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch legal documents: ${response.statusText}`);
-    }
-    
-    return await response.json();
+    return documents as LegalDocument[];
   } catch (error) {
     console.error('Error fetching legal documents:', error);
     return [];

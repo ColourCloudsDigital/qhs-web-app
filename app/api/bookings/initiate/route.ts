@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { availabilityService } from '@/lib/services/availability.service';
 import pool from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
 
 /**
  * POST /api/bookings/initiate

@@ -1,8 +1,11 @@
-import { getServerSession } from 'next-auth';
+﻿import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+
+export const dynamic = 'force-dynamic';
+
 
 // Define types for MySQL query results
 type QueryResult = any[];
@@ -296,14 +299,14 @@ if (features && typeof features === 'object') {
     const isIncluded = typeof value === 'object' ? (value as any).included : !!value;
     const limits = typeof value === 'object' && value !== null ? (value as any).limits : null;
 
-    const featureId = uuidv4(); // ← Generate UUID for plan_features.id
+    const featureId = uuidv4(); // â† Generate UUID for plan_features.id
 
     await connection.query(
       `INSERT INTO plan_features 
        (id, planId, moduleId, isIncluded, limits)
        VALUES (?, ?, ?, ?, ?)`,
       [
-        featureId,     // ← New: provide the generated UUID
+        featureId,     // â† New: provide the generated UUID
         planId,
         moduleId,
         isIncluded ? 1 : 0,

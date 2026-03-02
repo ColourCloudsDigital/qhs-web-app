@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '@/lib/db';
 import { availabilityService } from '@/lib/services/availability.service';
 import { customerNotificationService } from '@/lib/services/customer-notification.service';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: NextRequest) {
   try {

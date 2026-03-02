@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { paymentService } from '@/lib/services/payment.service';
 import { PaymentMethod } from '@/lib/types/enums';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

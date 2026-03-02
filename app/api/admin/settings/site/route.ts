@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { UserRole } from '@/lib/types/enums';
+
+export const dynamic = 'force-dynamic';
+
 
 // GET handler to retrieve site settings
 export async function GET(request: NextRequest) {

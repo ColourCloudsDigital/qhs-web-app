@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { UserRole } from '@/lib/types/enums';
@@ -6,6 +6,9 @@ import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(req: NextRequest) {
   try {

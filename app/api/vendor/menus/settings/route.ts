@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import menuService from '@/lib/services/menu.service';
 import { getUserVendorId } from '@/lib/utils/vendor';
 import { UserRole } from '@/lib/types/enums';
+
+export const dynamic = 'force-dynamic';
+
 
 // Get menu settings
 export async function GET(req: NextRequest) {

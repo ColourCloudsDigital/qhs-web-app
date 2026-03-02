@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcrypt";
 import pool from "@/lib/db";
 import { UserRole, SubscriptionPlan } from "@/lib/types/enums";
 import crypto from "crypto";
 import { emailService } from "@/lib/services/email.service";
 import { calculateEndDate } from "@/lib/services/subscription.service";
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

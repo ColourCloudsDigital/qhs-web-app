@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { UserRole } from '@/lib/types/enums';
 import { staffNotificationService } from '@/lib/services/staff-notification.service';
 import bcrypt from 'bcrypt';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: NextRequest) {
   try {

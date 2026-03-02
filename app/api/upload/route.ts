@@ -1,23 +1,26 @@
-// app/api/upload/route.ts
+﻿// app/api/upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
+
 export async function POST(req: NextRequest) {
-  console.log('⭐ Upload API called');
+  console.log('â­ Upload API called');
   
   try {
     // Parse form data
     const formData = await req.formData();
-    console.log('📝 Form data received');
+    console.log('ðŸ“ Form data received');
 
     // Get query parameters
     const url = new URL(req.url);
     const entity = url.searchParams.get('entity') || 'uploads';
     const id = url.searchParams.get('id');
     
-    console.log(`📂 Entity: ${entity}, ID: ${id || 'none'}`);
+    console.log(`ðŸ“‚ Entity: ${entity}, ID: ${id || 'none'}`);
 
     // Extract files
     const uploadFiles: { 
@@ -36,13 +39,13 @@ export async function POST(req: NextRequest) {
         'name' in value && 
         'type' in value
       ) {
-        console.log(`📄 Found file: ${value.name}, type: ${value.type}`);
+        console.log(`ðŸ“„ Found file: ${value.name}, type: ${value.type}`);
         uploadFiles.push(value as any);
       }
     });
     
     if (uploadFiles.length === 0) {
-      console.log('❌ No files in request');
+      console.log('âŒ No files in request');
       return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
     }
     
@@ -54,12 +57,12 @@ export async function POST(req: NextRequest) {
       uploadDir = path.join(uploadDir, id);
     }
     
-    console.log(`📁 Creating directory: ${uploadDir}`);
+    console.log(`ðŸ“ Creating directory: ${uploadDir}`);
     try {
       await mkdir(uploadDir, { recursive: true });
-      console.log(`✅ Directory created successfully`);
+      console.log(`âœ… Directory created successfully`);
     } catch (dirError) {
-      console.error(`❌ Error creating directory:`, dirError);
+      console.error(`âŒ Error creating directory:`, dirError);
       throw dirError;
     }
 
@@ -71,9 +74,9 @@ export async function POST(req: NextRequest) {
       const fileName = `${randomUUID()}${fileExt}`;
       const filePath = path.join(uploadDir, fileName);
       
-      console.log(`📁 Full file path: ${filePath}`);
+      console.log(`ðŸ“ Full file path: ${filePath}`);
       
-      console.log(`💾 Saving file: ${fileName}`);
+      console.log(`ðŸ’¾ Saving file: ${fileName}`);
       
       // Convert file to buffer and save
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -83,7 +86,7 @@ export async function POST(req: NextRequest) {
       const publicPath = `/uploads/${entity}${id ? `/${id}` : ''}/${fileName}`;
       savedFiles.push(publicPath);
       
-      console.log(`🔗 File URL: ${publicPath}`);
+      console.log(`ðŸ”— File URL: ${publicPath}`);
     }
     
     return NextResponse.json({
@@ -92,7 +95,7 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('⛔ Upload error:', error);
+    console.error('â›” Upload error:', error);
     return NextResponse.json({
       error: 'Failed to upload files',
       message: error instanceof Error ? error.message : String(error)

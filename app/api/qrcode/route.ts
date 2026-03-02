@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { generateQRCode } from '@/lib/services/qrcode.service';
+
+export const dynamic = 'force-dynamic';
+
 
 // GET /api/qrcode - Generate a QR code
 export async function GET(req: NextRequest) {

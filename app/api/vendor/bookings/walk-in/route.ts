@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
@@ -8,6 +8,9 @@ import { emailService } from '@/lib/services/email.service';
 import * as bcrypt from 'bcrypt';
 import NotificationService from '@/lib/services/notification.service';
 import { getUserVendorId } from '@/lib/utils/vendor';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

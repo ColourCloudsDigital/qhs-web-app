@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { UserRole } from '@/lib/types/enums';
 import pool from '@/lib/db';
 import { updateVendorSubscription, calculateEndDate } from '@/lib/services/subscription.service';
+
+export const dynamic = 'force-dynamic';
+
 
 // POST /api/subscriptions/vendor/set-highest-plan - Sets the highest plan for the vendor
 export async function POST(req: NextRequest) {

@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { saveSubscription, deleteSubscription, getUserPushSubscriptions } from '@/lib/services/push.service';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(req: NextRequest) {
   try {

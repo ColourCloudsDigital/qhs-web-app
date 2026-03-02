@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { RowDataPacket } from 'mysql2';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: NextRequest) {
   try {

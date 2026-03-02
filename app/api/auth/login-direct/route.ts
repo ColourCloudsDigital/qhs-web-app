@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db.js';
 import { RowDataPacket } from 'mysql2';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

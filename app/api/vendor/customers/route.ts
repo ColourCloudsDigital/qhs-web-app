@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { UserRole } from '@/lib/types/enums';
 import { getUserVendorId } from '@/lib/utils/vendor';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: NextRequest) {
   try {

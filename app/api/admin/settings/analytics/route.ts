@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { z } from 'zod';
+
+export const dynamic = 'force-dynamic';
+
 
 // Analytics settings schema validation (accepts document-shaped payload)
 const analyticsSettingsSchema = z.object({

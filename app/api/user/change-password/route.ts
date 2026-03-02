@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import bcrypt from 'bcrypt';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

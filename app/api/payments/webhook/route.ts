@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import crypto from 'crypto';
 import { paymentService } from '@/lib/services/payment.service';
 import { getPaystackConfig } from '@/lib/services/settings.service';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

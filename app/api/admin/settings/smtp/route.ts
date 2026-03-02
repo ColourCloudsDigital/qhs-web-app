@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import pool from '@/lib/db';
 import { authOptions } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+
 
 // GET: Retrieve SMTP configuration
 export async function GET(request: NextRequest) {

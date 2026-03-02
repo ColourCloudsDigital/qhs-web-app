@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db.js';
 import bcrypt from 'bcrypt';
 import { RowDataPacket } from 'mysql2';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

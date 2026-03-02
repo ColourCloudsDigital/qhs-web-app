@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import menuService from '@/lib/services/menu.service';
 import { getUserVendorId } from '@/lib/utils/vendor';
 import { UserRole } from '@/lib/types/enums';
 import { checkUserPermissions, checkModuleAccess } from '@/lib/utils/auth';
+
+export const dynamic = 'force-dynamic';
+
 
 // Get all menu categories for a vendor's hotel
 export async function GET(req: NextRequest) {

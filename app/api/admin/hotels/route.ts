@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { UserRole } from '@/lib/types/enums';
 import { HotelService } from '@/services/hotels';
+
+export const dynamic = 'force-dynamic';
+
 
 // GET handler to fetch hotels with pagination, sorting, and filtering
 export async function GET(req: NextRequest) {

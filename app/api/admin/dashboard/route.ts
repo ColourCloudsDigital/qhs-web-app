@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { UserRole } from '@/lib/types/enums';
 import { RowDataPacket } from 'mysql2';
+
+export const dynamic = 'force-dynamic';
+
 
 // Type definitions
 interface PlanFeature {

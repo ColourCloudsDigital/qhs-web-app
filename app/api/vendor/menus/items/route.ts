@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import menuService from '@/lib/services/menu.service';
 import { getUserVendorId } from '@/lib/utils/vendor';
 import { UserRole } from '@/lib/types/enums';
+
+export const dynamic = 'force-dynamic';
+
 
 // Create a new menu item
 export async function POST(req: NextRequest) {

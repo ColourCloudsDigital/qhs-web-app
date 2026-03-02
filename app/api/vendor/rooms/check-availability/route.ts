@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { RoomService } from '@/services/rooms';
 import { UserRole } from '@/lib/types/enums';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(req: NextRequest) {
   try {

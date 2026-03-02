@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
 
 // Simple test endpoint to verify API routing is working
 export async function GET(req: NextRequest) {

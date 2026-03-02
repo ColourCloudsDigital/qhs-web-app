@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { RowDataPacket, OkPacket, ResultSetHeader, ProcedureCallPacket } from 'mysql2';
+
+export const dynamic = 'force-dynamic';
+
 
 interface TableRow extends RowDataPacket {
   Tables_in_database: string;

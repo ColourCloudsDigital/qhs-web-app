@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { canAccessModule } from '@/lib/services/module-access.service';
 import { ModuleType } from '@/lib/types/enums';
 import { getServerSession } from 'next-auth';
 import { RowDataPacket } from 'mysql2';
+
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: Request) {
   try {

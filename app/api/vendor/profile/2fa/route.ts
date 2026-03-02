@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { UserRole } from '@/lib/types/enums';
 import pool from '@/lib/db';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
+
+export const dynamic = 'force-dynamic';
+
 
 // Base32 encoding/decoding for TOTP
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
