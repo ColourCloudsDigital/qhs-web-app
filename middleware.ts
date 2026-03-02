@@ -5,9 +5,15 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
   
-  // Short-circuit NextAuth API routes
-  if (pathname.startsWith('/api/auth')) {
-    return NextResponse.next();
+  // Skip all API routes except admin/vendor/customer/staff
+  if (pathname.startsWith('/api/')) {
+    // Only process role-based API routes
+    if (!pathname.startsWith('/api/admin') && 
+        !pathname.startsWith('/api/vendor') && 
+        !pathname.startsWith('/api/customer') && 
+        !pathname.startsWith('/api/staff')) {
+      return NextResponse.next();
+    }
   }
   
   // Get the token
@@ -113,29 +119,17 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Limit middleware to specific paths
+// Simplified matcher configuration for Vercel Edge Runtime
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api/public (Public API routes)
-     * - api/auth (NextAuth routes)
-     * - api/hotels (Hotel API routes)
-     * - api/rooms (Room API routes)
-     * - api/bookings (Booking API routes) 
+     * Match all paths except:
+     * - api (API routes handled separately)
      * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - assets (image assets)
-     * - icon.png (PWA icon)
-     * - manifest.json (PWA manifest)
-     * - uploads (user uploaded content)
-     * - marketing (marketing routes)
+     * - _next/image (image optimization)
+     * - favicon.ico
+     * - public files (assets, uploads, etc.)
      */
-    '/((?!api/public|api/auth|api/hotels|api/rooms|api/bookings|_next/static|_next/image|favicon.ico|assets|icon.png|manifest.json|uploads|marketing).*)',
-    '/api/admin/:path*',
-    '/api/vendor/:path*',
-    '/api/customer/:path*',
-    '/api/staff/:path*'
+    '/((?!api|_next/static|_next/image|favicon.ico|assets|icon.png|manifest.json|uploads|.*\\..*).*)' 
   ],
 };
