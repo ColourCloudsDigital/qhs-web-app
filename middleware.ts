@@ -1,28 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { jwtVerify } from 'jose';
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
-  // Short-circuit NextAuth API routes to avoid middleware interfering with auth endpoints
+  
+  // Short-circuit NextAuth API routes
   if (pathname.startsWith('/api/auth')) {
     return NextResponse.next();
   }
-  // If visiting root, immediately open the login URL (or role dashboard if authenticated)
+  
+  // Get the token
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const userRole = token?.role as string;
+  
+  // If visiting root, redirect based on auth status
   if (pathname === '/') {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-
-    // Not authenticated -> send to login right away
     if (!token) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('callbackUrl', '/');
       return NextResponse.redirect(loginUrl);
     }
 
-    // Authenticated -> redirect to role-specific dashboard
+    // Redirect to role-specific dashboard
     let redirectUrl = '/login';
-    const userRole = token?.role as string;
     switch (userRole) {
       case 'SUPER_ADMIN':
         redirectUrl = '/admin/dashboard';
@@ -37,112 +38,14 @@ export async function middleware(request: NextRequest) {
         redirectUrl = '/staff/dashboard';
         break;
     }
-
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
-  // Redirect requests from the old (marketing) path to the new marketing path
-  // Skip this redirect for static files like manifest.json and icon.png
-  if ((pathname.startsWith('/(marketing)') || pathname.includes('/_next/static/chunks/app/(marketing)')) 
-       && !pathname.includes('manifest.json') && !pathname.includes('icon.png')) {
-    // Special case for chunk loading
-    if (pathname.includes('/_next/static/chunks/app/(marketing)')) {
-      const newPath = pathname.replace('(marketing)', 'marketing');
-      url.pathname = newPath;
-      return NextResponse.redirect(url);
-    }
-    
-    // Regular page navigation
-    const newPath = pathname.replace('/(marketing)', '/marketing');
-    url.pathname = newPath;
-    return NextResponse.redirect(url);
-  }
-
-  // Get the pathname
-  const path = pathname;
-  
-  // Check for impersonation cookie
-  const impersonationToken = request.cookies.get('impersonation_token')?.value;
-  let isImpersonating = false;
-  let impersonatedRole: string | null = null;
-  
-  // If impersonation token exists, extract data
-  if (impersonationToken) {
-    try {
-      // Verify the impersonation token
-      const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'impersonate-secret-key');
-      const { payload } = await jwtVerify(impersonationToken, secret);
-      
-      isImpersonating = true;
-      impersonatedRole = payload.userRole as string;
-      
-    } catch (error) {
-      console.error('Invalid impersonation token:', error);
-      
-      // Remove the invalid impersonation token
-      const response = NextResponse.next();
-      response.cookies.delete('impersonation_token');
-      return response;
-    }
-  }
-  
-  // Check for end impersonation request
-  if (path === '/api/admin/users/end-impersonation') {
-    const response = NextResponse.redirect(new URL('/admin/dashboard', request.url));
-    response.cookies.delete('impersonation_token');
-    return response;
-  }
-  
-  // Original middleware logic
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-  let userRole = token?.role as string;
-
-  // If getToken didn't return a token (edge cases), try reading known cookie names
-  // and verify the JWT manually as a fallback. This helps when cookie naming
-  // differs between secure vs non-secure contexts (e.g. '__Secure-next-auth.session-token').
-  if (!token) {
-    try {
-      const cookieNames = [
-        '__Secure-next-auth.session-token',
-        'next-auth.session-token',
-      ];
-
-      for (const name of cookieNames) {
-        const cookieValue = request.cookies.get(name)?.value;
-        if (!cookieValue) continue;
-
-        try {
-          const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || '');
-          const { payload } = await jwtVerify(cookieValue, secret);
-          // Attach the payload as token so downstream logic can read role, id, etc.
-          // `payload` may contain standard JWT fields used by NextAuth callbacks.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (globalThis as any).__nextAuthMiddlewareToken = payload;
-          // map to local token variable
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (token as any) = payload as any;
-          break;
-        } catch (e) {
-          // try next cookie name
-          continue;
-        }
-      }
-    } catch (err) {
-      console.error('Error verifying session cookie in middleware:', err);
-    }
-  }
-  
-  // Override the role if impersonating
-  if (isImpersonating && impersonatedRole && token?.role === 'SUPER_ADMIN') {
-    userRole = impersonatedRole;
-  }
-  
   // Public paths that don't require authentication
   const publicPaths = [
     '/login', 
     '/register', 
     '/forgot-password',
-    '/',
     '/about',
     '/contact',
     '/hotels',
@@ -150,11 +53,12 @@ export async function middleware(request: NextRequest) {
     '/pricing',
     '/menu',
     '/qr',
+    '/legal',
   ];
   
   // Check if the current path is public
   const isPublicPath = publicPaths.some(publicPath => 
-    path === publicPath || path.startsWith(`${publicPath}/`)
+    pathname === publicPath || pathname.startsWith(`${publicPath}/`)
   );
 
   // Allow access to public paths
@@ -164,32 +68,31 @@ export async function middleware(request: NextRequest) {
 
   // Redirect to login if not authenticated
   if (!token) {
-    const url = new URL('/login', request.url);
-    url.searchParams.set('callbackUrl', path);
-    return NextResponse.redirect(url);
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Handle role-based routing with impersonation in mind
-  if (path.startsWith('/admin') && userRole !== 'SUPER_ADMIN') {
+  // Handle role-based routing
+  if (pathname.startsWith('/admin') && userRole !== 'SUPER_ADMIN') {
     return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
 
-  if (path.startsWith('/vendor') && userRole !== 'VENDOR') {
+  if (pathname.startsWith('/vendor') && userRole !== 'VENDOR') {
     return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
 
-  if (path.startsWith('/customer') && userRole !== 'CUSTOMER') {
+  if (pathname.startsWith('/customer') && userRole !== 'CUSTOMER') {
     return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
 
-  if (path.startsWith('/staff') && userRole !== 'STAFF') {
+  if (pathname.startsWith('/staff') && userRole !== 'STAFF') {
     return NextResponse.redirect(new URL('/unauthorized', request.url));
   }
   
   // Redirect root dashboard to role-specific dashboard
-  if (path === '/dashboard') {
+  if (pathname === '/dashboard') {
     let redirectUrl = '/login';
-    
     switch (userRole) {
       case 'SUPER_ADMIN':
         redirectUrl = '/admin/dashboard';
@@ -204,45 +107,10 @@ export async function middleware(request: NextRequest) {
         redirectUrl = '/staff/dashboard';
         break;
     }
-    
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
-  // Add impersonation info to response for client-side access
-  const response = NextResponse.next();
-  
-  if (isImpersonating && token?.role === 'SUPER_ADMIN') {
-    
-    // Set a client-readable cookie with impersonation status
-    response.cookies.set({
-      name: 'is_impersonating',
-      value: 'true',
-      path: '/',
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 8 // 8 hours
-    });
-    
-    response.cookies.set({
-      name: 'impersonated_role',
-      value: impersonatedRole || '',
-      path: '/',
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 8 // 8 hours
-    });
-    
-    // Important: Add headers to the response that can be read by server components
-    response.headers.set('x-is-impersonating', 'true');
-    response.headers.set('x-impersonated-role', impersonatedRole || '');
-    response.headers.set('x-original-role', token.role);
-  } else {
-    // Clear impersonation cookies if not impersonating
-    response.cookies.delete('is_impersonating');
-    response.cookies.delete('impersonated_role');
-  }
-
-  return response;
+  return NextResponse.next();
 }
 
 // Limit middleware to specific paths
