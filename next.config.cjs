@@ -35,6 +35,9 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   
+  // Output configuration for Docker deployment
+  output: 'standalone',
+  
   // Security headers
   async headers() {
     return [

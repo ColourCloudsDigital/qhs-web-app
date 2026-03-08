@@ -51,3 +51,7 @@ node_modules
 
 # backup files
 public.bak/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
