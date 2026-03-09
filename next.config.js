@@ -7,38 +7,44 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   reactStrictMode: true,
-  swcMinify: true,
-  
-  // Image optimization
+  // swcMinify is now the default; property can be safely removed
+
+  // Updated Image optimization
   images: {
-    domains: ['localhost', 'qarashotels.com.ng', 'qarashotels.com'],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 60,
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'qarashotels.com.ng',
+      },
+      {
+        protocol: 'https',
+        hostname: 'qarashotels.com',
+      },
+      {
+        protocol: 'http', // Keep for local dev if needed
+        hostname: 'localhost',
+        port: '3000',
+      },
+      // Note: Keeping wildcard patterns allows images from ANY source.
+      // For better security, restrict these to your specific CDN/S3 bucket.
       {
         protocol: 'https',
         hostname: '**',
       },
-      {
-        protocol: 'http',
-        hostname: '**',
-      },
     ],
-    formats: ['image/webp', 'image/avif'],
-    minimumCacheTTL: 60,
   },
-  
+
   // External packages configuration
   experimental: {
     serverComponentsExternalPackages: ['bcrypt', 'mysql2'],
   },
-  
-  // Performance optimizations
+
   compress: true,
   poweredByHeader: false,
-  
-  // Output configuration for Docker deployment
   output: 'standalone',
-  
-  // Security headers
+
   async headers() {
     return [
       {
@@ -62,4 +68,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig; 
+export default nextConfig;
