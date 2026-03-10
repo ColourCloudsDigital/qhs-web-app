@@ -17,11 +17,17 @@ services:
         sync: false
       - key: DATABASE_HOST
         sync: false
+      - key: DATABASE_PORT
+        value: 3306
       - key: DATABASE_USER
         sync: false
       - key: DATABASE_PASSWORD
         sync: false
       - key: DATABASE_NAME
         sync: false
-    healthCheckPath: /
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+    healthCheckPath: /api/health
     autoDeploy: true
