@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
   }
   
   // Get the token
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET, cookieName: 'next-auth.session-token' });
   const userRole = token?.role as string;
   
   // If visiting root, redirect based on auth status
@@ -52,6 +52,9 @@ export async function middleware(request: NextRequest) {
     '/login', 
     '/register', 
     '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+    '/resend-verification',
     '/about',
     '/contact',
     '/hotels',

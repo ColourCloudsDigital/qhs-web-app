@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import crypto from "crypto";
-import { emailService } from "@/lib/services/email.service";
+import { brevoEmailService } from "@/lib/services/brevo-email.service";
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Check if user exists and needs verification
     const query = `
       SELECT id, name, email, emailVerified 
-      FROM User 
+      FROM users 
       WHERE email = ? 
       LIMIT 1
     `;
@@ -52,15 +52,15 @@ export async function POST(request: NextRequest) {
     
     // Update user with new verification token
     const updateQuery = `
-      UPDATE User 
+      UPDATE users 
       SET verificationToken = ?, verificationExpires = ? 
       WHERE id = ?
     `;
     
     await pool.query(updateQuery, [verificationToken, verificationExpires, user.id]);
     
-    // Send verification email
-    await emailService.sendVerificationEmail({
+    // Send verification email using Brevo
+    await brevoEmailService.sendVerificationEmail({
       to: user.email,
       name: user.name,
       token: verificationToken,

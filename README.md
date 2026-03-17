@@ -1,38 +1,195 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Qaras Hotels Management System
 
-## Getting Started
+A comprehensive hotel management system built with Next.js, featuring booking management, QR menus, staff management, and more.
 
-First, run the development server:
+## 🚀 Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
+
+# Run database migrations
+mysql -u your_username -p your_database < scripts/add-verification-columns.sql
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## ✨ Features
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+- 🏨 **Hotel Management** - Multi-hotel support with vendor dashboard
+- 📅 **Booking System** - Complete booking workflow with availability checking
+- 📧 **Email Verification** - Secure registration with Brevo email templates
+- 👥 **User Roles** - Super Admin, Vendor, Staff, and Customer roles
+- 🍽️ **QR Menu System** - Digital menus with QR code generation
+- 💳 **Payment Integration** - Paystack and Flutterwave support
+- 📊 **Analytics Dashboard** - Booking statistics and revenue tracking
+- 🔔 **Notifications** - Real-time notifications for bookings and updates
+- 📱 **PWA Support** - Progressive Web App capabilities
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+## 📧 Email Verification Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+The system uses Brevo for transactional emails. See detailed setup guides:
 
-## Learn More
+- **Quick Start**: [docs/QUICK_START.md](./docs/QUICK_START.md)
+- **Full Brevo Setup**: [docs/BREVO_EMAIL_SETUP.md](./docs/BREVO_EMAIL_SETUP.md)
 
-To learn more about Next.js, take a look at the following resources:
+### Quick Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Create Brevo account and get API key
+2. Create email templates in Brevo dashboard
+3. Update `.env` with Brevo credentials and template IDs
+4. Run database migration for verification columns
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+## 🗄️ Database Setup
 
-## Deploy on Vercel
+```bash
+# Run migrations
+mysql -u username -p database < scripts/add-verification-columns.sql
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Or with Docker
+docker exec -i qaras-mysql mysql -u qaras_user -pqaras_password qaras_hotel < scripts/add-verification-columns.sql
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## 🐳 Docker Deployment
+
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# View logs
+docker logs qaras-app
+
+# Stop containers
+docker-compose down
+```
+
+Access the application at http://localhost:8080
+
+## 🔧 Environment Variables
+
+Key environment variables (see `.env.example` for full list):
+
+```env
+# Database
+DATABASE_URL=mysql://user:password@localhost:3306/qaras_hotel
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key
+
+# Brevo Email
+BREVO_API_KEY=your-api-key
+BREVO_SENDER_EMAIL=noreply@yourdomain.com
+BREVO_TEMPLATE_EMAIL_VERIFICATION=1
+BREVO_TEMPLATE_PASSWORD_RESET=2
+BREVO_TEMPLATE_WELCOME_EMAIL=3
+
+# App URLs
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+## 📁 Project Structure
+
+```
+app/
+├── (auth)/              # Authentication pages
+├── (dashboard)/         # Dashboard pages
+├── (marketing)/         # Public marketing pages
+└── api/                 # API routes
+
+components/
+├── admin/              # Admin components
+├── booking/            # Booking components
+├── common/             # Shared components
+└── ui/                 # UI components
+
+lib/
+├── services/           # Business logic services
+├── utils/              # Utility functions
+└── types/              # TypeScript types
+
+docs/                   # Documentation
+scripts/                # Database scripts
+```
+
+## 🔐 User Roles
+
+- **Super Admin** - Full system access
+- **Vendor** - Hotel owner/manager
+- **Staff** - Hotel staff with limited permissions
+- **Customer** - Guest/booking user
+
+## 📚 Documentation
+
+- [Quick Start Guide](./docs/QUICK_START.md)
+- [Brevo Email Setup](./docs/BREVO_EMAIL_SETUP.md)
+- [Staff Permissions](./docs/staff-permissions-system.md)
+- [Docker Deployment](./DOCKER_QUICKSTART.md)
+
+## 🧪 Testing
+
+```bash
+# Run tests
+npm test
+
+# Test email verification flow
+npm run dev
+# Navigate to /register and create account
+```
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 14
+- **Database**: MySQL
+- **Authentication**: NextAuth.js
+- **Email**: Brevo API
+- **Styling**: Tailwind CSS
+- **UI Components**: Custom component library
+- **Payment**: Paystack, Flutterwave
+- **Deployment**: Docker, Vercel
+
+## 📝 API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - User login
+- `GET /api/auth/verify-email` - Verify email
+- `POST /api/auth/resend-verification` - Resend verification
+- `POST /api/auth/forgot-password` - Password reset
+
+### Bookings
+- `GET /api/bookings` - List bookings
+- `POST /api/bookings/create` - Create booking
+- `PATCH /api/bookings/[id]` - Update booking
+- `DELETE /api/bookings/[id]` - Cancel booking
+
+### Hotels
+- `GET /api/hotels` - List hotels
+- `POST /api/hotels` - Create hotel
+- `GET /api/hotels/[id]` - Get hotel details
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+## 📄 License
+
+© 2026 Qaras Hotels. All rights reserved.
+
+## 🆘 Support
+
+For support:
+- Email: support@qarashotels.com
+- Documentation: [docs/](./docs/)
+- Issues: GitHub Issues

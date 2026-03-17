@@ -50,6 +50,17 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 24 * 60 * 60, // 1 day (will be overridden by settings if available)
   },
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false, // allow http for local dev even when NODE_ENV=production
+      },
+    },
+  },
   pages: {
     signIn: '/login',
     error: '/login', // Error code passed in query string as ?error=

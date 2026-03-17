@@ -3,7 +3,7 @@ import { hash } from "bcrypt";
 import pool from "@/lib/db";
 import { UserRole, SubscriptionPlan } from "@/lib/types/enums";
 import crypto from "crypto";
-import { emailService } from "@/lib/services/email.service";
+import { brevoEmailService } from "@/lib/services/brevo-email.service";
 import { calculateEndDate } from "@/lib/services/subscription.service";
 
 export const dynamic = 'force-dynamic';
@@ -81,19 +81,20 @@ export async function POST(request: NextRequest) {
     try {
       await connection.beginTransaction();
 
+      // Generate UUID on the application side so we can reference it immediately
+      const newUserId = crypto.randomUUID();
+
       // Create the base user with verification fields
-      const [userResult] = await connection.query(
+      await connection.query(
         `INSERT INTO users (id, name, email, password, role, verificationToken, verificationExpires, createdAt, updatedAt) 
-         VALUES (UUID(), ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-        [name, email, hashedPassword, userRole, verificationToken, verificationExpires]
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [newUserId, name, email, hashedPassword, userRole, verificationToken, verificationExpires]
       );
 
-      const userId = (userResult as any).insertId;
-
-      // Get the created user
+      // Get the created user by the UUID we generated
       const [userRows] = await connection.query(
         'SELECT * FROM users WHERE id = ?',
-        [userId]
+        [newUserId]
       );
       const user = (userRows as any[])[0];
 
@@ -110,12 +111,32 @@ export async function POST(request: NextRequest) {
       await connection.commit();
       connection.release();
 
-      // Send welcome email
-      await emailService.sendWelcomeEmail(user.email, user.name);
+      // Log user details before sending email
+      console.log('=== Registration Debug ===');
+      console.log('User created:', {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      });
+      console.log('Sending verification email to:', user.email);
+      console.log('========================');
 
-      // Return the created user (without password)
-      const { password: _, ...userWithoutPassword } = user;
-      return NextResponse.json(userWithoutPassword, { status: 201 });
+      // Send verification email using Brevo
+      await brevoEmailService.sendVerificationEmail({
+        to: user.email,
+        name: user.name,
+        token: verificationToken,
+      });
+
+      console.log('Verification email sent successfully to:', user.email);
+
+      // Return success message (without password or sensitive data)
+      return NextResponse.json({
+        message: "Registration successful! Please check your email to verify your account.",
+        email: user.email,
+        requiresVerification: true
+      }, { status: 201 });
     } catch (error) {
       await connection.rollback();
       connection.release();

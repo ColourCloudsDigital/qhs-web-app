@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import crypto from 'crypto';
-import { emailService } from '@/lib/services/email.service';
+import { brevoEmailService } from '@/lib/services/brevo-email.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
       [resetToken, resetExpires, user.id]
     );
 
-    // Send reset email
-    await emailService.sendPasswordResetEmail({
+    // Send reset email using Brevo
+    await brevoEmailService.sendPasswordResetEmail({
       to: user.email,
       name: user.name,
       token: resetToken,

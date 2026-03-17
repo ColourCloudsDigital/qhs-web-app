@@ -1,5 +1,6 @@
 import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface HotelFilters {
   location?: string;
@@ -424,15 +425,19 @@ export class HotelService {
     const whitelabelConfigString = data.whitelabelConfig ? 
       JSON.stringify(data.whitelabelConfig) : null;
     
+    // Generate UUID on the application side
+    const hotelId = uuidv4();
+
     try {
       // Create the hotel first
-      const [result] = await pool.query(
+      await pool.query(
         `INSERT INTO hotels (
-          name, description, address, city, state, country, zipCode, 
+          id, name, description, address, city, state, country, zipCode, 
           phone, email, website, images, rating, vendorId,
           whitelabelConfig
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          hotelId,
           data.name,
           data.description || '',
           data.address || '',
@@ -449,8 +454,6 @@ export class HotelService {
           whitelabelConfigString
         ]
       );
-      
-      const hotelId = (result as any).insertId;
       
       // Add amenities if provided
       if (data.amenities && data.amenities.length > 0) {

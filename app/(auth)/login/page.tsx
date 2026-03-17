@@ -12,19 +12,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const callbackUrl = searchParams.get('callbackUrl');
   const errorType = searchParams.get('error');
+  const verified = searchParams.get('verified');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [themeSettings, setThemeSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Set error message based on URL parameter
   useEffect(() => {
+    if (verified === '1') {
+      setSuccessMessage('Email verified successfully! You can now log in.');
+    }
     if (errorType) {
       switch (errorType) {
         case 'CredentialsSignin':
@@ -80,7 +86,7 @@ export default function LoginPage() {
           setError('Your account has been deactivated. Please contact support.');
         } else if (result.error === 'EMAIL_NOT_VERIFIED') {
           setError('Please verify your email address before logging in.');
-          // Offer resend option here
+          setUnverifiedEmail(email);
         } else if (result.error.includes('Database') || result.error.includes('Invalid credentials')) {
           // Handle database errors with a user-friendly message
           console.error('Database error:', result.error);
@@ -92,23 +98,27 @@ export default function LoginPage() {
         return;
       }
 
-      // If we have specific callbackUrl, use it
-      if (callbackUrl) {
-        router.push(callbackUrl);
-      } else {
-        // Default to dashboard
-        router.push('/dashboard');
-      }
-      router.refresh();
+      // If we have specific callbackUrl, use it — but never redirect back to auth pages or generic /dashboard
+      const safeCallbackUrl = callbackUrl && 
+        !callbackUrl.startsWith('/login') && 
+        !callbackUrl.startsWith('/register') &&
+        !callbackUrl.startsWith('/verify-email') &&
+        !callbackUrl.startsWith('/forgot-password') &&
+        callbackUrl !== '/dashboard'
+          ? callbackUrl 
+          : null;
+
+      // Hard navigate so the middleware can read the fresh session cookie and redirect to the right dashboard
+      window.location.href = safeCallbackUrl || '/dashboard';
     } catch (error) {
       setError('An unexpected error occurred');
       setIsLoading(false);
     }
   };
 
-  // Handle resend verification email
   const handleResendVerification = async () => {
-    if (!email) {
+    const targetEmail = unverifiedEmail || email;
+    if (!targetEmail) {
       setError('Please enter your email address');
       return;
     }
@@ -118,13 +128,13 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/resend-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: targetEmail }),
       });
       
       const data = await response.json();
       
       if (response.ok) {
-        setError(''); // Clear error
+        setError('');
         alert('Verification email has been sent. Please check your inbox.');
       } else {
         setError(data.message || 'Failed to resend verification email');
@@ -196,6 +206,11 @@ export default function LoginPage() {
           </div>
           
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {successMessage && (
+              <div className="rounded-lg bg-green-50 p-4 dark:bg-green-900/30">
+                <div className="text-sm text-green-700 dark:text-green-400">{successMessage}</div>
+              </div>
+            )}
             {error && (
               <div className="rounded-lg bg-red-50 p-4 dark:bg-red-900/30">
                 <div className="flex flex-col">
@@ -265,25 +280,6 @@ export default function LoginPage() {
               rounded="lg"
             >
               {isLoading ? 'Signing In...' : 'Sign In'}
-            </Button>
-            
-            <Button
-              type="button"
-              variant="google"
-              fullWidth
-              disabled
-              onClick={() => signIn('google', { callbackUrl })}
-              leftIcon={
-                <Image
-                  src="/assets/images/google-icon.svg"
-                  alt="Google"
-                  width={18}
-                  height={18}
-                />
-              }
-              rounded="lg"
-            >
-              Sign In with Google
             </Button>
           </form>
           

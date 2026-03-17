@@ -66,11 +66,11 @@ export async function GET(
       
     // Fetch room types for the hotel - using rooms table directly since room_types doesn't exist
     const [roomTypeRows]: any = await pool.query(
-      `SELECT DISTINCT
+      `SELECT
         r.type as id,
         r.type as name,
-        r.description,
-        r.pricePerNight as basePrice,
+        MIN(r.description) as description,
+        MIN(r.pricePerNight) as basePrice,
         COUNT(r.id) as roomCount
       FROM rooms r
       WHERE r.hotelId = ?
