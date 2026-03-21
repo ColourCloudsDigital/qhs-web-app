@@ -35,9 +35,7 @@ const nextConfig = {
     ],
   },
 
-  // FIXED: Moved out of 'experimental' and renamed for Next.js 14+
-  // If you are using Next.js 13 or early 14, change this back to:
-  // experimental: { serverComponentsExternalPackages: ['bcrypt', 'mysql2'] }
+  // External packages for server components
   serverExternalPackages: ['bcrypt', 'mysql2'],
 
   compress: true,
