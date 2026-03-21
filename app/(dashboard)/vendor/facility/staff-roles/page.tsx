@@ -2,11 +2,9 @@ import { Metadata } from 'next';
 import { authOptions } from '@/lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import dynamicImport from 'next/dynamic';
 import { getUserVendorId } from '@/lib/utils/vendor';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { HotelService } from '@/services/hotels';
 
 export const metadata: Metadata = {
   title: 'Roles & Permissions | Vendor Dashboard',
@@ -15,32 +13,12 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-// Fetch vendor hotels
-async function getVendorHotels() {
-  const cookieHeader = cookies().getAll().map(c => `${c.name}=${c.value}`).join('; ');
-
-  const response = await fetch(`${API_URL}/api/vendor/hotels?simple=true`, {
-    headers: {
-      cookie: cookieHeader,
-    },
-  });
-
-  if (!response.ok) {
-    console.error('Failed to fetch hotels');
-    return [];
-  }
-
-  const data = await response.json();
-  return data.hotels || [];
-}
-
 // Dynamically load TabsClient (client-only)
 const TabsClient = dynamicImport(() => import('../components/TabsClient'), { ssr: false });
 
 export default async function UserRolesPage() {
   const session = await getServerSession(authOptions);
 
-  console.log('Session:', session);
   if (!session?.user) {
     redirect('/login');
   }
@@ -51,7 +29,16 @@ export default async function UserRolesPage() {
     redirect('/login');
   }
 
-  const hotels = await getVendorHotels();
+  let hotels: { id: string; name: string }[] = [];
+  try {
+    const result = await HotelService.getHotels({
+      filters: { vendorId },
+      simple: true,
+    });
+    hotels = (result.hotels as any[]).map((h: any) => ({ id: h.id, name: h.name }));
+  } catch (err) {
+    console.error('Failed to fetch hotels for staff-roles page:', err);
+  }
 
   if (hotels.length === 0) {
     return (
