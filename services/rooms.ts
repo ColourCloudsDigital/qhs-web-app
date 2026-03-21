@@ -1,5 +1,6 @@
 import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface RoomCreateInput {
   name: string;
@@ -348,10 +349,11 @@ export class RoomService {
     const roomNumbersString = data.roomNumbers ? JSON.stringify(data.roomNumbers) : '[]';
     
     // Create room with amenities in a transaction
+    const roomId = uuidv4();
     const room = await pool.query(
-      `INSERT INTO rooms (name, type, description, capacity, pricePerNight, discountedPrice, status, hotelId, images, roomNumbers)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [data.name, data.type || 'standard', data.description, data.capacity || 1, data.pricePerNight || 0, data.discountedPrice, data.status || 'available', data.hotelId, imagesString, roomNumbersString]
+      `INSERT INTO rooms (id, name, type, description, capacity, pricePerNight, discountedPrice, status, hotelId, images, roomNumbers)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [roomId, data.name, data.type || 'standard', data.description, data.capacity || 1, data.pricePerNight || 0, data.discountedPrice, data.status || 'available', data.hotelId, imagesString, roomNumbersString]
     );
     
     // Add amenities if provided
@@ -369,14 +371,15 @@ export class RoomService {
         if (amenityExists && (amenityExists as any[]).length > 0) {
           await pool.query(
             `INSERT INTO room_amenities (roomId, amenityId) VALUES (?, ?)`,
-            [(room as any[])[0].insertId, amenityId]
+            [roomId, amenityId]
           );
         }
       }
     }
     
     return {
-      ...(room as any[])[0],
+      id: roomId,
+      ...data,
       images: JSON.parse(imagesString),
       roomNumbers: JSON.parse(roomNumbersString),
     };
@@ -433,10 +436,11 @@ export class RoomService {
     const roomNumbersString = JSON.stringify(data.roomNumbers);
     
     // Create room with amenities in a transaction
+    const bulkRoomId = uuidv4();
     const room = await pool.query(
-      `INSERT INTO rooms (name, type, description, capacity, pricePerNight, discountedPrice, status, hotelId, images, roomNumbers)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [data.name, data.type, data.description, data.capacity, data.pricePerNight, data.discountedPrice, data.status || 'available', data.hotelId, imagesString, roomNumbersString]
+      `INSERT INTO rooms (id, name, type, description, capacity, pricePerNight, discountedPrice, status, hotelId, images, roomNumbers)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [bulkRoomId, data.name, data.type, data.description, data.capacity, data.pricePerNight, data.discountedPrice, data.status || 'available', data.hotelId, imagesString, roomNumbersString]
     );
     
     // Add amenities if provided
@@ -454,14 +458,15 @@ export class RoomService {
         if (amenityExists && (amenityExists as any[]).length > 0) {
           await pool.query(
             `INSERT INTO room_amenities (roomId, amenityId) VALUES (?, ?)`,
-            [(room as any[])[0].insertId, amenityId]
+            [bulkRoomId, amenityId]
           );
         }
       }
     }
     
     return {
-      ...(room as any[])[0],
+      id: bulkRoomId,
+      ...data,
       images: JSON.parse(imagesString),
       roomNumbers: data.roomNumbers,
     };
