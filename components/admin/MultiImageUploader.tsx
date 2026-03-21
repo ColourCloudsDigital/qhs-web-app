@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import Image from 'next/image';
 import { Upload, X, ImagePlus, Loader2, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from '@/lib/toast';
@@ -169,13 +168,12 @@ export function MultiImageUploader({
           {images.map((imageUrl, index) => (
             <div key={index} className="relative rounded-md border border-gray-200 dark:border-gray-700">
               <div className="group relative aspect-[4/3] overflow-hidden rounded-t-md">
-                <Image
+                {/* Use plain img for local uploads to avoid Next.js image optimization issues */}
+                <img
                   src={imageUrl}
                   alt={`Image ${index + 1}`}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                   className={cn(
-                    "object-cover",
+                    "h-full w-full object-cover",
                     aspectRatio === 'square' && "aspect-square",
                     aspectRatio === 'portrait' && "aspect-[3/4]"
                   )}
