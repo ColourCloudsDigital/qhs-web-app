@@ -77,7 +77,7 @@ export default function CreateStaffModal({
       const fetchHotels = async () => {
         setLoadingHotels(true);
         try {
-          const response = await fetch(`/api/vendor/hotels?simple=true`);
+          const response = await fetch(`/api/vendor/${vendorId}/hotels`);
           if (response.ok) {
             const data = await response.json();
             setHotels(data.hotels || []);
