@@ -35,8 +35,10 @@ const nextConfig = {
     ],
   },
 
-  // External packages for server components
-  serverExternalPackages: ['bcrypt', 'mysql2'],
+  // External packages for server components (Next.js 14 syntax)
+  experimental: {
+    serverComponentsExternalPackages: ['bcrypt', 'mysql2'],
+  },
 
   compress: true,
   poweredByHeader: false,
