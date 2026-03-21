@@ -216,7 +216,7 @@ export function RoomForm({
     if (formData.images.length === 0) {
       errors.images = 'At least one image is required';
     }
-    
+
     // Validate room numbers based on the active tab
     if (activeTab === 'manual') {
       if (formData.roomNumbers.length === 0) {
@@ -359,6 +359,9 @@ export function RoomForm({
     
     const isValid = await validateForm();
     if (!isValid) {
+      // Scroll to top to show validation errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast.error('Please fix the errors before submitting');
       return;
     }
     
@@ -391,6 +394,16 @@ export function RoomForm({
   
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {Object.keys(validationErrors).length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">Please fix the following errors:</p>
+          <ul className="mt-2 list-disc pl-5 text-sm text-red-600 dark:text-red-400">
+            {Object.values(validationErrors).map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Room Information</CardTitle>
