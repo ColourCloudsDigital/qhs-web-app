@@ -6,99 +6,73 @@ import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
-
 export async function POST(req: NextRequest) {
-  console.log('â­ Upload API called');
-  
   try {
-    // Parse form data
     const formData = await req.formData();
-    console.log('ðŸ“ Form data received');
 
-    // Get query parameters
+    // entity can be a nested path like "hotels/hotelId/rooms"
     const url = new URL(req.url);
     const entity = url.searchParams.get('entity') || 'uploads';
-    const id = url.searchParams.get('id');
-    
-    console.log(`ðŸ“‚ Entity: ${entity}, ID: ${id || 'none'}`);
 
-    // Extract files
-    const uploadFiles: { 
+    // Sanitize: strip leading/trailing slashes, prevent path traversal
+    const safePath = entity
+      .split('/')
+      .map(s => s.replace(/[^a-zA-Z0-9_\-]/g, ''))
+      .filter(Boolean)
+      .join('/');
+
+    // Extract files from form data
+    const uploadFiles: {
       name: string;
       type: string;
       arrayBuffer: () => Promise<ArrayBuffer>;
     }[] = [];
-    
-    formData.forEach((value, key) => {
-      // Check if the value is a file (has arrayBuffer method) without using instanceof File
+
+    formData.forEach((value) => {
       if (
-        typeof value === 'object' && 
-        value !== null && 
-        'arrayBuffer' in value && 
-        typeof value.arrayBuffer === 'function' &&
-        'name' in value && 
+        typeof value === 'object' &&
+        value !== null &&
+        'arrayBuffer' in value &&
+        typeof (value as any).arrayBuffer === 'function' &&
+        'name' in value &&
         'type' in value
       ) {
-        console.log(`ðŸ“„ Found file: ${value.name}, type: ${value.type}`);
         uploadFiles.push(value as any);
       }
     });
-    
+
     if (uploadFiles.length === 0) {
-      console.log('âŒ No files in request');
       return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
     }
-    
-    // Now let's actually save the files
-    
-    // Create upload directory path
-    let uploadDir = path.join(process.cwd(), 'public', 'uploads', entity);
-    if (id) {
-      uploadDir = path.join(uploadDir, id);
-    }
-    
-    console.log(`ðŸ“ Creating directory: ${uploadDir}`);
-    try {
-      await mkdir(uploadDir, { recursive: true });
-      console.log(`âœ… Directory created successfully`);
-    } catch (dirError) {
-      console.error(`âŒ Error creating directory:`, dirError);
-      throw dirError;
-    }
 
-    // Process files one by one
-    const savedFiles = [];
+    // Build upload directory: public/uploads/<safePath>
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', safePath);
+    await mkdir(uploadDir, { recursive: true });
+
+    const savedFiles: string[] = [];
+
     for (const file of uploadFiles) {
-      // Create a unique filename based on the original name
-      const fileExt = path.extname(file.name);
-      const fileName = `${randomUUID()}${fileExt}`;
+      const ext = path.extname(file.name) || '.jpg';
+      const fileName = `${randomUUID()}${ext}`;
       const filePath = path.join(uploadDir, fileName);
-      
-      console.log(`ðŸ“ Full file path: ${filePath}`);
-      
-      console.log(`ðŸ’¾ Saving file: ${fileName}`);
-      
-      // Convert file to buffer and save
+
       const buffer = Buffer.from(await file.arrayBuffer());
       await writeFile(filePath, buffer);
-      
-      // Generate public URL
-      const publicPath = `/uploads/${entity}${id ? `/${id}` : ''}/${fileName}`;
-      savedFiles.push(publicPath);
-      
-      console.log(`ðŸ”— File URL: ${publicPath}`);
+
+      // Public URL matches the path under /public
+      const publicUrl = `/uploads/${safePath}/${fileName}`;
+      savedFiles.push(publicUrl);
     }
-    
-    return NextResponse.json({
-      success: true,
-      files: savedFiles
-    });
-    
+
+    return NextResponse.json({ success: true, files: savedFiles });
   } catch (error) {
-    console.error('â›” Upload error:', error);
-    return NextResponse.json({
-      error: 'Failed to upload files',
-      message: error instanceof Error ? error.message : String(error)
-    }, { status: 500 });
+    console.error('Upload error:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to upload files',
+        message: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
   }
 }
