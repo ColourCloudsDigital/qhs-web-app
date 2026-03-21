@@ -7,7 +7,6 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   reactStrictMode: true,
-  // swcMinify is now the default; property can be safely removed
 
   // Updated Image optimization
   images: {
@@ -23,12 +22,12 @@ const nextConfig = {
         hostname: 'qarashotels.com',
       },
       {
-        protocol: 'http', // Keep for local dev if needed
+        protocol: 'http', 
         hostname: 'localhost',
         port: '3000',
       },
-      // Note: Keeping wildcard patterns allows images from ANY source.
-      // For better security, restrict these to your specific CDN/S3 bucket.
+      // Note: While valid in newer versions, a blanket wildcard can sometimes 
+      // cause validation issues depending on your hosting provider.
       {
         protocol: 'https',
         hostname: '**',
@@ -36,19 +35,23 @@ const nextConfig = {
     ],
   },
 
-  // External packages configuration
-  experimental: {
-    serverComponentsExternalPackages: ['bcrypt', 'mysql2'],
-  },
+  // FIXED: Moved out of 'experimental' and renamed for Next.js 14+
+  // If you are using Next.js 13 or early 14, change this back to:
+  // experimental: { serverComponentsExternalPackages: ['bcrypt', 'mysql2'] }
+  serverExternalPackages: ['bcrypt', 'mysql2'],
 
   compress: true,
   poweredByHeader: false,
+  
+  // Note: Only keep 'standalone' if deploying to Docker/custom VPS. 
+  // If deploying to Vercel or Netlify, you should comment this out.
   output: 'standalone',
 
   async headers() {
     return [
       {
-        source: '/(.*)',
+        // FIXED: Updated regex syntax for Next.js routing
+        source: '/:path*', 
         headers: [
           {
             key: 'X-Frame-Options',
