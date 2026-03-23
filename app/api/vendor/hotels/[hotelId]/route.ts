@@ -51,6 +51,18 @@ export async function GET(
 
     const hotel = rows[0];
 
+    // Parse images JSON string from DB
+    let parsedImages: string[] = [];
+    try {
+      if (hotel.images) {
+        parsedImages = typeof hotel.images === 'string'
+          ? JSON.parse(hotel.images)
+          : hotel.images;
+      }
+    } catch {
+      parsedImages = [];
+    }
+
     // Fetch amenities for the hotel
     const [amenityRows]: any = await pool.query(
       `SELECT 
@@ -84,22 +96,46 @@ export async function GET(
         COUNT(DISTINCT b.id) as activeBookings,
         SUM(CASE WHEN b.status = 'CHECKED_IN' THEN 1 ELSE 0 END) as currentGuests,
         COUNT(DISTINCT CASE WHEN ru.status = 'occupied' THEN ru.id END) as occupiedRooms,
-        COUNT(DISTINCT CASE WHEN ru.status = 'maintenance' THEN ru.id END) as maintenanceRooms
+        COUNT(DISTINCT CASE WHEN ru.status = 'maintenance' THEN ru.id END) as maintenanceRooms,
+        COUNT(DISTINCT ru.id) as totalUnits,
+        COALESCE(SUM(CASE WHEN b.status IN ('CONFIRMED','CHECKED_IN','CHECKED_OUT') THEN b.totalAmount ELSE 0 END), 0) as totalRevenue
       FROM hotels h
       LEFT JOIN rooms r ON h.id = r.hotelId
       LEFT JOIN room_units ru ON r.id = ru.roomId
-      LEFT JOIN bookings b ON ru.id = b.roomUnitId AND b.status IN ('CONFIRMED', 'CHECKED_IN')
+      LEFT JOIN bookings b ON ru.id = b.roomUnitId AND b.status IN ('CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT')
       WHERE h.id = ?`,
       [hotelId]
     );
 
+    // Room type count and total room units
+    const [roomCountRows]: any = await pool.query(
+      `SELECT COUNT(DISTINCT r.id) as roomTypes, COUNT(ru.id) as totalRooms
+       FROM rooms r
+       LEFT JOIN room_units ru ON r.id = ru.roomId
+       WHERE r.hotelId = ?`,
+      [hotelId]
+    );
+
+    const s = statsRows[0];
+    const totalUnits = Number(roomCountRows[0]?.totalRooms) || 0;
+    const occupiedUnits = Number(s?.occupiedRooms) || 0;
+    const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
+
     return NextResponse.json({ 
       hotel: {
         ...hotel,
+        images: parsedImages,
         amenities: amenityRows,
-        policies: [], // Empty array since hotel_policies table doesn't exist
+        policies: [],
         roomTypes: roomTypeRows,
-        stats: statsRows[0]
+        stats: {
+          ...s,
+          roomCount: Number(roomCountRows[0]?.roomTypes) || 0,
+          physicalRoomCount: totalUnits,
+          revenue: Number(s?.totalRevenue) || 0,
+          occupancyRate,
+          bookingCount: Number(s?.activeBookings) || 0,
+        }
       }
     });
   } catch (error) {
