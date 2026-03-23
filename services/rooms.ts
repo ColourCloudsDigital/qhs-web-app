@@ -370,7 +370,7 @@ export class RoomService {
         
         if (amenityExists && (amenityExists as any[]).length > 0) {
           await pool.query(
-            `INSERT INTO room_amenities (roomId, amenityId) VALUES (?, ?)`,
+            `INSERT INTO room_amenities (id, roomId, amenityId) VALUES (UUID(), ?, ?)`,
             [roomId, amenityId]
           );
         }
@@ -457,7 +457,7 @@ export class RoomService {
         
         if (amenityExists && (amenityExists as any[]).length > 0) {
           await pool.query(
-            `INSERT INTO room_amenities (roomId, amenityId) VALUES (?, ?)`,
+            `INSERT INTO room_amenities (id, roomId, amenityId) VALUES (UUID(), ?, ?)`,
             [bulkRoomId, amenityId]
           );
         }
@@ -605,10 +605,41 @@ export class RoomService {
         for (const amenityId of data.amenities) {
           if (amenityId) {
             await pool.query(
-              `INSERT INTO room_amenities (roomId, amenityId) VALUES (?, ?)`,
+              `INSERT INTO room_amenities (id, roomId, amenityId) VALUES (UUID(), ?, ?)`,
               [roomId, amenityId]
             );
           }
+        }
+      }
+
+      // Sync room_units when roomNumbers is updated
+      if (data.roomNumbers && Array.isArray(data.roomNumbers)) {
+        const newNumbers = data.roomNumbers.map(String);
+
+        // Get existing room_units for this room
+        const [existingUnits] = await pool.query(
+          `SELECT id, roomNumber FROM room_units WHERE roomId = ?`,
+          [roomId]
+        ) as any[];
+
+        const existingNumbers = (existingUnits as any[]).map((u: any) => String(u.roomNumber));
+
+        // Delete units whose roomNumber was removed
+        const toDelete = (existingUnits as any[]).filter(
+          (u: any) => !newNumbers.includes(String(u.roomNumber))
+        );
+        for (const unit of toDelete) {
+          await pool.query(`DELETE FROM room_units WHERE id = ?`, [unit.id]);
+        }
+
+        // Insert units for newly added room numbers
+        const toAdd = newNumbers.filter(n => !existingNumbers.includes(n));
+        for (const roomNumber of toAdd) {
+          await pool.query(
+            `INSERT INTO room_units (id, roomId, roomNumber, status, createdAt, updatedAt)
+             VALUES (UUID(), ?, ?, 'available', NOW(), NOW())`,
+            [roomId, roomNumber]
+          );
         }
       }
       
