@@ -96,7 +96,9 @@ export async function POST(request: NextRequest) {
     
     // Verify room unit exists and get room details
     const [roomUnitRows] = await pool.query(
-      `SELECT ru.*, r.* FROM room_units ru 
+      `SELECT ru.id, ru.roomId, ru.roomNumber, ru.status, ru.currentBookingId, ru.notes,
+              r.name as roomName, r.type as roomType, r.pricePerNight, r.capacity, r.hotelId
+       FROM room_units ru 
        JOIN rooms r ON ru.roomId = r.id 
        WHERE ru.id = ? AND r.hotelId = ?`,
       [roomUnitId, hotelId]
@@ -117,6 +119,8 @@ export async function POST(request: NextRequest) {
       pricePerNight: roomUnit.pricePerNight
     };
     
+    console.log("This is the room unit", roomUnit);
+
     // Check if the room unit is available
     if (roomUnit.status !== 'available') {
       console.log('[API] Room unit is not available, status:', roomUnit.status);
