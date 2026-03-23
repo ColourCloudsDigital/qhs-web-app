@@ -125,10 +125,12 @@ export async function POST(req: NextRequest) {
       const roomNumbersString = JSON.stringify(roomData.roomNumbers);
       
       // Create the room
-      const [roomResult] = await pool.query(
+      const roomId = require('crypto').randomUUID();
+      await pool.query(
         `INSERT INTO rooms (id, name, type, description, capacity, pricePerNight, discountedPrice, status, hotelId, images, roomNumbers, createdAt, updatedAt) 
-         VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [
+          roomId,
           roomData.name,
           roomData.type,
           roomData.description,
@@ -141,8 +143,6 @@ export async function POST(req: NextRequest) {
           roomNumbersString
         ]
       );
-
-      const roomId = (roomResult as any).insertId;
 
       // Get the created room
       const [newRoomRows] = await pool.query(
@@ -159,6 +159,15 @@ export async function POST(req: NextRequest) {
             [newRoom.id, amenityId]
           );
         }
+      }
+
+      // Create a room_unit for each room number
+      for (const roomNumber of roomData.roomNumbers) {
+        await pool.query(
+          `INSERT INTO room_units (id, roomId, roomNumber, status, createdAt, updatedAt)
+           VALUES (UUID(), ?, ?, ?, NOW(), NOW())`,
+          [newRoom.id, String(roomNumber), roomData.status]
+        );
       }
       
       // Return the created room
@@ -196,6 +205,15 @@ export async function POST(req: NextRequest) {
         );
         
         room.roomNumbers = data.roomNumbers;
+
+        // Create a room_unit for each room number
+        for (const roomNumber of data.roomNumbers) {
+          await pool.query(
+            `INSERT INTO room_units (id, roomId, roomNumber, status, createdAt, updatedAt)
+             VALUES (UUID(), ?, ?, ?, NOW(), NOW())`,
+            [room.id, String(roomNumber), roomData.status]
+          );
+        }
       }
       
       return NextResponse.json({ room }, { status: 201 });
