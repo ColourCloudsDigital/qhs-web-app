@@ -2,14 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeftIcon,
   PencilIcon, 
   PlusIcon,
   TrashIcon,
-  ChevronRightIcon,
   HomeIcon,
   EyeIcon
 } from '@heroicons/react/24/outline';
@@ -22,7 +20,10 @@ import { formatCurrency } from '@/lib/utils';
 import { RoomList } from '@/components/vendor/RoomList';
 import ImageLightbox from '@/components/common/ImageLightbox';
 import toast from '@/lib/toast';
-import { Loader2 } from 'lucide-react';
+import { 
+  Loader2, Wifi, Tv, Car, Utensils, Dumbbell, Waves, Wind, Coffee,
+  ShowerHead, Briefcase, ChefHat, TreePine, Shield, Star
+} from 'lucide-react';
 
 interface HotelDetailPageProps {
   params: {
@@ -167,6 +168,46 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
     return hotel.images && Array.isArray(hotel.images) && hotel.images.length > 0 && 
           hotel.images.some((img: string) => img && typeof img === 'string');
   };
+
+  // Map amenity icon field to lucide components
+  const AMENITY_ICON_MAP: Record<string, React.ReactNode> = {
+    'wifi': <Wifi className="h-5 w-5" />,
+    'pool': <Waves className="h-5 w-5" />,
+    'gym': <Dumbbell className="h-5 w-5" />,
+    'restaurant': <Utensils className="h-5 w-5" />,
+    'meeting-room': <Briefcase className="h-5 w-5" />,
+    'spa': <Waves className="h-5 w-5" />,
+    'ac': <Wind className="h-5 w-5" />,
+    'tv': <Tv className="h-5 w-5" />,
+    'minibar': <Coffee className="h-5 w-5" />,
+    'safe': <Shield className="h-5 w-5" />,
+    'balcony': <TreePine className="h-5 w-5" />,
+    'bathtub': <ShowerHead className="h-5 w-5" />,
+    'shower': <ShowerHead className="h-5 w-5" />,
+    'room-service': <ChefHat className="h-5 w-5" />,
+    'parking': <Car className="h-5 w-5" />,
+    'breakfast': <Coffee className="h-5 w-5" />,
+  };
+
+  const getAmenityIcon = (amenity: any) => {
+    const icon = (amenity.icon || '').toLowerCase().trim();
+    if (AMENITY_ICON_MAP[icon]) return AMENITY_ICON_MAP[icon];
+    // Fallback: keyword match on name
+    const name = (amenity.name || '').toLowerCase();
+    if (name.includes('wifi') || name.includes('internet')) return <Wifi className="h-5 w-5" />;
+    if (name.includes('pool') || name.includes('swim')) return <Waves className="h-5 w-5" />;
+    if (name.includes('gym') || name.includes('fitness')) return <Dumbbell className="h-5 w-5" />;
+    if (name.includes('restaurant') || name.includes('dining')) return <Utensils className="h-5 w-5" />;
+    if (name.includes('park') || name.includes('car')) return <Car className="h-5 w-5" />;
+    if (name.includes('breakfast') || name.includes('coffee')) return <Coffee className="h-5 w-5" />;
+    if (name.includes('air') || name.includes('ac')) return <Wind className="h-5 w-5" />;
+    if (name.includes('tv') || name.includes('television')) return <Tv className="h-5 w-5" />;
+    if (name.includes('safe') || name.includes('security')) return <Shield className="h-5 w-5" />;
+    if (name.includes('shower') || name.includes('bath')) return <ShowerHead className="h-5 w-5" />;
+    if (name.includes('kitchen') || name.includes('cook')) return <ChefHat className="h-5 w-5" />;
+    if (name.includes('business') || name.includes('meeting')) return <Briefcase className="h-5 w-5" />;
+    return <Star className="h-5 w-5" />;
+  };
   
   return (
     <div className="space-y-6">
@@ -231,16 +272,11 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
               className="col-span-3 relative overflow-hidden rounded-lg cursor-pointer group"
               onClick={() => openLightbox(0)}
             >
-              <Image
+              <img
                 src={getImageUrl(hotel.images[0])}
                 alt={`${hotel.name} main view`}
-                fill
-                sizes="(max-width: 768px) 100vw, 60vw"
-                className="object-cover transition-transform duration-300 group-hover:scale-110"
-                priority
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                 onError={(e) => {
-                  console.error(`Failed to load main image: ${hotel.images[0]}`);
-                  // Set fallback image
                   e.currentTarget.src = '/assets/images/placeholder-hotel.jpg';
                 }}
               />
@@ -256,14 +292,11 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                   className="relative overflow-hidden rounded-lg cursor-pointer group"
                   onClick={() => openLightbox(1)}
                 >
-                  <Image
+                  <img
                     src={getImageUrl(hotel.images[1])}
                     alt={`${hotel.name} view 2`}
-                    fill
-                    sizes="(max-width: 768px) 50vw, 20vw"
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                     onError={(e) => {
-                      console.error(`Failed to load image 2: ${hotel.images[1]}`);
                       e.currentTarget.src = '/assets/images/placeholder-hotel.jpg';
                     }}
                   />
@@ -278,14 +311,11 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                   className="relative overflow-hidden rounded-lg cursor-pointer group"
                   onClick={() => openLightbox(2)}
                 >
-                  <Image
+                  <img
                     src={getImageUrl(hotel.images[2])}
                     alt={`${hotel.name} view 3`}
-                    fill
-                    sizes="(max-width: 768px) 50vw, 20vw"
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                     onError={(e) => {
-                      console.error(`Failed to load image 3: ${hotel.images[2]}`);
                       e.currentTarget.src = '/assets/images/placeholder-hotel.jpg';
                     }}
                   />
@@ -319,11 +349,9 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
         </div>
       ) : (
         <div className="h-64 w-full rounded-lg bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-          <Image
+          <img
             src="/assets/images/placeholder-hotel.jpg"
             alt="No hotel images available"
-            width={600}
-            height={400}
             className="h-full w-full object-cover rounded-lg"
           />
         </div>
@@ -349,7 +377,7 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <span className="text-3xl font-bold text-blue-700 dark:text-blue-300">{stats.roomCount}</span>
+            <span className="text-3xl font-bold text-blue-700 dark:text-blue-300">{Number(stats.roomCount) || 0}</span>
             <span className="text-sm text-blue-600 dark:text-blue-400">Room Types</span>
           </CardContent>
         </Card>
@@ -361,8 +389,8 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
               </svg>
             </div>
-            <span className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{stats.physicalRoomCount}</span>
-            <span className="text-sm text-emerald-600 dark:text-emerald-400">Physical Rooms</span>
+            <span className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{Number(stats.physicalRoomCount) || 0}</span>
+            <span className="text-sm text-emerald-600 dark:text-emerald-400">Rooms</span>
           </CardContent>
         </Card>
         
@@ -373,7 +401,7 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <span className="text-3xl font-bold text-amber-700 dark:text-amber-300">{stats.bookingCount}</span>
+            <span className="text-3xl font-bold text-amber-700 dark:text-amber-300">{Number(stats.bookingCount) || 0}</span>
             <span className="text-sm text-amber-600 dark:text-amber-400">Total Bookings</span>
           </CardContent>
         </Card>
@@ -385,7 +413,7 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(stats.revenue)}</span>
+            <span className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(Number(stats.revenue) || 0)}</span>
             <span className="text-sm text-indigo-600 dark:text-indigo-400">Total Revenue</span>
           </CardContent>
         </Card>
@@ -398,7 +426,7 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
               </svg>
             </div>
-            <span className="text-3xl font-bold text-purple-700 dark:text-purple-300">{stats.occupancyRate}%</span>
+            <span className="text-3xl font-bold text-purple-700 dark:text-purple-300">{Number(stats.occupancyRate) || 0}%</span>
             <span className="text-sm text-purple-600 dark:text-purple-400">Occupancy Rate</span>
           </CardContent>
         </Card>
@@ -532,11 +560,13 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                       className="flex items-center gap-4 rounded-lg border border-gray-100 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50"
                     >
                       <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                        <span className="text-xl">{amenity.icon || '✓'}</span>
+                        {getAmenityIcon(amenity)}
                       </div>
                       <div>
                         <h4 className="font-medium text-gray-900 dark:text-white">{amenity.name}</h4>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{amenity.description}</p>
+                        {amenity.description && (
+                          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{amenity.description}</p>
+                        )}
                       </div>
                     </div>
                   ))}
