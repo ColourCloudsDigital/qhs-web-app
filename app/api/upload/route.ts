@@ -3,8 +3,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { existsSync } from 'fs';
 
 export const dynamic = 'force-dynamic';
+
+// Resolve the uploads base directory.
+// In standalone mode, process.cwd() is .next/standalone — we need to go up to the project root.
+// UPLOAD_DIR env var can override this entirely (useful for Docker/VPS deployments).
+function getUploadsBase(): string {
+  if (process.env.UPLOAD_DIR) {
+    return process.env.UPLOAD_DIR;
+  }
+  // Walk up from cwd until we find a 'public' folder or hit the filesystem root
+  let dir = process.cwd();
+  for (let i = 0; i < 5; i++) {
+    if (existsSync(path.join(dir, 'public'))) {
+      return path.join(dir, 'public', 'uploads');
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // Fallback: just use cwd/public/uploads
+  return path.join(process.cwd(), 'public', 'uploads');
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,8 +67,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
     }
 
-    // Build upload directory: public/uploads/<safePath>
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', safePath);
+    // Build upload directory
+    const uploadsBase = getUploadsBase();
+    const uploadDir = path.join(uploadsBase, safePath);
     await mkdir(uploadDir, { recursive: true });
 
     const savedFiles: string[] = [];
@@ -59,7 +82,7 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(await file.arrayBuffer());
       await writeFile(filePath, buffer);
 
-      // Public URL matches the path under /public
+      // Public URL — always relative to /uploads/
       const publicUrl = `/uploads/${safePath}/${fileName}`;
       savedFiles.push(publicUrl);
     }

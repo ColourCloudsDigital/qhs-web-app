@@ -45,9 +45,8 @@ yarn-error.log*
 next-env.d.ts
 
 # uploads
-public/uploads/*
-!public/uploads/.gitkeep
-node_modules
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # backup files
 public.bak/
