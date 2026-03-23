@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { 
   ArrowLeftIcon, 
   PencilIcon, 
@@ -415,15 +414,12 @@ export default function ViewRoomPage({ params }: ViewRoomPageProps) {
                       return (
                         <CarouselItem key={index}>
                           <div className="relative h-64 w-full sm:h-96">
-                            <Image
+                            <img
                               src={getImageUrl(image)}
                               alt={`${room.name} image ${index + 1}`}
                               className="h-full w-full object-cover"
-                              width={384}
-                              height={256}
                               onError={(e) => {
                                 console.error(`Failed to load image: ${image}`);
-                                // Set a fallback image on error
                                 e.currentTarget.src = '/assets/images/placeholder-room.jpg';
                               }}
                             />
@@ -437,12 +433,10 @@ export default function ViewRoomPage({ params }: ViewRoomPageProps) {
                 </Carousel>
               ) : (
                 <div className="flex h-64 w-full items-center justify-center bg-gray-200 sm:h-96">
-                  <Image 
-                    src="/assets/images/placeholder-room.jpg" 
-                    alt="No room image available" 
+                  <img
+                    src="/assets/images/placeholder-room.jpg"
+                    alt="No room image available"
                     className="h-full w-full object-cover"
-                    width={384}
-                    height={256}
                   />
                 </div>
               )}
@@ -626,14 +620,11 @@ export default function ViewRoomPage({ params }: ViewRoomPageProps) {
                       <div className="overflow-hidden rounded-lg border transition hover:shadow">
                         <div className="relative h-40 bg-gray-200">
                           {similarRoom.images && similarRoom.images.length > 0 ? (
-                            <Image
+                            <img
                               src={similarRoom.images[0].startsWith('/') ? similarRoom.images[0] : `/${similarRoom.images[0]}`}
                               alt={similarRoom.name}
                               className="h-full w-full object-cover"
-                              width={160}
-                              height={128}
                               onError={(e) => {
-                                console.error(`Failed to load similar room image: ${similarRoom.images[0]}`);
                                 e.currentTarget.src = '/placeholder-image.jpg';
                               }}
                             />
