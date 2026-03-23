@@ -63,6 +63,7 @@ interface RoomData {
     name: string;
   };
   roomNumber?: string;
+  roomNumbers?: string[];
   bedsCount?: number;
   bathroomsCount?: number;
   size?: number;
@@ -118,6 +119,21 @@ const getAmenityIcon = (amenityName: string) => {
 export default function ViewRoomPage({ params }: ViewRoomPageProps) {
   const { hotelId, roomId } = params;
   const router = useRouter();
+
+  const getStatusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      unavailable: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+      maintenance: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+      occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    };
+    const cls = map[(status || '').toLowerCase()] || 'bg-gray-100 text-gray-800';
+    return (
+      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${cls}`}>
+        {status || 'Unknown'}
+      </span>
+    );
+  };
   
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -522,9 +538,11 @@ export default function ViewRoomPage({ params }: ViewRoomPageProps) {
               </div>
               
               <div>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Room Number</h3>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Room Number(s)</h3>
                 <p className="mt-1 text-gray-900 dark:text-white">
-                  {room.roomNumber || 'Not assigned'}
+                  {room.roomNumbers && room.roomNumbers.length > 0
+                    ? room.roomNumbers.join(', ')
+                    : room.roomNumber || 'Not assigned'}
                 </p>
               </div>
             </CardContent>
@@ -583,21 +601,42 @@ export default function ViewRoomPage({ params }: ViewRoomPageProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {room.bookings.map((booking: any) => (
-                    <div key={booking.id} className="rounded-lg border p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">
-                            {booking.firstName} {booking.lastName}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(booking.checkIn)} to {formatDate(booking.checkOut)}
-                          </p>
+                  {room.bookings.map((booking: any) => {
+                    const statusColors: Record<string, string> = {
+                      CONFIRMED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+                      CHECKED_IN: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+                      CHECKED_OUT: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                      PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+                      CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+                    };
+                    const statusClass = statusColors[booking.status] || 'bg-gray-100 text-gray-800';
+                    const guestName = [booking.firstName, booking.lastName].filter(Boolean).join(' ') || booking.guestName || 'Guest';
+                    const checkIn = booking.checkIn ? formatDate(booking.checkIn) : 'N/A';
+                    const checkOut = booking.checkOut ? formatDate(booking.checkOut) : 'N/A';
+                    return (
+                      <div key={booking.id} className="rounded-lg border border-gray-100 p-4 dark:border-gray-700">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="font-medium text-gray-900 dark:text-white">{guestName}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {checkIn} → {checkOut}
+                            </p>
+                            {booking.totalAmount && (
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {formatCurrency(booking.totalAmount)}
+                              </p>
+                            )}
+                            {booking.roomNumber && (
+                              <p className="text-xs text-gray-400">Room {booking.roomNumber}</p>
+                            )}
+                          </div>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass}`}>
+                            {booking.status}
+                          </span>
                         </div>
-                        <Badge>{booking.status}</Badge>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
