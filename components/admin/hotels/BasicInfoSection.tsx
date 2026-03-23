@@ -72,19 +72,6 @@ export function BasicInfoSection({
             />
           </FormField>
         )}
-        
-        <FormField label="Rating">
-          <Input
-            type="number"
-            name="rating"
-            value={formData.rating.toString()}
-            onChange={onInputChange}
-            min="0"
-            max="5"
-            step="0.1"
-            placeholder="4.5"
-          />
-        </FormField>
       </FormGroup>
       
       <FormField label="Description">
