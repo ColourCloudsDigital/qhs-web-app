@@ -119,21 +119,6 @@ const getAmenityIcon = (amenityName: string) => {
 export default function ViewRoomPage({ params }: ViewRoomPageProps) {
   const { hotelId, roomId } = params;
   const router = useRouter();
-
-  const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-      unavailable: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-      maintenance: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-      occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    };
-    const cls = map[(status || '').toLowerCase()] || 'bg-gray-100 text-gray-800';
-    return (
-      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${cls}`}>
-        {status || 'Unknown'}
-      </span>
-    );
-  };
   
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -268,18 +253,19 @@ export default function ViewRoomPage({ params }: ViewRoomPageProps) {
   
   // Get status badge color based on room status
   const getStatusBadge = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'available':
-        return <Badge variant="success">{status}</Badge>;
-      case 'unavailable':
-        return <Badge variant="destructive">{status}</Badge>;
-      case 'maintenance':
-        return <Badge variant="warning">{status}</Badge>;
-      case 'cleaning':
-        return <Badge variant="warning">Cleaning</Badge>;
-      default:
-        return <Badge>{status || 'Unknown'}</Badge>;
-    }
+    const map: Record<string, string> = {
+      available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      unavailable: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+      maintenance: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+      occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      cleaning: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+    };
+    const cls = map[(status || '').toLowerCase()] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+    return (
+      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${cls}`}>
+        {status || 'Unknown'}
+      </span>
+    );
   };
   
   // Get friendly name for room type
