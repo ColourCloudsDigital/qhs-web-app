@@ -44,6 +44,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Windows reserved device names (should never be tracked)
+nul
+con
+prn
+aux
+
 # uploads
 /public/uploads/*
 !/public/uploads/.gitkeep

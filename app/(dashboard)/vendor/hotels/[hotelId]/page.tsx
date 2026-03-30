@@ -22,8 +22,35 @@ import ImageLightbox from '@/components/common/ImageLightbox';
 import toast from '@/lib/toast';
 import { 
   Loader2, Wifi, Tv, Car, Utensils, Dumbbell, Waves, Wind, Coffee,
-  ShowerHead, Briefcase, ChefHat, TreePine, Shield, Star
+  ShowerHead, Briefcase, ChefHat, TreePine, Shield, Star, ImageOff
 } from 'lucide-react';
+
+// Fallback component shown when an image fails to load or doesn't exist
+function HotelImage({ src, alt, className, onClick }: { src: string; alt: string; className?: string; onClick?: () => void }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div
+        onClick={onClick}
+        className={`flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 ${className || ''}`}
+      >
+        <ImageOff className="h-8 w-8 mb-1" />
+        <span className="text-xs">No image</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onClick={onClick}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 interface HotelDetailPageProps {
   params: {
@@ -272,13 +299,10 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
               className="col-span-3 relative overflow-hidden rounded-lg cursor-pointer group"
               onClick={() => openLightbox(0)}
             >
-              <img
+              <HotelImage
                 src={getImageUrl(hotel.images[0])}
                 alt={`${hotel.name} main view`}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                onError={(e) => {
-                  e.currentTarget.src = '/assets/images/placeholder-hotel.jpg';
-                }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
                 <EyeIcon className="h-10 w-10 text-white" />
@@ -292,13 +316,10 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                   className="relative overflow-hidden rounded-lg cursor-pointer group"
                   onClick={() => openLightbox(1)}
                 >
-                  <img
+                  <HotelImage
                     src={getImageUrl(hotel.images[1])}
                     alt={`${hotel.name} view 2`}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    onError={(e) => {
-                      e.currentTarget.src = '/assets/images/placeholder-hotel.jpg';
-                    }}
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <EyeIcon className="h-8 w-8 text-white" />
@@ -311,13 +332,10 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
                   className="relative overflow-hidden rounded-lg cursor-pointer group"
                   onClick={() => openLightbox(2)}
                 >
-                  <img
+                  <HotelImage
                     src={getImageUrl(hotel.images[2])}
                     alt={`${hotel.name} view 3`}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    onError={(e) => {
-                      e.currentTarget.src = '/assets/images/placeholder-hotel.jpg';
-                    }}
                   />
                   {hotel.images.length > 3 && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
@@ -348,12 +366,12 @@ export default function HotelDetailPage({ params }: HotelDetailPageProps) {
           )}
         </div>
       ) : (
-        <div className="h-64 w-full rounded-lg bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-          <img
-            src="/assets/images/placeholder-hotel.jpg"
-            alt="No hotel images available"
-            className="h-full w-full object-cover rounded-lg"
-          />
+        <div className="h-64 w-full rounded-lg bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+          <ImageOff className="h-12 w-12 mb-2" />
+          <p className="text-sm">No hotel images uploaded yet</p>
+          <Link href={`/vendor/hotels/${hotelId}/edit`} className="mt-2 text-xs text-primary hover:underline">
+            Edit hotel to add images
+          </Link>
         </div>
       )}
       

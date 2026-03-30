@@ -49,7 +49,7 @@ export function BasicInfoSection({
           />
         </FormField>
         
-        {isAdmin ? (
+        {isAdmin && (
           <FormField label="Vendor" required>
             <SimpleSelect
               value={formData.vendorId}
@@ -62,14 +62,6 @@ export function BasicInfoSection({
                 </Option>
               ))}
             </SimpleSelect>
-          </FormField>
-        ) : (
-          <FormField label="Vendor">
-            <Input
-              value={vendorName || 'Your account'}
-              disabled
-              className="bg-gray-50"
-            />
           </FormField>
         )}
       </FormGroup>
