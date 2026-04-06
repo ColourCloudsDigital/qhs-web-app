@@ -40,6 +40,29 @@ interface ViewRoomPageProps {
   };
 }
 
+// Image with fallback for missing/broken room images
+function RoomImageWithFallback({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span className="text-sm">Image not available</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="h-full w-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 interface RoomData {
   id: string;
   name: string;
@@ -408,38 +431,31 @@ export default function ViewRoomPage({ params }: ViewRoomPageProps) {
           {/* Images */}
           <Card className="mb-6 overflow-hidden">
             <CardContent className="p-0">
-              {hasValidImages() ? (
-                <Carousel className="w-full">
-                  <CarouselContent>
-                    {room.images.filter(img => img && typeof img === 'string').map((image: string, index: number) => {
-                      console.log(`Rendering room image ${index}: ${image}`);
-                      return (
+              {hasValidImages() ? (() => {
+                const validImages = room.images.filter((img: string) => img && typeof img === 'string');
+                const multipleImages = validImages.length > 1;
+                return (
+                  <Carousel className="w-full">
+                    <CarouselContent>
+                      {validImages.map((image: string, index: number) => (
                         <CarouselItem key={index}>
                           <div className="relative h-64 w-full sm:h-96">
-                            <img
+                            <RoomImageWithFallback
                               src={getImageUrl(image)}
                               alt={`${room.name} image ${index + 1}`}
-                              className="h-full w-full object-cover"
-                              onError={(e) => {
-                                console.error(`Failed to load image: ${image}`);
-                                e.currentTarget.src = '/assets/images/placeholder-room.jpg';
-                              }}
                             />
                           </div>
                         </CarouselItem>
-                      );
-                    })}
-                  </CarouselContent>
-                  <CarouselPrevious className="left-2" />
-                  <CarouselNext className="right-2" />
-                </Carousel>
-              ) : (
-                <div className="flex h-64 w-full items-center justify-center bg-gray-200 sm:h-96">
-                  <img
-                    src="/assets/images/placeholder-room.jpg"
-                    alt="No room image available"
-                    className="h-full w-full object-cover"
-                  />
+                      ))}
+                    </CarouselContent>
+                    {multipleImages && <CarouselPrevious className="left-2" />}
+                    {multipleImages && <CarouselNext className="right-2" />}
+                  </Carousel>
+                );
+              })() : (
+                <div className="flex h-64 w-full flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400 sm:h-96">
+                  <Loader2 className="h-8 w-8 mb-2 opacity-0" />
+                  <span className="text-sm">No images available</span>
                 </div>
               )}
             </CardContent>

@@ -69,6 +69,7 @@ export default function CreateStaffModal({
     { id: 'settings', label: 'Modify Settings' },
     { id: 'staff', label: 'Manage Staff' },
     { id: 'tasks', label: 'Manage Tasks' },
+    { id: 'pos', label: 'Manage Orders (POS)' },
   ];
 
   // Fetch hotels when modal opens

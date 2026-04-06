@@ -9,22 +9,18 @@ export async function GET(
   try {
     const { id } = params;
     
-    // Log the access for analytics
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const userAgent = req.headers.get('user-agent') || 'unknown';
-    const referrer = req.headers.get('referer') || 'unknown';
-    
-    await menuService.logMenuAccess(id, ip as string, userAgent as string, referrer as string);
+    // Log the access for analytics (non-critical)
+    try {
+      const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+      const userAgent = req.headers.get('user-agent') || 'unknown';
+      const referrer = req.headers.get('referer') || 'unknown';
+      await menuService.logMenuAccess(id, ip as string, userAgent as string, referrer as string);
+    } catch (logError) {
+      console.error('[API] Error logging menu access (non-critical):', logError);
+    }
     
     // Get the full menu data
     const menuData = await menuService.getFullMenu(id);
-    
-    if (!menuData.categories || menuData.categories.length === 0) {
-      return NextResponse.json({ 
-        error: 'Menu not found',
-        message: 'This hotel does not have a menu available yet.'
-      }, { status: 404 });
-    }
     
     return NextResponse.json(menuData);
   } catch (error: any) {

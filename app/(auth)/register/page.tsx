@@ -258,6 +258,7 @@ export default function RegisterPage() {
         id="businessPhone"
         name="businessPhone"
         type="tel"
+        autoComplete="off"
         value={businessPhone}
         onChange={(e) => setBusinessPhone(e.target.value)}
         placeholder="Enter your business phone"
@@ -268,6 +269,7 @@ export default function RegisterPage() {
         id="taxId"
         name="taxId"
         type="text"
+        autoComplete="off"
         value={taxId}
         onChange={(e) => setTaxId(e.target.value)}
         placeholder="Enter your tax ID"

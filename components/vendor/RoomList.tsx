@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { 
   PencilIcon, 
   EyeIcon, 
@@ -10,12 +9,36 @@ import {
   BedDoubleIcon,
   UsersIcon,
   DollarSignIcon,
+  ImageOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+
+// Fallback component for missing/broken room images
+function RoomImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500">
+        <ImageOff className="h-8 w-8 mb-1" />
+        <span className="text-xs">No image</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 interface Room {
   id: string;
@@ -152,16 +175,9 @@ export function RoomList({ hotelId, limit }: RoomListProps) {
       {rooms.map((room) => (
         <Card key={room.id} className="group overflow-hidden border border-gray-200 hover:border-primary hover:shadow-md transition-all dark:border-gray-700">
           <div className="relative aspect-square overflow-hidden">
-            <Image
+            <RoomImage
               src={getDefaultImage(room)}
               alt={room.name}
-              fill
-              className="object-cover transition-transform group-hover:scale-105"
-              onError={(e) => {
-                console.error(`Failed to load room image: ${getDefaultImage(room)}`);
-                // Set fallback image
-                e.currentTarget.src = '/assets/images/placeholder-room.jpg';
-              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent">
               <div className="absolute bottom-0 left-0 p-4">

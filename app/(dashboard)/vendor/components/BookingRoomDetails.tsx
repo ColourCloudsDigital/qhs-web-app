@@ -132,40 +132,52 @@ export default function BookingRoomDetails({
           Price Details
         </h4>
           
-          <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <div className="flex items-center">
-              <CalendarDays className="mr-2 h-4 w-4 text-gray-400" />
-              <span className="text-gray-600 dark:text-gray-400">
-                {formatCurrency(room?.pricePerNight || 0)} x {nights} {nights === 1 ? 'night' : 'nights'}
-              </span>
-            </div>
-              <span className="font-medium text-gray-900 dark:text-white">
-              {formatCurrency((room?.pricePerNight || 0) * nights)}
-              </span>
-            </div>
-            
-          {/* Only show if there's a difference between calculated total and actual total */}
-          {totalAmount !== (room?.pricePerNight || 0) * nights && (
-            <div className="flex justify-between text-sm">
-              <div className="flex items-center">
-                <DollarSign className="mr-2 h-4 w-4 text-gray-400" />
-                <span className="text-gray-600 dark:text-gray-400">
-                  {totalAmount > (room?.pricePerNight || 0) * nights ? 'Additional fees' : 'Discount'}
-                </span>
-              </div>
-              <span className={`font-medium ${totalAmount > (room?.pricePerNight || 0) * nights ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                {formatCurrency(Math.abs(totalAmount - ((room?.pricePerNight || 0) * nights)))}
-              </span>
-            </div>
-          )}
-            
-            <div className="border-t border-gray-200 pt-2 dark:border-gray-700">
-            <div className="flex justify-between">
-              <span className="font-medium text-gray-900 dark:text-white">Total</span>
-              <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(totalAmount)}</span>
-            </div>
-          </div>
+        <div className="space-y-2">
+          {/* Use discountedPrice if available, otherwise pricePerNight */}
+          {(() => {
+            const baseRate = room?.pricePerNight || 0;
+            const discountedRate = room?.discountedPrice || null;
+            const effectiveRate = discountedRate || baseRate;
+            const subtotal = baseRate * nights;
+            const discountAmount = discountedRate ? (baseRate - discountedRate) * nights : 0;
+
+            return (
+              <>
+                <div className="flex justify-between text-sm">
+                  <div className="flex items-center">
+                    <CalendarDays className="mr-2 h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {formatCurrency(baseRate)} x {nights} {nights === 1 ? 'night' : 'nights'}
+                    </span>
+                  </div>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {formatCurrency(subtotal)}
+                  </span>
+                </div>
+
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <div className="flex items-center">
+                      <DollarSign className="mr-2 h-4 w-4 text-green-500" />
+                      <span className="text-gray-600 dark:text-gray-400">Discount</span>
+                    </div>
+                    <span className="font-medium text-green-600 dark:text-green-400">
+                      -{formatCurrency(discountAmount)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="border-t border-gray-200 pt-2 dark:border-gray-700">
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-900 dark:text-white">Total</span>
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {formatCurrency(totalAmount)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </motion.div>
     </motion.div>

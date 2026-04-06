@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, Users, CreditCard, Info, Loader2 } from 'lucide-react';
+import { Calendar, Users, CreditCard, Info, Loader2, ChevronDown, Search } from 'lucide-react';
 import { addDays, format } from 'date-fns';
+import toast from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import {
   Card,
@@ -22,6 +25,109 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+
+// Searchable select component
+function SearchableSelect({
+  value, onChange, options, placeholder, disabled
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = options.filter(o =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  );
+  const selected = options.find(o => o.value === value);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => { if (!disabled) setOpen(o => !o); }}
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span className={selected ? '' : 'text-muted-foreground'}>
+          {selected ? selected.label : (placeholder || 'Select...')}
+        </span>
+        <ChevronDown className="h-4 w-4 opacity-50" />
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center border-b border-gray-200 px-3 dark:border-gray-700">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <input
+              autoFocus
+              className="flex h-9 w-full bg-transparent py-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-gray-100"
+              placeholder="Search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto p-1">
+            {filtered.length === 0 ? (
+              <div className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">No results</div>
+            ) : filtered.map(o => (
+              <div
+                key={o.value}
+                className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-gray-900 outline-none hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700 ${value === o.value ? 'bg-gray-100 font-medium dark:bg-gray-700' : ''}`}
+                onClick={() => { onChange(o.value); setOpen(false); setSearch(''); }}
+              >
+                {o.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const COUNTRIES = [
+  'Afghan','Albanian','Algerian','American','Andorran','Angolan','Antiguan','Argentine','Armenian','Australian',
+  'Austrian','Azerbaijani','Bahamian','Bahraini','Bangladeshi','Barbadian','Belarusian','Belgian','Belizean',
+  'Beninese','Bhutanese','Bolivian','Bosnian','Botswanan','Brazilian','British','Bruneian','Bulgarian',
+  'Burkinabe','Burundian','Cambodian','Cameroonian','Canadian','Cape Verdean','Central African','Chadian',
+  'Chilean','Chinese','Colombian','Comoran','Congolese','Costa Rican','Croatian','Cuban','Cypriot','Czech',
+  'Danish','Djiboutian','Dominican','Dutch','East Timorese','Ecuadorian','Egyptian','Emirati','Equatorial Guinean',
+  'Eritrean','Estonian','Ethiopian','Fijian','Finnish','French','Gabonese','Gambian','Georgian','German',
+  'Ghanaian','Greek','Grenadian','Guatemalan','Guinean','Guinea-Bissauan','Guyanese','Haitian','Honduran',
+  'Hungarian','Icelandic','Indian','Indonesian','Iranian','Iraqi','Irish','Israeli','Italian','Ivorian',
+  'Jamaican','Japanese','Jordanian','Kazakhstani','Kenyan','Kiribati','Kuwaiti','Kyrgyz','Laotian','Latvian',
+  'Lebanese','Lesothan','Liberian','Libyan','Liechtensteiner','Lithuanian','Luxembourgish','Macedonian',
+  'Malagasy','Malawian','Malaysian','Maldivian','Malian','Maltese','Marshallese','Mauritanian','Mauritian',
+  'Mexican','Micronesian','Moldovan','Monacan','Mongolian','Montenegrin','Moroccan','Mozambican','Namibian',
+  'Nauruan','Nepalese','New Zealander','Nicaraguan','Nigerian','Nigerien','Norwegian','Omani','Pakistani',
+  'Palauan','Palestinian','Panamanian','Papua New Guinean','Paraguayan','Peruvian','Philippine','Polish',
+  'Portuguese','Qatari','Romanian','Russian','Rwandan','Saint Lucian','Salvadoran','Samoan','Saudi Arabian',
+  'Senegalese','Serbian','Seychellois','Sierra Leonean','Singaporean','Slovak','Slovenian','Solomon Islander',
+  'Somali','South African','South Korean','South Sudanese','Spanish','Sri Lankan','Sudanese','Surinamese',
+  'Swazi','Swedish','Swiss','Syrian','Taiwanese','Tajik','Tanzanian','Thai','Togolese','Tongan',
+  'Trinidadian','Tunisian','Turkish','Turkmen','Tuvaluan','Ugandan','Ukrainian','Uruguayan','Uzbek',
+  'Vanuatuan','Venezuelan','Vietnamese','Yemeni','Zambian','Zimbabwean'
+].map(c => ({ value: c, label: c }));
+
+const ID_TYPES = [
+  { value: 'passport', label: 'Passport' },
+  { value: 'national_id', label: 'National ID' },
+  { value: 'drivers_license', label: "Driver's License" },
+  { value: 'voters_card', label: "Voter's Card" },
+  { value: 'other', label: 'Other' },
+];
 
 interface Hotel {
   id: string;
@@ -108,6 +214,7 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
   const [numberOfGuests, setNumberOfGuests] = useState<number>(1);
   const [specialRequests, setSpecialRequests] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('CASH');
+  const [paymentStatus, setPaymentStatus] = useState<string>('COMPLETED');
   const [amountPaid, setAmountPaid] = useState<number>(0);
   
   // Get room units when hotel changes
@@ -276,6 +383,7 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
           numberOfGuests: parseInt(numberOfGuests.toString()),
           specialRequests,
           paymentMethod,
+          paymentStatus,
           totalAmount,
           depositAmount: parseFloat(amountPaid.toString()) || 0,
           customerId: !isNewCustomer && selectedCustomer ? selectedCustomer : null,
@@ -288,6 +396,7 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
       }
       
       setSuccessMessage('Booking created successfully!');
+      toast.success('Booking created successfully!');
       
       // Reset form
       setSelectedHotel('');
@@ -304,6 +413,7 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
       setNumberOfGuests(1);
       setSpecialRequests('');
       setPaymentMethod('CASH');
+      setPaymentStatus('COMPLETED');
       setAmountPaid(0);
       setCustomerSearch('');
       setSelectedCustomer('');
@@ -317,7 +427,9 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
       }, 1500);
     } catch (error) {
       console.error('Error creating booking:', error);
-      setErrorMessage('Failed to create booking. Please try again.');
+      const msg = error instanceof Error ? error.message : 'Failed to create booking. Please try again.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -392,7 +504,6 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
               {/* Debug info */}
               <div className="mt-1 text-xs text-gray-500">
                 Available hotels: {hotels.length}
-                {hotels.length > 0 && ` | First hotel: ${hotels[0].name}`}
               </div>
             </div>
 
@@ -408,33 +519,32 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  {roomUnits.map((unit) => (
-                    <SelectItem key={unit.unitId} value={unit.unitId}>
-                      <div className="flex flex-col">
-                        <div className="font-medium">
-                          {unit.displayName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          Status: {unit.statusDisplay} • {unit.discountedPrice ? (
-                            <>
-                              <span className="line-through">{(unit.pricePerNight || 0).toFixed(2)}</span>
-                              <span className="ml-1 text-green-600">{(unit.discountedPrice || 0).toFixed(2)}</span>
-                            </>
-                          ) : (
-                            (unit.pricePerNight || 0).toFixed(2)
-                          )} NGN/night
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {(() => {
+                    // Group units by room type
+                    const groups: Record<string, RoomUnit[]> = {};
+                    roomUnits.forEach(unit => {
+                      const key = unit.roomName || unit.roomType || 'Other';
+                      if (!groups[key]) groups[key] = [];
+                      groups[key].push(unit);
+                    });
+                    return Object.entries(groups).map(([groupName, units]) => (
+                      <SelectGroup key={groupName}>
+                        <SelectLabel>{groupName}</SelectLabel>
+                        {units.map((unit) => (
+                          <SelectItem key={unit.unitId} value={unit.unitId}>
+                            <div className="flex flex-col">
+                              <div className="font-medium">Room {unit.roomNumber}</div>
+                              <div className="text-sm text-gray-500">
+                                {unit.statusDisplay} • {(unit.finalPrice || unit.pricePerNight || 0).toFixed(2)} NGN/night
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ));
+                  })()}
                 </SelectContent>
               </Select>
-              {/* Debug info */}
-              {selectedHotel && (
-                <div className="mt-1 text-xs text-gray-500">
-                  Hotel: {selectedHotel} | Room units: {roomUnits.length} | Loading: {loading.toString()}
-                </div>
-              )}
               {selectedRoomUnitObj && (
                 <div className="mt-2 space-y-1">
                   <p className="text-sm text-gray-600">
@@ -656,11 +766,11 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
             {/* Guest Nationality */}
             <div>
               <Label htmlFor="guestNationality">Nationality</Label>
-              <Input
-                type="text"
-                id="guestNationality"
+              <SearchableSelect
                 value={guestNationality}
-                onChange={(e) => setGuestNationality(e.target.value)}
+                onChange={setGuestNationality}
+                options={COUNTRIES}
+                placeholder="Select nationality"
                 disabled={!isNewCustomer && !selectedCustomer}
               />
             </div>
@@ -668,22 +778,13 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
             {/* Guest ID Type */}
             <div>
               <Label htmlFor="guestIdType">ID Type</Label>
-              <Select 
-                value={guestIdType} 
-                onValueChange={setGuestIdType}
+              <SearchableSelect
+                value={guestIdType}
+                onChange={setGuestIdType}
+                options={ID_TYPES}
+                placeholder="Select ID type"
                 disabled={!isNewCustomer && !selectedCustomer}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select ID type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="passport">Passport</SelectItem>
-                  <SelectItem value="national_id">National ID</SelectItem>
-                  <SelectItem value="drivers_license">Driver's License</SelectItem>
-                  <SelectItem value="voters_card">Voter's Card</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              />
             </div>
             
             {/* Guest ID Number */}
@@ -710,6 +811,23 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
                   <SelectItem value="CARD">Card</SelectItem>
                   <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
                   <SelectItem value="OTHER">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Payment Status */}
+            <div>
+              <Label htmlFor="paymentStatus">Payment Status*</Label>
+              <Select value={paymentStatus} onValueChange={setPaymentStatus} required>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="PARTIAL">Partial</SelectItem>
+                  <SelectItem value="FAILED">Failed</SelectItem>
+                  <SelectItem value="REFUNDED">Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>

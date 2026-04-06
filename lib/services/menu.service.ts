@@ -475,25 +475,8 @@ export class MenuService {
   
   // Access log operations
   async logMenuAccess(hotelId: string, ip?: string, userAgent?: string, referrer?: string): Promise<void> {
-    try {
-      const id = uuidv4();
-      
-      await pool.query(
-        `INSERT INTO menu_access_logs 
-         (id, hotelId, ip, userAgent, referrer) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          id,
-          hotelId,
-          ip || null,
-          userAgent || null,
-          referrer || null
-        ]
-      );
-    } catch (error) {
-      console.error('[MENU SERVICE] Error logging menu access:', error);
-      // Don't throw here, just log the error
-    }
+    // menu_access_logs table not yet provisioned — skip silently
+    return;
   }
   
   async getMenuAccessStats(hotelId: string, days: number = 30): Promise<{ date: string; count: number }[]> {
@@ -621,18 +604,13 @@ export class MenuService {
       // Log basic access without sensitive information
       await this.logMenuAccess(hotelId, ip, data.userAgent, data.referrer);
       
-      // Also update device-specific stats
-      try {
-        await pool.query(
-          `INSERT INTO menu_view_stats (hotelId, viewDate, deviceType, count)
-           VALUES (?, CURRENT_DATE(), ?, 1)
-           ON DUPLICATE KEY UPDATE count = count + 1`,
-          [hotelId, device]
-        );
-      } catch (statsError) {
-        console.error('[MENU SERVICE] Error updating device stats:', statsError);
-        // Continue execution, this is non-critical
-      }
+      // menu_view_stats table not yet provisioned — skip silently
+      // await pool.query(
+      //   `INSERT INTO menu_view_stats (hotelId, viewDate, deviceType, count)
+      //    VALUES (?, CURRENT_DATE(), ?, 1)
+      //    ON DUPLICATE KEY UPDATE count = count + 1`,
+      //   [hotelId, device]
+      // );
       
     } catch (error) {
       console.error('[MENU SERVICE] Error tracking menu view:', error);

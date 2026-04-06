@@ -72,25 +72,40 @@ export default function BookingPaymentDetails({ booking, payments = [] }: Bookin
     >
       {/* Payment Summary */}
       <motion.div variants={itemVariants} className="space-y-4">
-        <div className="flex items-center justify-between">
-        <div className="flex items-center">
-            <div className={`mr-3 flex h-10 w-10 items-center justify-center rounded-full ${
-              booking.paymentStatus.toUpperCase() === 'PAID' ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400' :
-              booking.paymentStatus.toUpperCase() === 'PENDING' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400' :
-              'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-            }`}>
-              {getStatusIcon(booking.paymentStatus)}
-      </div>
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+          <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Total Amount</p>
+              <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
                 {formatCurrency(booking.totalAmount)}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Payment {booking.paymentStatus.toLowerCase()}
               </p>
             </div>
-              </div>
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Amount Paid</p>
+              <p className="mt-1 text-lg font-bold text-green-600 dark:text-green-400">
+                {formatCurrency(booking.amountPaid ?? payments.reduce((s: number, p: Payment) => p.status.toUpperCase() === 'COMPLETED' ? s + p.amount : s, 0))}
+              </p>
             </div>
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Balance Due</p>
+              <p className={`mt-1 text-lg font-bold ${(booking.balance ?? 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {formatCurrency(booking.balance ?? Math.max(0, booking.totalAmount - payments.reduce((s: number, p: Payment) => p.status.toUpperCase() === 'COMPLETED' ? s + p.amount : s, 0)))}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+              booking.paymentStatus?.toUpperCase() === 'COMPLETED' ? 'bg-green-100 text-green-600' :
+              booking.paymentStatus?.toUpperCase() === 'PENDING' ? 'bg-amber-100 text-amber-600' :
+              'bg-red-100 text-red-600'
+            }`}>
+              {getStatusIcon(booking.paymentStatus || '')}
+            </div>
+            <span className="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">
+              Payment {(booking.paymentStatus || '').toLowerCase()}
+            </span>
+          </div>
+        </div>
       </motion.div>
 
       {/* Payment Transactions */}
@@ -154,27 +169,23 @@ export default function BookingPaymentDetails({ booking, payments = [] }: Bookin
       )}
 
       {/* Payment Due Information */}
-      {booking.paymentStatus.toUpperCase() !== 'PAID' && (
+      {(booking.balance ?? 0) > 0 && (
         <motion.div 
           variants={itemVariants}
           className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-900/10"
-                >
+        >
           <div className="flex">
             <div className="flex-shrink-0">
               <AlertTriangle className="h-5 w-5 text-amber-400" />
             </div>
-                        <div className="ml-3">
+            <div className="ml-3">
               <h3 className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                Payment Required
+                Balance Due
               </h3>
               <div className="mt-2 text-sm text-amber-700 dark:text-amber-200">
                 <p>
-                  {booking.paymentStatus.toUpperCase() === 'PENDING'
-                    ? 'This booking requires payment. Process payment to confirm the reservation.'
-                    : booking.paymentStatus.toUpperCase() === 'PARTIALLY_PAID'
-                    ? `A balance of ${formatCurrency(booking.totalAmount - (payments.reduce((sum: number, p: Payment) => sum + p.amount, 0)))} is pending.`
-                    : 'Payment information is not available.'
-                  }
+                  {formatCurrency(booking.balance)} remaining out of {formatCurrency(booking.totalAmount)}.
+                  {(booking.amountPaid ?? 0) > 0 && ` ${formatCurrency(booking.amountPaid)} has been paid.`}
                 </p>
               </div>
             </div>

@@ -53,12 +53,11 @@ export async function GET(request: Request) {
       [hotelId]
     ) as [RowDataPacket[], any];
 
-    const today = new Date();
     const [overdueTasks] = await pool.query(
       `SELECT COUNT(*) as count 
        FROM facility_tasks 
-       WHERE hotelId = ? AND due_date < ? AND status NOT IN ('COMPLETED', 'CANCELLED')`,
-      [hotelId, today]
+       WHERE hotelId = ? AND due_date < NOW() AND status NOT IN ('COMPLETED', 'CANCELLED')`,
+      [hotelId]
     ) as [RowDataPacket[], any];
 
     const [totalTasks] = await pool.query(
@@ -69,10 +68,10 @@ export async function GET(request: Request) {
     ) as [RowDataPacket[], any];
 
     return NextResponse.json({
-      statusCounts: statusCounts || [],
-      priorityCounts: priorityCounts || [],
-      overdueTasks: overdueTasks[0]?.count || 0,
-      totalTasks: totalTasks[0]?.count || 0,
+      statusCounts: (statusCounts || []).map((r: any) => ({ status: r.status, _count: Number(r.count) })),
+      priorityCounts: (priorityCounts || []).map((r: any) => ({ priority: r.priority, _count: Number(r.count) })),
+      overdueTasks: Number(overdueTasks[0]?.count) || 0,
+      totalTasks: Number(totalTasks[0]?.count) || 0,
     });
   } catch (error) {
     console.error('Error fetching task stats:', error);

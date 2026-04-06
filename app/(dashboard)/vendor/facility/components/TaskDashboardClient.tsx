@@ -65,6 +65,7 @@ export default function TaskDashboardClient({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   // Ref to track URL updates to prevent infinite loops
   const lastUrlUpdateRef = useRef<string | null>(null);
@@ -145,6 +146,7 @@ export default function TaskDashboardClient({
   
   const handleTaskCreated = () => {
     fetchTaskStats();
+    setRefreshKey(k => k + 1);
     setIsCreateModalOpen(false);
   };
   
@@ -219,7 +221,7 @@ export default function TaskDashboardClient({
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchTaskStats}
+              onClick={() => { fetchTaskStats(); setRefreshKey(k => k + 1); }}
               disabled={isLoading}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -253,6 +255,7 @@ export default function TaskDashboardClient({
           assigneeFilter={assigneeFilter}
           searchQuery={searchQuery}
           onTaskUpdate={fetchTaskStats}
+          refreshKey={refreshKey}
         />
       </div>
       

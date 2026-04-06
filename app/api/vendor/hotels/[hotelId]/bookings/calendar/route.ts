@@ -22,6 +22,8 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const roomId = searchParams.get('roomId');       // filter by rooms.id (all units of a room)
+    const roomUnitId = searchParams.get('roomUnitId'); // filter by specific room_unit.id
     
     if (!startDate || !endDate) {
       return NextResponse.json(
@@ -69,58 +71,78 @@ export async function GET(
       );
     }
     
-    // Get total room count for the hotel
-    const [totalRoomsResult] = await pool.query(`
-      SELECT COUNT(*) as total FROM rooms
-      WHERE hotelId = ?
-    `, [hotelId]);
-    
-    const totalRooms = (totalRoomsResult as any[])[0]?.total || 0;
-    
-    // Get bookings for each day in the date range
+    // Get total room count (1 if filtering by specific unit/room)
+    let totalRooms = 1;
+    if (!roomId && !roomUnitId) {
+      const [totalRoomsResult] = await pool.query(`
+        SELECT COUNT(*) as total FROM rooms WHERE hotelId = ?
+      `, [hotelId]);
+      totalRooms = (totalRoomsResult as any[])[0]?.total || 1;
+    }
+
+    // Build filter clause — roomUnitId takes priority over roomId
+    let unitFilter = '';
+    let unitParams: any[] = [hotelId, endDateStr, startDateStr];
+
+    if (roomUnitId) {
+      unitFilter = 'AND ru.id = ?';
+      unitParams = [hotelId, roomUnitId, endDateStr, startDateStr];
+    } else if (roomId) {
+      unitFilter = 'AND ru.roomId = ?';
+      unitParams = [hotelId, roomId, endDateStr, startDateStr];
+    }
+
     const [bookingsRows] = await pool.query(`
       SELECT 
-        DATE(checkInDate) as date,
-        COUNT(*) as count
+        b.id,
+        DATE(b.checkInDate) as checkIn,
+        DATE(b.checkOutDate) as checkOut,
+        b.status,
+        CONCAT(c.firstName, ' ', COALESCE(c.lastName, '')) as guestName
       FROM bookings b
       JOIN room_units ru ON b.roomUnitId = ru.id
       JOIN rooms r ON ru.roomId = r.id
-      WHERE r.hotelId = ? 
-      AND DATE(b.checkInDate) >= ?
-      AND DATE(b.checkInDate) <= ?
-      GROUP BY DATE(b.checkInDate)
-    `, [hotelId, startDateStr, endDateStr]);
+      LEFT JOIN customers c ON b.customerId = c.id
+      WHERE r.hotelId = ?
+      ${unitFilter}
+      AND b.checkInDate <= ?
+      AND b.checkOutDate >= ?
+      AND b.status NOT IN ('CANCELLED')
+      ORDER BY b.checkInDate ASC
+    `, unitParams);
+
+    // Build a map of date -> count of overlapping bookings
+    const bookingCountMap: Record<string, number> = {};
+    const bookingList = bookingsRows as any[];
+
+    // For each booking, mark every day it covers
+    for (const booking of bookingList) {
+      const checkIn = new Date(booking.checkIn);
+      const checkOut = new Date(booking.checkOut);
+      const cur = new Date(checkIn);
+      while (cur < checkOut) {
+        const dateStr = cur.toISOString().split('T')[0];
+        bookingCountMap[dateStr] = (bookingCountMap[dateStr] || 0) + 1;
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
     
     // Get a list of all dates in the range
     const dates: string[] = [];
     const current = new Date(startDateStr);
     const end = new Date(endDateStr);
-    
     while (current <= end) {
       dates.push(current.toISOString().split('T')[0]);
       current.setDate(current.getDate() + 1);
     }
-    
-    // Map booking counts to dates
-    const bookingCountMap = (bookingsRows as any[]).reduce((acc, item) => {
-      // Convert MySQL date to ISO string format (YYYY-MM-DD)
-      const dateStr = new Date(item.date).toISOString().split('T')[0];
-      acc[dateStr] = item.count;
-      return acc;
-    }, {} as Record<string, number>);
-    
+
     // Create response data
     const bookings = dates.map(date => {
       const count = bookingCountMap[date] || 0;
       const occupancyRate = totalRooms > 0 ? Math.round((count / totalRooms) * 100) : 0;
-      
-      return {
-        date,
-        count,
-        occupancyRate
-      };
+      return { date, count, occupancyRate };
     });
-    
+
     return NextResponse.json({ bookings });
   } catch (error) {
     console.error('Error fetching calendar data:', error);

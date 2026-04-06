@@ -589,12 +589,15 @@ export default function MenuCategoriesList({ categories, hotelId, onDataUpdate }
                             </div>
                             {item.image && (
                               <div className="mt-2">
-                                <Image
+                                <img
                                   src={item.image}
                                   alt={item.name}
                                   width={100}
                                   height={75}
-                                  className="rounded-md object-cover"
+                                  className="rounded-md object-cover h-[75px] w-[100px]"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '/assets/images/placeholder.jpg';
+                                  }}
                                 />
                               </div>
                             )}

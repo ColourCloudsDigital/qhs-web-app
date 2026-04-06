@@ -32,6 +32,12 @@ import { format } from 'date-fns';
 import { CalendarIcon, Loader2, Plus } from 'lucide-react';
 import { MaintenanceType } from '@/lib/types/enums';
 
+/** Format a Date as MySQL DATETIME in local time (no UTC shift) */
+function formatLocalDatetime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
 interface Room {
   id: string;
   name: string;
@@ -78,9 +84,12 @@ export default function CreateTaskModal({
   const [priority, setPriority] = useState<string>('MEDIUM');
   const [assignedToId, setAssignedToId] = useState<string>('');
   const [roomUnitId, setRoomUnitId] = useState<string>('');
-  const [dueDate, setDueDate] = useState<Date | undefined>(
-    new Date(new Date().setDate(new Date().getDate() + 1))
-  );
+  const [dueDate, setDueDate] = useState<Date | undefined>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(18, 0, 0, 0);
+    return tomorrow;
+  });
   const [estimatedHours, setEstimatedHours] = useState<number | undefined>(undefined);
   const [maintenanceType, setMaintenanceType] = useState<string>('CORRECTIVE');
   const [isRecurring, setIsRecurring] = useState(false);
@@ -158,7 +167,12 @@ export default function CreateTaskModal({
     setPriority('MEDIUM');
     setAssignedToId('');
     setRoomUnitId('');
-    setDueDate(new Date(new Date().setDate(new Date().getDate() + 1)));
+    setDueDate(() => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(18, 0, 0, 0);
+      return tomorrow;
+    });
     setEstimatedHours(undefined);
     setMaintenanceType('CORRECTIVE');
     setIsRecurring(false);
@@ -199,7 +213,7 @@ export default function CreateTaskModal({
           priority,
           assignedToId: assignedToId && assignedToId !== 'unassigned' ? assignedToId : null,
           roomUnitId: roomUnitId && roomUnitId !== 'none' ? roomUnitId : null,
-          dueDate: dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+          dueDate: formatLocalDatetime(dueDate), // local datetime, no UTC shift
           status: 'PENDING',
           estimatedHours: estimatedHours || null,
           maintenanceType,
@@ -329,7 +343,7 @@ export default function CreateTaskModal({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                  {dueDate ? format(dueDate, "PPP p") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -337,6 +351,9 @@ export default function CreateTaskModal({
                   mode="single"
                   selected={dueDate}
                   onSelect={setDueDate}
+                  showTimePicker
+                  defaultHour={18}
+                  defaultMinute={0}
                   disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                 />
               </PopoverContent>

@@ -250,14 +250,14 @@ export default function NotificationCenter() {
     if (session) {
       fetchUnreadCount();
       
-      // Set up polling for unread count (every 30 seconds)
-      const countInterval = setInterval(fetchUnreadCount, 30000);
+      // Set up polling for unread count (every 60 seconds)
+      const countInterval = setInterval(fetchUnreadCount, 60000);
       
       return () => {
         clearInterval(countInterval);
       };
     }
-  }, [session]);
+  }, [session?.user?.id]); // use stable id, not the whole session object
 
   // Load notifications when dropdown opens
   useEffect(() => {

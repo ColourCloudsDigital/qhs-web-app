@@ -247,7 +247,7 @@ export default function FacilityDashboardClient({ hotels, stats: initialStats }:
                 View All Tasks
               </Button>
             </Link>
-            <Link href="/vendor/facility/staff">
+            <Link href="/vendor/facility/staff-roles">
               <Button variant="outline" className="w-full justify-start">
                 <Users className="h-4 w-4 mr-2" />
                 Manage Staff

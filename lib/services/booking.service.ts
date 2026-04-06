@@ -735,11 +735,43 @@ export const bookingService = {
       throw new Error('Booking not found');
     }
 
-    // Update booking status
-    await pool.query(
-      'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?',
-      [status, id]
-    );
+    // Update booking status and sync room unit status
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      await connection.query(
+        'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?',
+        [status, id]
+      );
+
+      if (status === BookingStatus.CHECKED_OUT || status === BookingStatus.CANCELLED) {
+        await connection.query(
+          `UPDATE room_units SET status = 'available', currentBookingId = NULL
+           WHERE currentBookingId = ?`,
+          [id]
+        );
+      } else if (status === BookingStatus.CHECKED_IN) {
+        await connection.query(
+          `UPDATE room_units SET status = 'occupied', currentBookingId = ?
+           WHERE currentBookingId = ?`,
+          [id, id]
+        );
+      } else if (status === BookingStatus.CONFIRMED) {
+        await connection.query(
+          `UPDATE room_units SET status = 'reserved', currentBookingId = ?
+           WHERE currentBookingId = ?`,
+          [id, id]
+        );
+      }
+
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
 
     // Get updated booking
     const updatedBooking = await this.getBookingById(id, false, false, false);

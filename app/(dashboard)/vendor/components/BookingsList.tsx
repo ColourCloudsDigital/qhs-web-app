@@ -48,6 +48,8 @@ interface Booking {
   checkOutDate: string;
   numberOfGuests: number;
   totalAmount: number;
+  amountPaid?: number;
+  balance?: number;
   status: string;
   paymentStatus: string;
   createdAt: string;
@@ -143,6 +145,10 @@ export default function BookingsList({
       if (sortOrder) queryParams.set('sortOrder', sortOrder);
       if (selectedHotelId) queryParams.set('hotelId', selectedHotelId);
       
+      // Pass roomUnitId from URL if present
+      const roomUnitId = searchParams.get('roomUnitId');
+      if (roomUnitId) queryParams.set('roomUnitId', roomUnitId);
+      
       try {
         // Check if we're offline
         if (!navigator.onLine) {
@@ -190,7 +196,7 @@ export default function BookingsList({
       } finally {
         setIsLoading(false);
       }
-  }, [vendorId, page, limit, status, search, checkInDate, checkOutDate, sortBy, sortOrder, selectedHotelId]);
+  }, [vendorId, page, limit, status, search, checkInDate, checkOutDate, sortBy, sortOrder, selectedHotelId, searchParams]);
   
   useEffect(() => {
     fetchBookings();
@@ -592,6 +598,14 @@ export default function BookingsList({
                             <CreditCard className="mr-2 h-4 w-4 text-gray-400" />
                             <div>
                               <div className="font-medium">{formatCurrency(booking.totalAmount)}</div>
+                              <div className="text-xs text-green-600 dark:text-green-400">
+                                Paid: {formatCurrency(booking.amountPaid ?? 0)}
+                              </div>
+                              {(booking.balance ?? 0) > 0 && (
+                                <div className="text-xs text-red-500 dark:text-red-400">
+                                  Balance: {formatCurrency(booking.balance)}
+                                </div>
+                              )}
                               <div>
                                 <PaymentStatusBadge status={booking.paymentStatus} />
                               </div>
@@ -710,6 +724,70 @@ export default function BookingsList({
       )}
     </div>
       
+      {/* Grid View */}
+      {bookingViewMode === 'grid' && !isLoading && displayBookings.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {displayBookings.map((booking) => (
+            <div
+              key={booking.id}
+              className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div className="mb-3 flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-mono text-gray-500 dark:text-gray-400">#{booking.id.slice(0, 8).toUpperCase()}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{booking.customer?.name || 'Guest'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{booking.customer?.email || ''}</p>
+                </div>
+                <BookingStatusBadge status={booking.status} />
+              </div>
+              <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                  <span>{formatDate(booking.checkInDate)} → {formatDate(booking.checkOutDate)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-3.5 w-3.5 text-gray-400" />
+                  <span>{booking.hotel?.name || 'Hotel'} · {booking.room?.name || 'Room'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-3.5 w-3.5 text-gray-400" />
+                  <div>
+                    <span className="font-medium">{formatCurrency(booking.totalAmount)}</span>
+                    {(booking.amountPaid ?? 0) > 0 && (
+                      <span className="ml-1 text-xs text-green-600 dark:text-green-400">
+                        · Paid: {formatCurrency(booking.amountPaid)}
+                      </span>
+                    )}
+                    {(booking.balance ?? 0) > 0 && (
+                      <span className="ml-1 text-xs text-red-500">
+                        · Due: {formatCurrency(booking.balance)}
+                      </span>
+                    )}
+                  </div>
+                  <PaymentStatusBadge status={booking.paymentStatus} />
+                </div>
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <button
+                  onClick={() => setModal('view', booking.id)}
+                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
+                  title="View"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setModal('edit', booking.id)}
+                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
+                  title="Edit"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Modal with AnimatePresence and motion for animation */}
       <AnimatePresence>
         {modalType && (
@@ -734,7 +812,14 @@ export default function BookingsList({
                   <span className="text-sm">Please try again or contact support.</span>
                 </div>
               ) : modalType === 'view' && modalBooking ? (
-                <BookingDetailClient booking={modalBooking} vendorId={vendorId} />
+                <BookingDetailClient
+                  booking={modalBooking}
+                  vendorId={vendorId}
+                  onBookingUpdated={(updated) => {
+                    setBookings(prev => prev.map(b => b.id === updated.id ? { ...b, ...updated } : b));
+                    setModalBooking((prev: any) => prev ? { ...prev, ...updated } : prev);
+                  }}
+                />
               ) : modalType === 'edit' && modalBooking ? (
                 <BookingEditClient booking={modalBooking} vendorId={vendorId} />
               ) : modalType === 'documents' && modalBooking ? (

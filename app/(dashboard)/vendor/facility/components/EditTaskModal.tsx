@@ -33,6 +33,12 @@ import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { isBoolean } from 'lodash';
 
+/** Format a Date as MySQL DATETIME in local time (no UTC shift) */
+function formatLocalDatetime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
 // Utility function to clean up modal overlays
 const cleanupModalOverlays = () => {
   try {
@@ -105,7 +111,7 @@ export default function EditTaskModal({
 }: EditTaskModalProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // start loading immediately
   const fetchedTaskIdRef = useRef<string | null>(null);
   
   // Form state
@@ -235,10 +241,10 @@ export default function EditTaskModal({
   }, [isOpen, taskId, toast]);
 
   const handleSubmit = async () => {
-    if (!title || !description) {
+    if (!title) {
       toast({
         title: 'Missing information',
-        description: 'Please fill in all required fields',
+        description: 'Please enter a task title',
       });
       return;
     }
@@ -259,7 +265,7 @@ export default function EditTaskModal({
           category,
           priority,
           status,
-          dueDate: dueDate?.toISOString().split('T')[0], // Format as YYYY-MM-DD
+          dueDate: dueDate ? formatLocalDatetime(dueDate) : undefined,
           estimatedHours: isNaN(Number(estimatedHours)) ?  null : Number(estimatedHours),
           maintenanceType,
           isRecurring: isBoolean(isRecurring) ? isRecurring : false,
@@ -305,6 +311,13 @@ export default function EditTaskModal({
         <div className="grid gap-4 py-4">
           {isLoading ? (
             <div className="space-y-4">
+              <div className="flex flex-col items-center justify-center py-8 gap-3 text-gray-500">
+                <svg className="h-6 w-6 animate-spin text-primary" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span className="text-sm">Loading task details...</span>
+              </div>
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-20 w-full" />
               <div className="grid grid-cols-2 gap-4">
@@ -315,6 +328,11 @@ export default function EditTaskModal({
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <Skeleton className="h-10 w-full" />
             </div>
           ) : (
           <>
@@ -334,7 +352,7 @@ export default function EditTaskModal({
           {/* Description */}
           <div className="grid gap-2">
             <label htmlFor="description" className="text-sm font-medium">
-              Description *
+              Description
             </label>
             <Textarea
               id="description"
@@ -465,7 +483,7 @@ export default function EditTaskModal({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                    {dueDate ? format(dueDate, "PPP p") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -473,6 +491,9 @@ export default function EditTaskModal({
                     mode="single"
                     selected={dueDate}
                     onSelect={setDueDate}
+                    showTimePicker
+                    defaultHour={18}
+                    defaultMinute={0}
                   />
                 </PopoverContent>
               </Popover>

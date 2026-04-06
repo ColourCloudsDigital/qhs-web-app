@@ -800,29 +800,21 @@ export class RoomService {
   static async getSimilarRooms(roomId: string, hotelId: string, roomTypeId?: string) {
     try {
       let query = `
-        SELECT r.*, rt.name as typeName, rt.description as typeDescription, 
-               rt.basePrice, rt.capacity as typeCapacity, rt.bedType
+        SELECT r.*
         FROM rooms r
-        LEFT JOIN room_types rt ON r.roomTypeId = rt.id
         WHERE r.id != ? AND r.hotelId = ?
       `;
       
       const params: any[] = [roomId, hotelId];
       
-      // If we have a room type ID, prioritize rooms of the same type
       if (roomTypeId) {
-        query += ` AND (r.roomTypeId = ? OR r.type = ?)`;
-        params.push(roomTypeId, roomTypeId);
-        
-        // Limit to 6 rooms of the same type
-        query += ` ORDER BY r.roomTypeId = ? DESC, r.pricePerNight`;
+        query += ` AND r.type = ?`;
         params.push(roomTypeId);
+        query += ` ORDER BY r.pricePerNight`;
       } else {
-        // Without a specific room type, just order by price
         query += ` ORDER BY r.pricePerNight`;
       }
       
-      // Limit to 6 rooms
       query += ` LIMIT 6`;
       
       const [rows] = await pool.query(query, params);

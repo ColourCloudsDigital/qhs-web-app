@@ -207,11 +207,22 @@ export default function ViewTaskModal({
         <div className="space-y-6 py-4">
           {isLoading ? (
             <div className="space-y-4">
+              <div className="flex flex-col items-center justify-center py-8 gap-3 text-gray-500">
+                <svg className="h-6 w-6 animate-spin text-primary" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span className="text-sm">Loading task details...</span>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
               </div>
               <Skeleton className="h-20 w-full" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />

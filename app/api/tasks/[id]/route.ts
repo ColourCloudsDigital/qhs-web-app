@@ -8,26 +8,28 @@ import { getServerSession } from 'next-auth';
 import { RowDataPacket } from 'mysql2';
 import NotificationService from '@/lib/services/notification.service';
 
+/** Serialize a Date as local YYYY-MM-DD HH:MM:SS (no UTC shift) */
+function formatLocalDatetime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 // Schema for updating a task
 const updateTaskSchema = z.object({
   title: z.string().min(3).optional(),
-  description: z.string().min(5).optional(),
+  description: z.string().optional().nullable(),
   assignedToId: z.string().nullable().optional(),
   status: z.nativeEnum(TaskStatus).optional(),
   priority: z.string().optional(),
   category: z.string().optional(),
-  dueDate: z.string().transform(str => {
-    const date = new Date(str);
-    // Format as YYYY-MM-DD for MySQL date type
-    return date.toISOString().split('T')[0];
-  }).optional(),
-  estimatedHours: z.number().positive().optional(),
-  costEstimate: z.number().nonnegative().optional(),
+  dueDate: z.string().transform(str => str).optional(), // client sends local YYYY-MM-DD HH:MM:SS, store as-is
+  estimatedHours: z.number().positive().optional().nullable(),
+  costEstimate: z.number().nonnegative().optional().nullable(),
   roomUnitId: z.string().nullable().optional(),
   maintenanceType: z.string().optional(),
   isRecurring: z.boolean().optional(),
-  attachments: z.string().optional(), // JSON string of URLs
-  notes: z.string().optional(), // Additional notes for status changes
+  attachments: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
 });
 
 // Helper to check task access permission
@@ -194,7 +196,7 @@ export async function GET(
       createdById: task.createdById,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
-      dueDate: task.dueDate,
+      dueDate: task.dueDate ? formatLocalDatetime(new Date(task.dueDate)) : null,
       estimatedHours: task.estimatedHours,
       costEstimate: task.costEstimate,
       maintenanceType: task.maintenanceType,
@@ -499,7 +501,7 @@ export async function PUT(
       createdById: updatedTask.createdById,
       createdAt: updatedTask.createdAt,
       updatedAt: updatedTask.updatedAt,
-      dueDate: updatedTask.dueDate,
+      dueDate: updatedTask.dueDate ? formatLocalDatetime(new Date(updatedTask.dueDate)) : null,
       estimatedHours: updatedTask.estimatedHours,
       costEstimate: updatedTask.costEstimate,
       maintenanceType: updatedTask.maintenanceType,

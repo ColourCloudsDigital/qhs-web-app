@@ -206,10 +206,7 @@ export async function PUT(
       values.push(actualHours);
     }
 
-    if (completedAt) {
-      updates.push('created_at = ?');
-      values.push(completedAt);
-    }
+    // completedAt is tracked via updated_at = NOW() — no separate column needed
 
     if (updates.length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });

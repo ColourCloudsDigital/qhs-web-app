@@ -100,6 +100,7 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
   const [specialRequests, setSpecialRequests] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('CASH');
   const [amountPaid, setAmountPaid] = useState<number>(0);
+  const [paymentStatus, setPaymentStatus] = useState<string>('PENDING');
 
   // Load staff hotel and available room units
   useEffect(() => {
@@ -111,6 +112,7 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
         const roomId = searchParams.get('roomId');
         const roomUnitId = searchParams.get('roomUnitId');
         const preSelectedDate = searchParams.get('date');
+        const preSelectedCustomerId = searchParams.get('customerId');
         
         // Set pre-selected date if provided
         if (preSelectedDate) {
@@ -128,6 +130,32 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
           
           // Load available room units
           await loadRoomUnits(roomId, roomUnitId);
+        }
+
+        // Pre-select customer if customerId is in URL
+        if (preSelectedCustomerId) {
+          try {
+            const custRes = await fetch(`/api/staff/customers/${preSelectedCustomerId}`);
+            if (custRes.ok) {
+              const custData = await custRes.json();
+              const customer = custData.customer;
+              if (customer) {
+                // Switch to existing customer mode and populate fields
+                setIsNewCustomer(false);
+                setSelectedCustomer(customer.id);
+                setCustomers([{ ...customer, displayName: `${customer.firstName} ${customer.lastName} - ${customer.phone}` }]);
+                setGuestFirstName(customer.firstName);
+                setGuestLastName(customer.lastName || '');
+                setGuestPhone(customer.phone);
+                setGuestEmail(customer.email || '');
+                setGuestNationality(customer.nationality || '');
+                setGuestIdType(customer.idType || '');
+                setGuestIdNumber(customer.idNumber || '');
+              }
+            }
+          } catch (e) {
+            console.error('Failed to pre-load customer:', e);
+          }
         }
       } catch (error) {
         console.error('Error loading data:', error);
@@ -291,6 +319,7 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
           paymentMethod,
           totalAmount,
           depositAmount: parseFloat(amountPaid.toString()) || 0,
+          paymentStatus,
           customerId: !isNewCustomer && selectedCustomer ? selectedCustomer : null,
         }),
       });
@@ -317,6 +346,7 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
       setSpecialRequests('');
       setPaymentMethod('CASH');
       setAmountPaid(0);
+      setPaymentStatus('PENDING');
       setCustomerSearch('');
       setSelectedCustomer('');
       setIsNewCustomer(true);
@@ -734,6 +764,25 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
               </div>
               <p className="mt-1 text-sm text-gray-500">
                 Total amount: {totalAmount.toFixed(2)} NGN ({nights} night{nights > 1 ? 's' : ''})
+              </p>
+            </div>
+
+            {/* Payment Status */}
+            <div>
+              <Label htmlFor="paymentStatus">Payment Status</Label>
+              <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                <SelectTrigger id="paymentStatus">
+                  <SelectValue placeholder="Select payment status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="PARTIAL">Partial</SelectItem>
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-sm text-gray-500">
+                Balance: {Math.max(0, totalAmount - amountPaid).toFixed(2)} NGN
               </p>
             </div>
             

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Check, Trash2, Edit2, UserX, UserCheck, RefreshCw } from 'lucide-react';
 import Pagination, { PaginationInfo } from '@/components/ui/pagination';
 import CreateStaffModal from '@/components/CreateStaffModal';
+import toast from '@/lib/toast';
 
 interface User {
   id: string;
@@ -63,6 +64,7 @@ function EditStaffModal({ open, onClose, staff, onSave, loading, vendorId }: any
     { id: 'settings', label: 'Modify Settings' },
     { id: 'staff', label: 'Manage Staff' },
     { id: 'tasks', label: 'Manage Tasks' },
+    { id: 'pos', label: 'Manage Orders (POS)' },
   ];
 
   // Fetch hotels when modal opens
@@ -311,20 +313,29 @@ export default function StaffTab({ hotelId, vendorId }: StaffTabProps) {
         let url = `/api/staff/${userId}`;
         if (action === 'delete') method = 'DELETE';
         if (action === 'deactivate') method = 'PATCH';
-        await fetch(url, { method });
+        const res = await fetch(url, { method });
+        if (!res.ok) throw new Error((await res.json()).error || 'Action failed');
       } else {
-        await fetch(`/api/staff`, {
+        const res = await fetch(`/api/staff`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action, ids }),
         });
+        if (!res.ok) throw new Error((await res.json()).error || 'Action failed');
       }
+
+      const actionLabel =
+        action === 'delete' ? 'deleted' :
+        action === 'activate' ? 'activated' : 'deactivated';
+      const count = ids.length;
+      toast.success(`${count} staff member${count > 1 ? 's' : ''} ${actionLabel} successfully.`);
+
       setConfirmModal({ open: false, action: '', ids: [], single: false });
       setSelectedIds([]);
       setSelectAll(false);
       fetchStaff();
-    } catch (err) {
-      alert('Action failed.');
+    } catch (err: any) {
+      toast.error(err.message || 'Action failed. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -337,21 +348,24 @@ export default function StaffTab({ hotelId, vendorId }: StaffTabProps) {
   const saveEditStaff = async (updateData: { position: string; permissions: string[]; hotelId: string | null }) => {
     setEditLoading(true);
     try {
-      await fetch(`/api/staff/${editModal.staff.id}`, {
+      const res = await fetch(`/api/staff/${editModal.staff.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
       });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to update staff member');
+      toast.success('Staff member updated successfully.');
       setEditModal({ open: false, staff: null });
       fetchStaff();
-    } catch (err) {
-      alert('Failed to update staff member');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update staff member.');
     } finally {
       setEditLoading(false);
     }
   };
 
   const handleCreateSuccess = () => {
+    toast.success('Staff member added successfully.');
     fetchStaff();
   };
 

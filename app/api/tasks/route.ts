@@ -11,27 +11,29 @@ import NotificationService from '@/lib/services/notification.service';
 
 export const dynamic = 'force-dynamic';
 
+/** Serialize a Date as local YYYY-MM-DD HH:MM:SS (no UTC shift) */
+function formatLocalDatetime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 
 const taskSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
-  description: z.string().min(5, 'Description must be at least 5 characters'),
+  description: z.string().optional().nullable().default(''),
   assignedToId: z.string().optional().nullable(),
   hotelId: z.string(),
   roomUnitId: z.string().optional().nullable(),
   status: z.nativeEnum(TaskStatus).default(TaskStatus.PENDING),
   priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
   category: z.nativeEnum(TaskCategory),
-  dueDate: z.string().transform(str => {
-    const date = new Date(str);
-    // Format as YYYY-MM-DD for MySQL date type
-    return date.toISOString().split('T')[0];
-  }),
-  estimatedHours: z.number().positive().optional(),
-  costEstimate: z.number().nonnegative().optional(),
+  dueDate: z.string().transform(str => str), // client sends local YYYY-MM-DD HH:MM:SS, store as-is
+  estimatedHours: z.number().positive().optional().nullable(),
+  costEstimate: z.number().nonnegative().optional().nullable(),
   maintenanceType: z.nativeEnum(MaintenanceType).default(MaintenanceType.CORRECTIVE),
   isRecurring: z.boolean().default(false),
-  recurringPattern: z.string().optional(),
-  attachments: z.string().optional(), // JSON string of URLs
+  recurringPattern: z.string().optional().nullable(),
+  attachments: z.string().optional().nullable(),
   checklist: z.array(z.object({
     description: z.string(),
     order: z.number().int().nonnegative()
@@ -297,7 +299,7 @@ export async function GET(request: Request) {
       category: task.category,
       priority: task.priority,
       status: task.status,
-      dueDate: task.dueDate,
+      dueDate: task.dueDate ? formatLocalDatetime(new Date(task.dueDate)) : null,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       hotelId: task.hotelId,

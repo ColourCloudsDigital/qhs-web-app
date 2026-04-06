@@ -509,7 +509,7 @@ export function RoomForm({
                 <SelectContent>
                   <SelectItem value="available">Available</SelectItem>
                   <SelectItem value="unavailable">Unavailable</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="maintenance">Under Maintenance</SelectItem>
                 </SelectContent>
               </Select>
             </div>

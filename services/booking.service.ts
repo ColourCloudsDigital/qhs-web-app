@@ -15,6 +15,7 @@ export const bookingService = {
     sortBy = 'createdAt',
     sortOrder = 'desc',
     hotelId,
+    roomUnitId,
   }: {
     vendorId: string;
     page?: number;
@@ -26,6 +27,7 @@ export const bookingService = {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
     hotelId?: string;
+    roomUnitId?: string;
   }) {
     console.log('Fetching bookings for vendor:', vendorId);
     
@@ -39,13 +41,15 @@ export const bookingService = {
         r.name as roomName, r.type as roomType,
         ru.roomNumber,
         c.firstName as customerFirstName, c.lastName as customerLastName, c.phone as customerPhone,
-        u.name as customerName, u.email as customerEmail
+        u.name as customerName, u.email as customerEmail,
+        COALESCE(SUM(p.amount), 0) as amountPaid
       FROM bookings b
       JOIN hotels h ON b.hotelId = h.id
       JOIN room_units ru ON b.roomUnitId = ru.id
       JOIN rooms r ON ru.roomId = r.id
       JOIN customers c ON b.customerId = c.id
       LEFT JOIN users u ON c.userId = u.id
+      LEFT JOIN payments p ON p.bookingId = b.id AND p.status = 'COMPLETED'
       WHERE h.vendorId = ?
     `;
     
@@ -61,6 +65,11 @@ export const bookingService = {
     if (hotelId) {
       query += ' AND b.hotelId = ?';
       queryParams.push(hotelId);
+    }
+
+    if (roomUnitId) {
+      query += ' AND b.roomUnitId = ?';
+      queryParams.push(roomUnitId);
     }
     
     if (checkInDate) {
@@ -88,9 +97,18 @@ export const bookingService = {
       queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
     }
     
-    // Add count query for pagination
-    const countQuery = query.replace(/SELECT [\s\S]*?FROM/i, 'SELECT COUNT(*) as count FROM');
-    
+    // Add GROUP BY for the SUM aggregate
+    query += ` GROUP BY b.id, b.hotelId, b.roomUnitId, b.customerId, b.checkInDate, b.checkOutDate,
+      b.numberOfGuests, b.totalAmount, b.status, b.paymentStatus, b.specialRequests,
+      b.createdAt, b.updatedAt, h.name, r.name, r.type, ru.roomNumber,
+      c.firstName, c.lastName, c.phone, u.name, u.email`;
+
+    // Count query — COUNT(DISTINCT b.id) with same joins/filters but no aggregation
+    const countQuery = query
+      .replace(/SELECT\s[\s\S]*?FROM\s+bookings\s+b/i,
+        'SELECT COUNT(DISTINCT b.id) as count FROM bookings b')
+      .replace(/GROUP BY[\s\S]*/i, '');
+
     // Add sorting
     const validSortColumns = ['createdAt', 'checkInDate', 'checkOutDate', 'status', 'paymentStatus', 'totalAmount'];
     const actualSortBy = validSortColumns.includes(sortBy) ? `b.${sortBy}` : 'b.createdAt';
@@ -141,6 +159,8 @@ export const bookingService = {
           checkOutDate: row.checkOutDate,
           numberOfGuests: row.numberOfGuests,
           totalAmount: parseFloat(row.totalAmount),
+          amountPaid: parseFloat(row.amountPaid) || 0,
+          balance: Math.max(0, parseFloat(row.totalAmount) - (parseFloat(row.amountPaid) || 0)),
           status: row.status,
           paymentStatus: row.paymentStatus,
           specialRequests: row.specialRequests,
@@ -182,14 +202,17 @@ export const bookingService = {
           ru.roomNumber,
           c.firstName as customerFirstName, c.lastName as customerLastName, 
           c.phone as customerPhone, c.address as customerAddress,
-          u.name as customerName, u.email as customerEmail
+          u.name as customerName, u.email as customerEmail,
+          COALESCE(SUM(p.amount), 0) as amountPaid
         FROM bookings b
         JOIN hotels h ON b.hotelId = h.id
         JOIN room_units ru ON b.roomUnitId = ru.id
         JOIN rooms r ON ru.roomId = r.id
         JOIN customers c ON b.customerId = c.id
         LEFT JOIN users u ON c.userId = u.id
+        LEFT JOIN payments p ON p.bookingId = b.id AND p.status = 'COMPLETED'
         WHERE b.id = ?
+        GROUP BY b.id
       `;
       
       const [results] = await pool.query(query, [bookingId]);
@@ -201,6 +224,13 @@ export const bookingService = {
       }
       
       const booking = bookings[0];
+
+      // Fetch all payment records for this booking
+      const [paymentRows] = await pool.query(
+        `SELECT id, amount, status, paymentMethod, transactionId, createdAt
+         FROM payments WHERE bookingId = ? ORDER BY createdAt ASC`,
+        [bookingId]
+      );
       
       // Use customer name from user if available, otherwise use firstName + lastName from customers table
       const customerName = booking.customerName || 
@@ -250,11 +280,21 @@ export const bookingService = {
         checkOutDate: booking.checkOutDate,
         numberOfGuests: booking.numberOfGuests,
         totalAmount: parseFloat(booking.totalAmount),
+        amountPaid: parseFloat(booking.amountPaid) || 0,
+        balance: Math.max(0, parseFloat(booking.totalAmount) - (parseFloat(booking.amountPaid) || 0)),
         status: booking.status,
         paymentStatus: booking.paymentStatus,
         specialRequests: booking.specialRequests,
         createdAt: booking.createdAt,
-        updatedAt: booking.updatedAt
+        updatedAt: booking.updatedAt,
+        payments: (paymentRows as any[]).map(p => ({
+          id: p.id,
+          amount: parseFloat(p.amount),
+          status: p.status,
+          paymentMethod: p.paymentMethod,
+          transactionId: p.transactionId,
+          createdAt: p.createdAt,
+        })),
       };
     } catch (error) {
       console.error('Error fetching booking details:', error);
@@ -266,13 +306,47 @@ export const bookingService = {
    * Update booking status
    */
   async updateBookingStatus(bookingId: string, status: string) {
+    const connection = await pool.getConnection();
     try {
-      const query = 'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?';
-      const [result] = await pool.query(query, [status, bookingId]);
+      await connection.beginTransaction();
+
+      const [result] = await connection.query(
+        'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?',
+        [status, bookingId]
+      );
+
+      if ((result as any).affectedRows > 0) {
+        // Sync room unit status based on booking status
+        if (status === 'CHECKED_OUT' || status === 'CANCELLED') {
+          await connection.query(
+            `UPDATE room_units SET status = 'available', currentBookingId = NULL
+             WHERE currentBookingId = ?`,
+            [bookingId]
+          );
+        } else if (status === 'CHECKED_IN') {
+          await connection.query(
+            `UPDATE room_units SET status = 'occupied', currentBookingId = ?
+             WHERE currentBookingId = ?`,
+            [bookingId, bookingId]
+          );
+        } else if (status === 'CONFIRMED') {
+          // Ensure room unit is marked reserved when booking is confirmed
+          await connection.query(
+            `UPDATE room_units SET status = 'reserved', currentBookingId = ?
+             WHERE currentBookingId = ?`,
+            [bookingId, bookingId]
+          );
+        }
+      }
+
+      await connection.commit();
       return (result as any).affectedRows > 0;
     } catch (error) {
+      await connection.rollback();
       console.error('Error updating booking status:', error);
       throw error;
+    } finally {
+      connection.release();
     }
   },
 
@@ -294,15 +368,31 @@ export const bookingService = {
    * Check in a guest
    */
   async checkInGuest(bookingId: string) {
+    const connection = await pool.getConnection();
     try {
-      // First update the booking status
-      const bookingQuery = 'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?';
-      const [bookingResult] = await pool.query(bookingQuery, ['CHECKED_IN', bookingId]);
-      
+      await connection.beginTransaction();
+
+      const [bookingResult] = await connection.query(
+        'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?',
+        ['CHECKED_IN', bookingId]
+      );
+
+      if ((bookingResult as any).affectedRows > 0) {
+        await connection.query(
+          `UPDATE room_units SET status = 'occupied', currentBookingId = ?
+           WHERE currentBookingId = ?`,
+          [bookingId, bookingId]
+        );
+      }
+
+      await connection.commit();
       return (bookingResult as any).affectedRows > 0;
     } catch (error) {
+      await connection.rollback();
       console.error('Error checking in guest:', error);
       throw error;
+    } finally {
+      connection.release();
     }
   },
 
@@ -310,15 +400,31 @@ export const bookingService = {
    * Check out a guest
    */
   async checkOutGuest(bookingId: string) {
+    const connection = await pool.getConnection();
     try {
-      // Update the booking status
-      const bookingQuery = 'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?';
-      const [bookingResult] = await pool.query(bookingQuery, ['CHECKED_OUT', bookingId]);
-      
+      await connection.beginTransaction();
+
+      const [bookingResult] = await connection.query(
+        'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?',
+        ['CHECKED_OUT', bookingId]
+      );
+
+      if ((bookingResult as any).affectedRows > 0) {
+        await connection.query(
+          `UPDATE room_units SET status = 'available', currentBookingId = NULL
+           WHERE currentBookingId = ?`,
+          [bookingId]
+        );
+      }
+
+      await connection.commit();
       return (bookingResult as any).affectedRows > 0;
     } catch (error) {
+      await connection.rollback();
       console.error('Error checking out guest:', error);
       throw error;
+    } finally {
+      connection.release();
     }
   }
 }; 

@@ -58,11 +58,30 @@ export async function POST(
       );
     }
 
-    // Update booking status to checked in
-    await pool.query(
-      'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?',
-      ['CHECKED_IN', bookingId]
-    );
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // Update booking status to checked in
+      await connection.query(
+        'UPDATE bookings SET status = ?, updatedAt = NOW() WHERE id = ?',
+        ['CHECKED_IN', bookingId]
+      );
+
+      // Mark room unit as occupied
+      await connection.query(
+        `UPDATE room_units SET status = 'occupied', currentBookingId = ?
+         WHERE currentBookingId = ?`,
+        [bookingId, bookingId]
+      );
+
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
 
     return NextResponse.json({
       message: 'Guest checked in successfully'

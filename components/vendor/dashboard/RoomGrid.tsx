@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Tooltip } from '@/components/ui/tooltip';
 import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Loader2, MoreVertical, Check } from 'lucide-react';
+import { Loader2, MoreVertical, Check, ExternalLink, CalendarDays, Wrench, Sparkles } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   DropdownMenu, 
@@ -18,13 +18,15 @@ import toast from '@/lib/toast';
 
 interface RoomGridProps {
   hotelId: string;
-  onRoomSelect?: (roomId: string, roomNumber: string) => void;
+  onRoomSelect?: (unitId: string, roomNumber: string, roomId: string) => void;
+  selectedRoomId?: string;
 }
 
 type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'cleaning';
 
 interface RoomGridItem {
-  id: string;
+  id: string;        // room_unit id
+  roomId: string;    // parent rooms.id
   roomNumber: string;
   type: string;
   capacity: number;
@@ -35,7 +37,7 @@ interface RoomGridItem {
   bookingId?: string;
 }
 
-export default function RoomGrid({ hotelId, onRoomSelect }: RoomGridProps) {
+export default function RoomGrid({ hotelId, onRoomSelect, selectedRoomId }: RoomGridProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [rooms, setRooms] = useState<RoomGridItem[]>([]);
@@ -131,12 +133,11 @@ export default function RoomGrid({ hotelId, onRoomSelect }: RoomGridProps) {
   // Handle room selection
   const handleRoomClick = (room: RoomGridItem) => {
     if (onRoomSelect) {
-      onRoomSelect(room.id, room.roomNumber);
+      onRoomSelect(room.id, room.roomNumber, room.roomId);
     } else {
-      router.push(`/vendor/hotels/${hotelId}/rooms/${room.id}`);
+      router.push(`/vendor/hotels/${hotelId}/rooms/${room.roomId}`);
     }
   };
-
   // Get status icon based on room status
   const getStatusIcon = (status: RoomStatus) => {
     switch (status) {
@@ -301,48 +302,67 @@ export default function RoomGrid({ hotelId, onRoomSelect }: RoomGridProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className={`group relative flex cursor-pointer flex-col items-center rounded-lg border p-4 shadow-sm transition-all hover:shadow-md ${getStatusColorClass(room.status)}`}
+                    className={`group relative flex cursor-pointer flex-col items-center rounded-lg border p-4 shadow-sm transition-all hover:shadow-md ${getStatusColorClass(room.status)} ${selectedRoomId === room.id ? 'ring-2 ring-primary ring-offset-1' : ''}`}
                     onClick={() => handleRoomClick(room)}
                   >
-                    {/* Status change dropdown */}
-                    {room.status !== 'occupied' && room.status !== 'reserved' && (
-                      <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800/90 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300">
-                            <MoreVertical className="h-4 w-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {room.status !== 'available' && (
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(room.id, 'available');
-                              }}>
-                                <Check className="mr-2 h-4 w-4 text-green-500" />
-                                Mark as Available
+                    {/* Context-aware dropdown — always visible on hover */}
+                    <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800/90 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {(room.status === 'occupied' || room.status === 'reserved') ? (
+                            <>
+                              {/* Booked room options */}
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/vendor/bookings?roomUnitId=${room.id}`);
+                                }}
+                              >
+                                <ExternalLink className="mr-2 h-4 w-4 text-blue-500" />
+                                View Bookings
                               </DropdownMenuItem>
-                            )}
-                            {room.status !== 'cleaning' && (
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(room.id, 'cleaning');
-                              }}>
-                                <Check className="mr-2 h-4 w-4 text-yellow-500" />
-                                Mark as Cleaning
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/vendor/bookings?roomUnitId=${room.id}&status=CHECKED_IN`);
+                                }}
+                              >
+                                <CalendarDays className="mr-2 h-4 w-4 text-purple-500" />
+                                View Current Guest
                               </DropdownMenuItem>
-                            )}
-                            {room.status !== 'maintenance' && (
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(room.id, 'maintenance');
-                              }}>
-                                <Check className="mr-2 h-4 w-4 text-orange-500" />
-                                Mark as Maintenance
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )}
+                            </>
+                          ) : (
+                            <>
+                              {/* Available / cleaning / maintenance options */}
+                              {room.status !== 'available' && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(room.id, 'available'); }}>
+                                  <Sparkles className="mr-2 h-4 w-4 text-green-500" />
+                                  Set as Available
+                                </DropdownMenuItem>
+                              )}
+                              {room.status !== 'cleaning' && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(room.id, 'cleaning'); }}>
+                                  <Check className="mr-2 h-4 w-4 text-yellow-500" />
+                                  Set as Cleaning
+                                </DropdownMenuItem>
+                              )}
+                              {room.status !== 'maintenance' && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(room.id, 'maintenance'); }}>
+                                  <Wrench className="mr-2 h-4 w-4 text-orange-500" />
+                                  Set as Under Maintenance
+                                </DropdownMenuItem>
+                              )}
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                     
                     <div className="mb-3 text-center">
                       <div className="text-3xl font-bold text-gray-800 dark:text-gray-100">{room.roomNumber}</div>

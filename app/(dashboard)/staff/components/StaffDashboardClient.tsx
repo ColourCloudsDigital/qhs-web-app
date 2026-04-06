@@ -289,57 +289,66 @@ export default function StaffDashboardClient({ staffId, staffName }: StaffDashbo
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
               Task Summary
             </h3>
-            <div className="space-y-3">
-              {stats.overdueTasks > 0 && (
-                <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <AlertCircle className="h-5 w-5 text-red-500" />
-                    <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                      You have {stats.overdueTasks} overdue task{stats.overdueTasks > 1 ? 's' : ''}
-                    </span>
+            {(stats.overdueTasks === 0 && stats.inProgressTasks === 0 && stats.pendingTasks === 0) ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <CheckCircleIcon className="h-12 w-12 text-green-400 mb-3" />
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">All caught up!</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  No pending, in-progress, or overdue tasks right now.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {stats.overdueTasks > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                        You have {stats.overdueTasks} overdue task{stats.overdueTasks > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <a href="/staff/tasks?tab=overdue" className="text-sm text-red-600 hover:text-red-800 font-medium">View →</a>
                   </div>
-                  <a 
-                    href="/staff/tasks?tab=overdue" 
-                    className="text-sm text-red-600 hover:text-red-800 font-medium"
-                  >
-                    View →
-                  </a>
-                </div>
-              )}
-              
-              {stats.inProgressTasks > 0 && (
-                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <ClockIcon className="h-5 w-5 text-blue-500" />
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      {stats.inProgressTasks} task{stats.inProgressTasks > 1 ? 's' : ''} in progress
-                    </span>
+                )}
+                {stats.inProgressTasks > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <ClockIcon className="h-5 w-5 text-blue-500" />
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                        {stats.inProgressTasks} task{stats.inProgressTasks > 1 ? 's' : ''} in progress
+                      </span>
+                    </div>
+                    <a href="/staff/tasks?tab=inprogress" className="text-sm text-blue-600 hover:text-blue-800 font-medium">View →</a>
                   </div>
-                  <a 
-                    href="/staff/tasks?tab=inprogress" 
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    View →
-                  </a>
-                </div>
-              )}
-              
-              {stats.pendingTasks > 0 && (
-                <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <ClockIcon className="h-5 w-5 text-yellow-500" />
-                    <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-                      {stats.pendingTasks} pending task{stats.pendingTasks > 1 ? 's' : ''} to start
-                    </span>
+                )}
+                {stats.pendingTasks > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <ClockIcon className="h-5 w-5 text-yellow-500" />
+                      <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                        {stats.pendingTasks} pending task{stats.pendingTasks > 1 ? 's' : ''} to start
+                      </span>
+                    </div>
+                    <a href="/staff/tasks?tab=pending" className="text-sm text-yellow-600 hover:text-yellow-800 font-medium">View →</a>
                   </div>
-                  <a 
-                    href="/staff/tasks?tab=pending" 
-                    className="text-sm text-yellow-600 hover:text-yellow-800 font-medium"
-                  >
-                    View →
-                  </a>
-                </div>
-              )}
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* No tasks at all */}
+      {stats.totalAssigned === 0 && (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">Task Summary</h3>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <ClipboardDocumentListIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No tasks available</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                You have no tasks assigned yet.
+              </p>
             </div>
           </div>
         </div>

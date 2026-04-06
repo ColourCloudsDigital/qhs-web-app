@@ -173,6 +173,15 @@ export function getStaffMenuItems(permissions: string[] = []): MenuItem[] {
     iconName: 'BellIcon'
   });
 
+  // POS permission
+  if (permissions.includes('pos') || permissions.includes('POS')) {
+    menuItems.push({
+      title: 'Point of Sale',
+      path: '/staff/pos',
+      iconName: 'CreditCardIcon',
+    });
+  }
+
   // Settings permission
   if (permissions.includes('settings')) {
     menuItems.push({
@@ -409,6 +418,14 @@ export function getMenuItems(role?: UserRole, modules: string[] = [], permission
               iconName: 'ClipboardDocumentListIcon'
             }
           ]
+        });
+      }
+
+      if (modules.includes('POS') || modules.includes('pos')) {
+        vendorItems.push({
+          title: 'Point of Sale',
+          path: '/vendor/pos',
+          iconName: 'CreditCardIcon',
         });
       }
       

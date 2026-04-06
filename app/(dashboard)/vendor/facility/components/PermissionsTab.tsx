@@ -13,9 +13,10 @@ const mockPermissions = [
   { id: '5', name: 'Manage Staff', key: 'staff', description: 'Can manage staff', module: 'Staff' },
   { id: '6', name: 'View Logs', key: 'logs', description: 'Can view system logs', module: 'Reports' },
   { id: '7', name: 'Export Data', key: 'export', description: 'Can export data', module: 'Reports' },
+  { id: '8', name: 'Manage Orders (POS)', key: 'pos', description: 'Can create and manage POS orders', module: 'POS' },
 ];
 
-const modules = ['All', 'Bookings', 'Rooms', 'Reports', 'Settings', 'Staff'];
+const modules = ['All', 'Bookings', 'Rooms', 'Reports', 'Settings', 'Staff', 'POS'];
 
 export default function PermissionsTab() {
   const [searchTerm, setSearchTerm] = useState('');

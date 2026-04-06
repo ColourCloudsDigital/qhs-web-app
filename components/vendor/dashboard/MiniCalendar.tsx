@@ -6,15 +6,16 @@ import { formatDate } from '@/lib/utils';
 interface MiniCalendarProps {
   hotelId: string;
   onDateSelect?: (date: Date) => void;
+  roomUnitId?: string;
 }
 
 interface BookingData {
-  date: string; // ISO string
+  date: string;
   count: number;
   occupancyRate: number;
 }
 
-export default function MiniCalendar({ hotelId, onDateSelect }: MiniCalendarProps) {
+export default function MiniCalendar({ hotelId, onDateSelect, roomUnitId }: MiniCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [bookingData, setBookingData] = useState<Record<string, BookingData>>({});
@@ -30,7 +31,8 @@ export default function MiniCalendar({ hotelId, onDateSelect }: MiniCalendarProp
         
         const response = await fetch(
           `/api/vendor/hotels/${hotelId}/bookings/calendar?` + 
-          `startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+          `startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}` +
+          (roomUnitId ? `&roomUnitId=${roomUnitId}` : '')
         );
         
         if (!response.ok) {
@@ -56,7 +58,7 @@ export default function MiniCalendar({ hotelId, onDateSelect }: MiniCalendarProp
     if (hotelId) {
       fetchMonthData();
     }
-  }, [hotelId, currentMonth]);
+  }, [hotelId, currentMonth, roomUnitId]);
 
   // Get days in month
   const getDaysInMonth = (year: number, month: number) => {
@@ -153,33 +155,29 @@ export default function MiniCalendar({ hotelId, onDateSelect }: MiniCalendarProp
     const dateStr = day.date.toISOString().split('T')[0];
     const dayData = bookingData[dateStr];
     const occupancyRate = dayData?.occupancyRate || 0;
+    const isBooked = dayData && dayData.count > 0;
     
     let bgColor = 'bg-white dark:bg-gray-800';
-    let textColor = 'text-gray-700 dark:text-gray-300';
-    
-    if (!day.isCurrentMonth) {
-      textColor = 'text-gray-400 dark:text-gray-600';
-    }
+    let textColor = day.isCurrentMonth ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600';
     
     if (isToday(day.date)) {
       bgColor = 'bg-blue-50 dark:bg-blue-900/20';
-      textColor = 'text-blue-700 dark:text-blue-400';
+      textColor = 'text-blue-700 dark:text-blue-400 font-bold';
     }
     
     if (isSelected(day.date)) {
-      bgColor = 'bg-primary/10 dark:bg-primary/30';
-      textColor = 'text-primary-foreground';
-    }
-    
-    if (day.isCurrentMonth && occupancyRate > 0) {
-      if (occupancyRate >= 90) {
-        bgColor = 'bg-red-50 dark:bg-red-900/20';
-      } else if (occupancyRate >= 70) {
-        bgColor = 'bg-orange-50 dark:bg-orange-900/20';
-      } else if (occupancyRate >= 40) {
-        bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+      bgColor = 'bg-primary text-white dark:bg-primary';
+      textColor = 'text-white font-bold';
+    } else if (day.isCurrentMonth && isBooked) {
+      if (roomUnitId) {
+        // Room-specific: just show as occupied (blue)
+        bgColor = 'bg-blue-100 dark:bg-blue-900/40';
+        textColor = 'text-blue-800 dark:text-blue-200 font-medium';
       } else {
-        bgColor = 'bg-green-50 dark:bg-green-900/20';
+        if (occupancyRate >= 90) bgColor = 'bg-red-100 dark:bg-red-900/30';
+        else if (occupancyRate >= 70) bgColor = 'bg-orange-100 dark:bg-orange-900/30';
+        else if (occupancyRate >= 40) bgColor = 'bg-yellow-100 dark:bg-yellow-900/30';
+        else bgColor = 'bg-green-100 dark:bg-green-900/30';
       }
     }
     
@@ -192,9 +190,14 @@ export default function MiniCalendar({ hotelId, onDateSelect }: MiniCalendarProp
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-          {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
-        </h3>
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+            {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+          </h3>
+          {roomUnitId && (
+            <p className="text-xs text-primary">Showing room bookings</p>
+          )}
+        </div>
         <div className="flex gap-1">
           <Button
             variant="ghost"
@@ -245,25 +248,34 @@ export default function MiniCalendar({ hotelId, onDateSelect }: MiniCalendarProp
       </div>
       
       <div className="mt-2 flex items-center justify-center text-xs">
-        <div className="flex items-center space-x-1">
-          <div className="h-2 w-2 rounded-full bg-green-400"></div>
-          <span>0-40%</span>
-        </div>
-        <div className="mx-2">|</div>
-        <div className="flex items-center space-x-1">
-          <div className="h-2 w-2 rounded-full bg-yellow-400"></div>
-          <span>40-70%</span>
-        </div>
-        <div className="mx-2">|</div>
-        <div className="flex items-center space-x-1">
-          <div className="h-2 w-2 rounded-full bg-orange-400"></div>
-          <span>70-90%</span>
-        </div>
-        <div className="mx-2">|</div>
-        <div className="flex items-center space-x-1">
-          <div className="h-2 w-2 rounded-full bg-red-400"></div>
-          <span>90%+</span>
-        </div>
+        {roomUnitId ? (
+          <div className="flex items-center space-x-1">
+            <div className="h-2 w-2 rounded-full bg-blue-400"></div>
+            <span className="text-gray-500">Booked</span>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center space-x-1">
+              <div className="h-2 w-2 rounded-full bg-green-400"></div>
+              <span>0-40%</span>
+            </div>
+            <div className="mx-2">|</div>
+            <div className="flex items-center space-x-1">
+              <div className="h-2 w-2 rounded-full bg-yellow-400"></div>
+              <span>40-70%</span>
+            </div>
+            <div className="mx-2">|</div>
+            <div className="flex items-center space-x-1">
+              <div className="h-2 w-2 rounded-full bg-orange-400"></div>
+              <span>70-90%</span>
+            </div>
+            <div className="mx-2">|</div>
+            <div className="flex items-center space-x-1">
+              <div className="h-2 w-2 rounded-full bg-red-400"></div>
+              <span>90%+</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

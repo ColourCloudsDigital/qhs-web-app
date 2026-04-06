@@ -55,6 +55,7 @@ interface TaskListProps {
   assigneeFilter: string | null;
   searchQuery: string;
   onTaskUpdate: () => void;
+  refreshKey?: number;
 }
 
 export default function TaskList({
@@ -65,6 +66,7 @@ export default function TaskList({
   assigneeFilter,
   searchQuery,
   onTaskUpdate,
+  refreshKey = 0,
 }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,11 +107,11 @@ export default function TaskList({
     } finally {
       setIsLoading(false);
     }
-  }, [hotelId, statusFilter, priorityFilter, categoryFilter, assigneeFilter, searchQuery, page]);
+  }, [hotelId, statusFilter, priorityFilter, categoryFilter, assigneeFilter, searchQuery, page, refreshKey]);
   
   useEffect(() => {
     fetchTasks();
-  }, [hotelId, statusFilter, priorityFilter, categoryFilter, assigneeFilter, searchQuery, page]);
+  }, [hotelId, statusFilter, priorityFilter, categoryFilter, assigneeFilter, searchQuery, page, refreshKey]);
   
   const handlePageChange = (newPage: number) => {
     setPage(newPage);

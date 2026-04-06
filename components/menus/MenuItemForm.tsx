@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,8 @@ export default function MenuItemForm({
   const isEditMode = !!item;
   const [loading, setLoading] = useState<boolean>(false);
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
+
+  const getInitialFormData = () => ({
     name: item?.name || '',
     description: item?.description || '',
     price: item?.price ? String(item.price) : '',
@@ -55,6 +56,16 @@ export default function MenuItemForm({
     isAvailable: item?.isAvailable !== undefined ? item.isAvailable : true,
     isFeatured: item?.isFeatured || false,
   });
+
+  const [formData, setFormData] = useState(getInitialFormData);
+
+  // Reset form state whenever the dialog opens
+  useEffect(() => {
+    if (open) {
+      setFormData(getInitialFormData());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, item]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>

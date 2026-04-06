@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { UserRole } from '@/lib/types/enums';
+import { v4 as uuidv4 } from 'uuid';
 
 // GET /api/tasks/[id]/comments - Get all comments for a task
 export async function GET(
@@ -121,9 +122,10 @@ export async function POST(
     }
 
     // Insert the comment
+    const commentId = uuidv4();
     const [result] = await pool.query(
-      `INSERT INTO task_comments (taskId, staffId, comment_text) VALUES (?, ?, ?)`,
-      [taskId, staffId, content.trim()]
+      `INSERT INTO task_comments (commentId, taskId, staffId, comment_text) VALUES (?, ?, ?, ?)`,
+      [commentId, taskId, staffId, content.trim()]
     );
 
     // Get the inserted comment with user information
@@ -142,7 +144,7 @@ export async function POST(
       JOIN staff s ON tc.staffId = s.id
       JOIN users u ON s.userId = u.id
       WHERE tc.commentId = ?`,
-      [(result as any).insertId]
+      [commentId]
     );
 
     if (newComment.length === 0) {

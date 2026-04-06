@@ -16,7 +16,8 @@ interface MenuItemWithCategory extends MenuItem {
 }
 
 export default function MenuPage() {
-  const { hotelId } = useParams();
+  const params = useParams();
+  const hotelId = Array.isArray(params.hotelId) ? params.hotelId[0] : params.hotelId;
   const [loading, setLoading] = useState(true);
   const [menuData, setMenuData] = useState<{
     categories: (MenuCategory & { items: MenuItem[] })[];
@@ -185,7 +186,8 @@ export default function MenuPage() {
     );
   }
 
-  const { categories, settings } = menuData;
+  const { categories, settings: rawSettings } = menuData;
+  const settings = rawSettings ?? {} as MenuSettings;
   const menuTitle = 'Our Menu';
 
   return (
@@ -266,6 +268,18 @@ export default function MenuPage() {
               <div className="space-y-4">
                 {filteredItems.map((item) => (
                   <Card key={item.id} className="overflow-hidden hover:shadow-md transition-shadow border-none shadow-sm">
+                    {item.image && (
+                      <div className="relative h-44 w-full bg-gray-100">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                     <CardContent className="p-4">
                       <div className="flex justify-between">
                         <div className="flex-1">
@@ -346,6 +360,13 @@ export default function MenuPage() {
         )}
 
         {/* Menu tabs */}
+        {!searchQuery.trim() && categories.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-gray-500 text-lg">No menu items available yet.</p>
+            <p className="text-gray-400 text-sm mt-1">Please check back later.</p>
+          </div>
+        )}
+
         {!searchQuery.trim() && categories.length > 0 && (
           <Tabs defaultValue={categories[0].id} className="w-full">
             <div className="overflow-x-auto pb-2">
@@ -386,6 +407,19 @@ export default function MenuPage() {
                           key={item.id}
                           className="overflow-hidden hover:shadow-md transition-all border-none shadow-sm hover:scale-[1.01]"
                         >
+                          {/* Item image */}
+                          {item.image && (
+                            <div className="relative h-44 w-full bg-gray-100">
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
                           <CardContent className="p-4">
                             <div className="flex justify-between">
                               <div className="flex-1">
@@ -410,40 +444,21 @@ export default function MenuPage() {
                                 )}
                                 
                                 <div className="flex flex-wrap items-center gap-1 mt-2">
-                                  {/* Food attribute icons */}
                                   {item.isVegan && (
                                     <div className="flex items-center bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
-                                      <Image
-                                        src="/assets/icons/vegan.png"
-                                        alt="Vegan"
-                                        width={16}
-                                        height={16}
-                                        className="mr-1"
-                                      />
+                                      <Image src="/assets/icons/vegan.png" alt="Vegan" width={16} height={16} className="mr-1" />
                                       Vegan
                                     </div>
                                   )}
                                   {item.isGlutenFree && (
                                     <div className="flex items-center bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">
-                                      <Image
-                                        src="/assets/icons/gluten-free.png"
-                                        alt="Gluten Free"
-                                        width={16}
-                                        height={16}
-                                        className="mr-1"
-                                      />
+                                      <Image src="/assets/icons/gluten-free.png" alt="Gluten Free" width={16} height={16} className="mr-1" />
                                       Gluten Free
                                     </div>
                                   )}
                                   {item.isSpicy && (
                                     <div className="flex items-center bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
-                                      <Image
-                                        src="/assets/icons/spicy.png"
-                                        alt="Spicy"
-                                        width={16}
-                                        height={16}
-                                        className="mr-1"
-                                      />
+                                      <Image src="/assets/icons/spicy.png" alt="Spicy" width={16} height={16} className="mr-1" />
                                       Spicy
                                     </div>
                                   )}

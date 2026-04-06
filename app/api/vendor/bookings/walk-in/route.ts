@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
       amountPaid,
       depositAmount,
       discountAmount = 0,
-      taxAmount = 0
+      taxAmount = 0,
+      paymentStatus: requestedPaymentStatus,
     } = body;
     
     // Validate required fields
@@ -255,7 +256,7 @@ export async function POST(request: NextRequest) {
             numberOfGuests || 1,
             calculatedTotalAmount,
             BookingStatus.CONFIRMED,
-            PaymentStatus.COMPLETED,
+            requestedPaymentStatus || PaymentStatus.COMPLETED,
             specialRequests || null,
             now,
             now
@@ -281,7 +282,7 @@ export async function POST(request: NextRequest) {
             bookingId,
             amountPaid || calculatedTotalAmount,
             paymentMethod,
-            PaymentStatus.COMPLETED,
+            requestedPaymentStatus || PaymentStatus.COMPLETED,
             now,
             now
           ]
@@ -289,9 +290,9 @@ export async function POST(request: NextRequest) {
         
         console.log(`[API] Created payment record with ID: ${bookingId}`);
         
-        // Update room unit status
+        // Update room unit status to reserved (occupied only when checked in)
         await connection.query(
-          `UPDATE room_units SET status = 'occupied', currentBookingId = ? WHERE id = ?`,
+          `UPDATE room_units SET status = 'reserved', currentBookingId = ? WHERE id = ?`,
           [bookingId, roomUnitId]
         );
         

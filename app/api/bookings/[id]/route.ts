@@ -119,7 +119,7 @@ export async function PATCH(
     const body = await request.json();
     
     // Validate required fields
-    const { checkInDate, checkOutDate, numberOfGuests, specialRequests } = body;
+    const { checkInDate, checkOutDate, numberOfGuests, specialRequests, totalAmount } = body;
     
     if (!checkInDate || !checkOutDate || !numberOfGuests) {
       return NextResponse.json(
@@ -251,6 +251,7 @@ export async function PATCH(
           checkOutDate = ?,
           numberOfGuests = ?,
           specialRequests = ?,
+          ${totalAmount != null ? 'totalAmount = ?,' : ''}
           updatedAt = NOW()
       WHERE id = ?
     `, [
@@ -258,8 +259,20 @@ export async function PATCH(
       parsedCheckOut.toISOString().split('T')[0],
       numberOfGuests,
       specialRequests || '',
+      ...(totalAmount != null ? [totalAmount] : []),
       bookingId
     ]);
+
+    // Ensure room unit is marked as reserved/occupied when booking is active
+    const activeStatuses = ['CONFIRMED', 'PENDING', 'CHECKED_IN'];
+    if (activeStatuses.includes(currentBooking.status)) {
+      const roomUnitStatus = currentBooking.status === 'CHECKED_IN' ? 'occupied' : 'reserved';
+      await pool.query(
+        `UPDATE room_units SET status = ?, currentBookingId = ?
+         WHERE id = ? AND (currentBookingId = ? OR currentBookingId IS NULL OR currentBookingId = '')`,
+        [roomUnitStatus, bookingId, currentBooking.roomUnitId, bookingId]
+      );
+    }
     
     // Get updated booking
     const updatedBooking = await bookingService.getBookingById(

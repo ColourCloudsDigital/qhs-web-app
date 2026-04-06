@@ -11,7 +11,7 @@ import {
   XCircle,
   ArrowLeft
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatCurrency } from '@/lib/utils';
 
 interface BookingEditClientProps {
   booking: any;
@@ -37,7 +37,16 @@ export default function BookingEditClient({
     numberOfGuests: ''
   });
   
-  // Handle form field changes
+  // Derive the effective nightly rate from the original booking
+  const pricePerNight = booking.room?.discountedPrice || booking.room?.pricePerNight || 0;
+
+  // Compute nights and totalAmount reactively from form dates
+  const computedNights = (() => {
+    if (!formData.checkInDate || !formData.checkOutDate) return 0;
+    const diff = new Date(formData.checkOutDate).getTime() - new Date(formData.checkInDate).getTime();
+    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  })();
+  const computedTotal = pricePerNight * computedNights;
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({
@@ -116,7 +125,8 @@ export default function BookingEditClient({
           checkInDate: formData.checkInDate,
           checkOutDate: formData.checkOutDate,
           numberOfGuests: Number(formData.numberOfGuests),
-          specialRequests: formData.specialRequests
+          specialRequests: formData.specialRequests,
+          totalAmount: computedTotal,
         }),
       });
       
@@ -274,6 +284,21 @@ export default function BookingEditClient({
             />
           </div>
           
+          {/* Live total preview */}
+          {computedNights > 0 && pricePerNight > 0 && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+              <h4 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Price Summary</h4>
+              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                <span>{formatCurrency(pricePerNight)} × {computedNights} night{computedNights !== 1 ? 's' : ''}</span>
+                <span>{formatCurrency(computedTotal)}</span>
+              </div>
+              <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 dark:border-gray-700">
+                <span className="font-medium text-gray-900 dark:text-white">New Total</span>
+                <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(computedTotal)}</span>
+              </div>
+            </div>
+          )}
+
           {/* Submit buttons */}
           <div className="flex justify-end space-x-3 border-t border-gray-200 pt-6 dark:border-gray-700">
             <Link

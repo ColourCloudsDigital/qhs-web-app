@@ -38,32 +38,35 @@ export async function PATCH(
       );
     }
     
-    // Check if the room exists and if the user has access to it
+    // Check if the room unit exists and if the user has access to it
     let query = '';
-    const queryParams = [];
+    const queryParams: any[] = [];
     
     if (session.user.role === 'VENDOR') {
-      // For vendors, check if they own the hotel this room belongs to
       query = `
-        SELECT r.* FROM rooms r
+        SELECT ru.*, r.hotelId FROM room_units ru
+        JOIN rooms r ON ru.roomId = r.id
         JOIN hotels h ON r.hotelId = h.id
         JOIN vendors v ON h.vendorId = v.id
         JOIN users u ON v.userId = u.id
-        WHERE r.id = ? AND u.id = ?
+        WHERE ru.id = ? AND u.id = ?
       `;
       queryParams.push(roomId, session.user.id);
     } else if (session.user.role === 'STAFF') {
-      // For staff, check if they're assigned to the hotel this room belongs to
       query = `
-        SELECT r.* FROM rooms r
+        SELECT ru.*, r.hotelId FROM room_units ru
+        JOIN rooms r ON ru.roomId = r.id
         JOIN staff s ON r.hotelId = s.hotelId
         JOIN users u ON s.userId = u.id
-        WHERE r.id = ? AND u.id = ?
+        WHERE ru.id = ? AND u.id = ?
       `;
       queryParams.push(roomId, session.user.id);
     } else {
-      // For admins and super admins, just check if the room exists
-      query = 'SELECT * FROM rooms WHERE id = ?';
+      query = `
+        SELECT ru.*, r.hotelId FROM room_units ru
+        JOIN rooms r ON ru.roomId = r.id
+        WHERE ru.id = ?
+      `;
       queryParams.push(roomId);
     }
     
@@ -71,47 +74,35 @@ export async function PATCH(
     
     if (!(rows as any[]).length) {
       return NextResponse.json(
-        { error: 'Room not found or you do not have access to this room' },
+        { error: 'Room unit not found or you do not have access to it' },
         { status: 404 }
       );
     }
     
-    const room = (rows as any[])[0];
-    const oldStatus = room.status;
+    const roomUnit = (rows as any[])[0];
+    const oldStatus = roomUnit.status;
     
-    // Update the room status
+    // Update the room unit status (clear currentBookingId for non-booking statuses)
     await pool.query(
-      'UPDATE rooms SET status = ? WHERE id = ?',
-      [status.toUpperCase(), roomId]
+      `UPDATE room_units SET status = ?, currentBookingId = NULL WHERE id = ?`,
+      [status, roomId]
     );
     
-    // Create notification for room status change
+    // Create notification for room unit status change
     try {
-      // Get room number from room_units table
-      const [roomUnits] = await pool.query(
-        'SELECT roomNumber FROM room_units WHERE roomId = ? LIMIT 1',
-        [roomId]
-      );
-      
-      const roomNumber = (roomUnits as any[])[0]?.roomNumber || room.name;
-      
+      const roomNumber = roomUnit.roomNumber;
+      const hotelId = roomUnit.hotelId;
+
       await NotificationService.notifyRoomStatusChanged(
         session.user.id,
         roomId,
         roomNumber,
         oldStatus,
-        status.toUpperCase(),
+        status,
         session.user.id
       );
       
-      // Notify hotel staff
-      const [hotelRows] = await pool.query(
-        'SELECT hotelId FROM rooms WHERE id = ?',
-        [roomId]
-      );
-      
-      if (hotelRows && (hotelRows as any[]).length > 0) {
-        const hotelId = (hotelRows as any[])[0].hotelId;
+      if (hotelId) {
         const staffUsers = await NotificationService.getHotelStaff(hotelId);
         
         if (staffUsers.length > 0) {
@@ -119,16 +110,16 @@ export async function PATCH(
             staffUsers.filter(id => id !== session.user.id),
             {
               title: 'Room Status Updated',
-              content: `Room ${roomNumber} status changed from ${oldStatus} to ${status.toUpperCase()}`,
+              content: `Room ${roomNumber} status changed from ${oldStatus} to ${status}`,
               type: 'SYSTEM' as any,
               senderId: session.user.id,
               metadata: {
-                roomId,
+                roomUnitId: roomId,
                 hotelId,
                 action: 'status_changed',
-                entityType: 'room',
+                entityType: 'room_unit',
                 oldValue: oldStatus,
-                newValue: status.toUpperCase()
+                newValue: status
               }
             }
           );
@@ -136,7 +127,6 @@ export async function PATCH(
       }
     } catch (notificationError) {
       console.error('Error creating room status notification:', notificationError);
-      // Don't fail the request if notification fails
     }
     
     return NextResponse.json({

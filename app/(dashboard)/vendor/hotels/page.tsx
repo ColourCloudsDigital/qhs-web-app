@@ -173,6 +173,9 @@ export default function VendorHotelsPage() {
                   src={getDefaultImage(hotel)}
                   alt={hotel.name}
                   className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/assets/images/hotel-banner.jpg';
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 p-4">

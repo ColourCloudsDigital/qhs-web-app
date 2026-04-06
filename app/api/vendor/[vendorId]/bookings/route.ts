@@ -51,6 +51,7 @@ export async function GET(
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') as 'asc' | 'desc' || 'desc';
     const hotelId = searchParams.get('hotelId') || undefined;
+    const roomUnitId = searchParams.get('roomUnitId') || undefined;
 
     // Get bookings from service
     const bookingsData = await bookingService.getVendorBookings({
@@ -64,6 +65,7 @@ export async function GET(
       sortBy,
       sortOrder,
       hotelId,
+      roomUnitId,
     });
 
     return NextResponse.json(bookingsData);
