@@ -22,6 +22,7 @@ export default function MenuPage() {
   const [menuData, setMenuData] = useState<{
     categories: (MenuCategory & { items: MenuItem[] })[];
     settings: MenuSettings;
+    hotelName?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +109,7 @@ export default function MenuPage() {
       root.style.setProperty('--secondary', menuData.settings.secondaryColor || '#34a853');
       
       // Set the page title
-      document.title = 'Restaurant Menu';
+      document.title = menuData.settings ? `${menuData.hotelName || 'Restaurant'} Menu` : 'Restaurant Menu';
     }
     
     return () => {
@@ -122,35 +123,59 @@ export default function MenuPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <div className="container mx-auto px-4 py-8 max-w-4xl flex-grow">
-          <div className="flex flex-col items-center space-y-6">
-            <Skeleton className="h-12 w-32 rounded" />
-            <Skeleton className="h-8 w-40 rounded" />
-            <Skeleton className="h-4 w-1/2 rounded" />
-
-            <div className="mt-8 w-full space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} className="overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between">
-                      <div>
-                        <Skeleton className="h-5 w-32 rounded mb-2" />
-                        <Skeleton className="h-4 w-48 rounded mb-1" />
-                        <Skeleton className="h-3 w-24 rounded" />
-                      </div>
-                      <Skeleton className="h-6 w-14 rounded" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+        {/* Fake header matching the real one */}
+        <div className="bg-gray-800 text-white py-10 px-4 text-center">
+          <div className="max-w-4xl mx-auto space-y-3">
+            <Skeleton className="h-8 w-48 rounded-full mx-auto bg-white/20" />
+            <Skeleton className="h-4 w-32 rounded-full mx-auto bg-white/10" />
           </div>
         </div>
-        <footer className="bg-gray-900 text-gray-100 py-6 px-4 mt-auto">
-          <div className="container mx-auto max-w-4xl">
-            <div className="flex justify-center">
-              <p className="text-sm">Powered by Qaras Hotels</p>
+
+        {/* Fake search bar */}
+        <div className="sticky top-0 bg-white shadow-md z-20 p-4 border-b">
+          <div className="max-w-4xl mx-auto">
+            <Skeleton className="h-10 w-full rounded-full bg-gray-100" />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="container mx-auto px-4 py-8 max-w-4xl flex-grow">
+          {/* Spinner + message */}
+          <div className="flex flex-col items-center justify-center py-10 gap-4">
+            <div className="relative h-16 w-16">
+              <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
+              <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
             </div>
+            <p className="text-base font-medium text-gray-700">Loading menu…</p>
+            <p className="text-sm text-gray-400">Fetching the latest items for you</p>
+          </div>
+
+          {/* Fake category tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
+            {[80, 96, 72, 88].map((w, i) => (
+              <Skeleton key={i} className={`h-8 w-${w === 80 ? '20' : w === 96 ? '24' : w === 72 ? '18' : '22'} rounded-full shrink-0 bg-gray-200`} />
+            ))}
+          </div>
+
+          {/* Fake item cards — 2-col grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden border-none shadow-sm">
+                <Skeleton className="h-44 w-full rounded-none bg-gray-200" />
+                <CardContent className="p-4 space-y-2">
+                  <Skeleton className="h-4 w-3/4 rounded bg-gray-200" />
+                  <Skeleton className="h-3 w-full rounded bg-gray-100" />
+                  <Skeleton className="h-3 w-2/3 rounded bg-gray-100" />
+                  <Skeleton className="h-5 w-20 rounded bg-gray-200 mt-1" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <footer className="bg-gray-900 text-gray-100 py-6 px-4 mt-auto">
+          <div className="container mx-auto max-w-4xl flex justify-center">
+            <p className="text-sm">Powered by Qaras Hotels</p>
           </div>
         </footer>
       </div>
@@ -188,7 +213,7 @@ export default function MenuPage() {
 
   const { categories, settings: rawSettings } = menuData;
   const settings = rawSettings ?? {} as MenuSettings;
-  const menuTitle = 'Our Menu';
+  const menuTitle = menuData.hotelName ? `${menuData.hotelName} Menu` : 'Our Menu';
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

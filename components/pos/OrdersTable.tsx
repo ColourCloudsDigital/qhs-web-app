@@ -17,6 +17,7 @@ interface Order {
   totalAmount: number;
   paymentMethod: string;
   paymentStatus: string;
+  status?: string; // 'placed' | 'delivered' | 'cancelled'
   createdAt: string;
   hotelId?: string;
   tax?: any;
@@ -92,15 +93,24 @@ export default function OrdersTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-700 dark:bg-gray-900">
-              {orders.map(order => (
-                <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+              {orders.map(order => {
+                const isCancelled = order.status === 'cancelled';
+                return (
+                <tr key={order.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${isCancelled ? 'opacity-60' : ''}`}>
                   <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
-                    #{order.id.slice(0, 8).toUpperCase()}
+                    <div className="flex items-center gap-1.5">
+                      #{order.id.slice(0, 8).toUpperCase()}
+                      {isCancelled && (
+                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                          Cancelled
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                     {order.items?.reduce((s, i) => s + i.quantity, 0) ?? '—'}
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                  <td className={`px-4 py-3 text-sm font-medium ${isCancelled ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>
                     {formatCurrency(parseFloat(String(order.totalAmount)))}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
@@ -124,7 +134,8 @@ export default function OrdersTable({
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -170,7 +181,19 @@ export default function OrdersTable({
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                 Order #{viewOrder.id.slice(0, 8).toUpperCase()}
               </h3>
-              <button onClick={() => setViewOrder(null)} className="text-xl leading-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">×</button>
+              <div className="flex items-center gap-2">
+                {viewOrder.status === 'cancelled' && (
+                  <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                    Cancelled
+                  </span>
+                )}
+                {viewOrder.status === 'delivered' && (
+                  <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                    Delivered
+                  </span>
+                )}
+                <button onClick={() => setViewOrder(null)} className="text-xl leading-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">×</button>
+              </div>
             </div>
 
             {/* Meta */}

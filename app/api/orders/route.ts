@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
     const orderId = uuidv4();
 
     await client.query(
-      `INSERT INTO orders (id, vendorId, hotelId, totalAmount, tax, paymentStatus, paymentMethod, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      `INSERT INTO orders (id, vendorId, hotelId, totalAmount, tax, paymentStatus, paymentMethod, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'placed', NOW(), NOW())`,
       [orderId, vendorId, hotelId || null, totalAmount, taxValue, paymentStatus || 'Not Paid', paymentMethod || 'Cash']
     );
 
@@ -92,6 +92,8 @@ export async function GET(req: NextRequest) {
   const paymentMethod = url.searchParams.get('paymentMethod');
   const paymentStatus = url.searchParams.get('paymentStatus');
   const hotelId = url.searchParams.get('hotelId');
+  const orderStatus = url.searchParams.get('orderStatus'); // 'placed' | 'delivered' | 'cancelled'
+  const excludeStatus = url.searchParams.get('excludeStatus'); // exclude a specific status
 
   let whereClause = 'WHERE 1=1';
   const params: any[] = [];
@@ -129,6 +131,8 @@ export async function GET(req: NextRequest) {
 
   if (paymentMethod) { whereClause += ' AND o.paymentMethod = ?'; params.push(paymentMethod); }
   if (paymentStatus) { whereClause += ' AND o.paymentStatus = ?'; params.push(paymentStatus); }
+  if (orderStatus)   { whereClause += ' AND o.status = ?'; params.push(orderStatus); }
+  if (excludeStatus) { whereClause += ' AND o.status != ?'; params.push(excludeStatus); }
 
   try {
     const [countRows] = await pool.query(
@@ -166,5 +170,70 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching orders:', error);
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
+
+  if (!user || (user.role !== 'VENDOR' && user.role !== 'STAFF')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const vendorId = await resolveVendorId(user);
+  if (!vendorId) return NextResponse.json({ error: 'Vendor ID could not be resolved' }, { status: 403 });
+
+  const { orderId, status, paymentStatus, paymentMethod, totalAmount, items } = await req.json();
+
+  if (!orderId || !status) {
+    return NextResponse.json({ error: 'orderId and status are required' }, { status: 400 });
+  }
+
+  const validStatuses = ['placed', 'delivered', 'cancelled'];
+  if (!validStatuses.includes(status)) {
+    return NextResponse.json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` }, { status: 400 });
+  }
+
+  // Verify order belongs to this vendor
+  const [orderRows] = await pool.query('SELECT id FROM orders WHERE id = ? AND vendorId = ?', [orderId, vendorId]);
+  if ((orderRows as any[]).length === 0) {
+    return NextResponse.json({ error: 'Order not found or access denied' }, { status: 404 });
+  }
+
+  const client = await pool.getConnection();
+  try {
+    await client.beginTransaction();
+
+    // Build update fields
+    const fields: string[] = ['status = ?', 'updatedAt = NOW()'];
+    const values: any[] = [status];
+
+    if (paymentStatus) { fields.push('paymentStatus = ?'); values.push(paymentStatus); }
+    if (paymentMethod) { fields.push('paymentMethod = ?'); values.push(paymentMethod); }
+    if (totalAmount !== undefined) { fields.push('totalAmount = ?'); values.push(totalAmount); }
+
+    values.push(orderId);
+    await client.query(`UPDATE orders SET ${fields.join(', ')} WHERE id = ?`, values);
+
+    // If items provided, replace order items (for edit flow)
+    if (items && Array.isArray(items) && items.length > 0) {
+      await client.query('DELETE FROM order_items WHERE orderId = ?', [orderId]);
+      for (const item of items) {
+        await client.query(
+          `INSERT INTO order_items (id, orderId, menuItemId, quantity, price, createdAt) VALUES (?, ?, ?, ?, ?, NOW())`,
+          [uuidv4(), orderId, item.id, item.quantity, item.price]
+        );
+      }
+    }
+
+    await client.commit();
+    return NextResponse.json({ success: true, orderId, status });
+  } catch (error) {
+    await client.rollback();
+    console.error('Error updating order:', error);
+    return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
+  } finally {
+    client.release();
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import menuService from '@/lib/services/menu.service';
+import pool from '@/lib/db';
 
 // Get the public menu for a hotel
 export async function GET(
@@ -21,8 +22,15 @@ export async function GET(
     
     // Get the full menu data
     const menuData = await menuService.getFullMenu(id);
-    
-    return NextResponse.json(menuData);
+
+    // Fetch hotel name to display in the menu header
+    let hotelName = '';
+    try {
+      const [hotelRows] = await pool.query('SELECT name FROM hotels WHERE id = ?', [id]);
+      hotelName = (hotelRows as any[])[0]?.name || '';
+    } catch { /* non-critical */ }
+
+    return NextResponse.json({ ...menuData, hotelName });
   } catch (error: any) {
     console.error('[API] Error getting public menu:', error);
     return NextResponse.json({ error: error.message || 'Failed to get menu' }, { status: 500 });

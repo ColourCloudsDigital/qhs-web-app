@@ -22,6 +22,7 @@ export interface Order {
 
 interface OrderStore {
   activeOrderId: string | null;
+  editingOrderId: string | null; // tracks which placed order is being edited
   orders: Order[];
 
   createOrder: (vendorId?: string) => string;
@@ -34,10 +35,12 @@ interface OrderStore {
   setPaymentMethod: (orderId: string, method: string) => void;
   setPaymentStatus: (orderId: string, status: string) => void;
   clearActiveOrder: () => void;
+  loadPlacedOrderForEdit: (order: { id: string; items: OrderItem[]; paymentMethod: string; paymentStatus: string }) => void;
 }
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
   activeOrderId: null,
+  editingOrderId: null,
   orders: [],
 
   createOrder: (vendorId) => {
@@ -138,6 +141,25 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     set(state => ({
       orders: state.orders.filter(o => o.id !== activeOrderId),
       activeOrderId: null,
+      editingOrderId: null,
+    }));
+  },
+
+  loadPlacedOrderForEdit: (order) => {
+    // Replace active order with the placed order's items so user can edit and re-place
+    const id = order.id;
+    const editOrder: Order = {
+      id,
+      items: order.items,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      vat: 0,
+    };
+    set(state => ({
+      // Remove any existing active order, add the edit order
+      orders: [...state.orders.filter(o => o.id !== id && o.id !== state.activeOrderId), editOrder],
+      activeOrderId: id,
+      editingOrderId: id,
     }));
   },
 }));

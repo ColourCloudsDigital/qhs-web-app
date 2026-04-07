@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    let whereClause = `(p.vendorId = ? OR b.hotelId = ?)`;
-    let queryParams = [staff.hotelId, staff.hotelId];
+    let whereClause = `b.hotelId = ?`;
+    let queryParams: any[] = [staff.hotelId];
 
     if (status && status !== 'all') {
       whereClause += ` AND p.status = ?`;
@@ -43,16 +43,14 @@ export async function GET(request: NextRequest) {
     }
 
     const [paymentRows] = await pool.query(
-      `SELECT p.*, 
+      `SELECT p.*,
               b.id as bookingReference,
-              c1.firstName as customerFirstName, c1.lastName as customerLastName,
               c2.firstName as bookingCustomerFirstName, c2.lastName as bookingCustomerLastName
-       FROM payments p 
-       LEFT JOIN bookings b ON p.bookingId = b.id 
-       LEFT JOIN customers c1 ON p.customer_id = c1.id
+       FROM payments p
+       JOIN bookings b ON p.bookingId = b.id
        LEFT JOIN customers c2 ON b.customerId = c2.id
        WHERE ${whereClause}
-       ORDER BY p.createdAt DESC 
+       ORDER BY p.createdAt DESC
        LIMIT ? OFFSET ?`,
       [...queryParams, limit, offset]
     );
@@ -60,35 +58,27 @@ export async function GET(request: NextRequest) {
     const formattedPayments = (paymentRows as any[]).map((payment: any) => ({
       id: payment.id,
       bookingId: payment.bookingId,
-      amount: payment.amount,
+      amount: parseFloat(payment.amount) || 0,
       status: payment.status,
       paymentMethod: payment.paymentMethod,
       transactionId: payment.transactionId,
-      transactionReference: payment.transaction_reference,
-      currency: payment.currency,
-      description: payment.description,
-      customerId: payment.customer_id,
-      vendorId: payment.vendor_id,
-      subscriptionPlanId: payment.subscription_plan_id,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
-      customerName: payment.customerFirstName && payment.customerLastName 
-        ? `${payment.customerFirstName} ${payment.customerLastName}`
-        : payment.bookingCustomerFirstName && payment.bookingCustomerLastName
+      customerName: payment.bookingCustomerFirstName && payment.bookingCustomerLastName
         ? `${payment.bookingCustomerFirstName} ${payment.bookingCustomerLastName}`
-        : null,
-      bookingReference: payment.bookingReference
+        : 'Guest',
+      bookingReference: payment.bookingReference,
     }));
 
     const [countRows] = await pool.query(
-      `SELECT COUNT(*) as total 
-       FROM payments p 
-       LEFT JOIN bookings b ON p.bookingId = b.id 
+      `SELECT COUNT(*) as total
+       FROM payments p
+       JOIN bookings b ON p.bookingId = b.id
        WHERE ${whereClause}`,
-      queryParams.slice(0, -2) // Remove limit and offset from count query
+      queryParams
     );
 
-    const total = (countRows as any[])[0].total;
+    const total = (countRows as any[])[0]?.total || 0;
 
     return NextResponse.json({
       payments: formattedPayments,

@@ -1,257 +1,171 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Search, 
-  Filter, 
-  Eye, 
-  Download, 
-  CreditCard, 
-  DollarSign,
-  TrendingUp,
-  Calendar,
-  CheckCircle,
-  XCircle,
-  Clock,
-  RefreshCw
-} from 'lucide-react'
-import toast from '@/lib/services/toast.service'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Search, Eye, CreditCard, TrendingUp, CheckCircle, XCircle, Clock, RefreshCw, Loader2, X } from 'lucide-react'
+import toast from '@/lib/toast'
 
 interface Payment {
   id: string
   bookingId?: string
   amount: number
-  status: 'pending' | 'completed' | 'failed' | 'refunded'
+  status: string
   paymentMethod: string
   transactionId?: string
-  transactionReference?: string
-  currency: string
-  description?: string
-  customerId?: string
-  vendorId?: string
-  subscriptionPlanId?: string
   createdAt: string
   updatedAt: string
   customerName?: string
   bookingReference?: string
 }
 
+const statusColor: Record<string, string> = {
+  COMPLETED: 'bg-green-100 text-green-800',
+  completed: 'bg-green-100 text-green-800',
+  PENDING: 'bg-yellow-100 text-yellow-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  FAILED: 'bg-red-100 text-red-800',
+  failed: 'bg-red-100 text-red-800',
+  REFUNDED: 'bg-blue-100 text-blue-800',
+  refunded: 'bg-blue-100 text-blue-800',
+}
+
+const StatusIcon = ({ status }: { status: string }) => {
+  const s = status?.toLowerCase()
+  if (s === 'completed') return <CheckCircle className="h-4 w-4 text-green-600" />
+  if (s === 'pending') return <Clock className="h-4 w-4 text-yellow-600" />
+  if (s === 'failed') return <XCircle className="h-4 w-4 text-red-600" />
+  if (s === 'refunded') return <RefreshCw className="h-4 w-4 text-blue-600" />
+  return <Clock className="h-4 w-4 text-gray-400" />
+}
+
 export function StaffPaymentsClient() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
-  useEffect(() => {
-    fetchPayments()
-  }, [])
-
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async (silent = false) => {
+    silent ? setRefreshing(true) : setLoading(true)
     try {
-      const response = await fetch('/api/staff/payments')
-      if (response.ok) {
-        const data = await response.json()
-        setPayments(data.payments || [])
-      }
-    } catch (error) {
-      toast.error('Failed to fetch payments', {
-        title: 'Error'
-      })
+      const params = new URLSearchParams()
+      if (statusFilter !== 'all') params.append('status', statusFilter)
+      const res = await fetch(`/api/staff/payments?${params}`)
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setPayments(data.payments || [])
+    } catch {
+      toast.error('Failed to fetch payments.')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
-  }
+  }, [statusFilter])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'failed':
-        return 'bg-red-100 text-red-800'
-      case 'refunded':
-        return 'bg-blue-100 text-blue-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
+  useEffect(() => { fetchPayments() }, [fetchPayments])
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-600" />
-      case 'refunded':
-        return <RefreshCw className="h-4 w-4 text-blue-600" />
-      default:
-        return <Clock className="h-4 w-4 text-gray-600" />
-    }
-  }
+  const filtered = payments.filter(p => {
+    const q = searchTerm.toLowerCase()
+    const matchSearch = !q ||
+      p.transactionId?.toLowerCase().includes(q) ||
+      p.bookingReference?.toLowerCase().includes(q) ||
+      p.customerName?.toLowerCase().includes(q) ||
+      p.paymentMethod?.toLowerCase().includes(q)
 
-  const filteredPayments = payments.filter(payment => {
-    const matchesSearch = 
-      payment.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.transactionReference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.bookingReference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter
-    
-    let matchesDate = true
+    let matchDate = true
     if (dateFilter !== 'all') {
-      const paymentDate = new Date(payment.createdAt)
+      const d = new Date(p.createdAt)
       const now = new Date()
-      
-      switch (dateFilter) {
-        case 'today':
-          matchesDate = paymentDate.toDateString() === now.toDateString()
-          break
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          matchesDate = paymentDate >= weekAgo
-          break
-        case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-          matchesDate = paymentDate >= monthAgo
-          break
-      }
+      if (dateFilter === 'today') matchDate = d.toDateString() === now.toDateString()
+      else if (dateFilter === 'week') matchDate = d >= new Date(now.getTime() - 7 * 86400000)
+      else if (dateFilter === 'month') matchDate = d >= new Date(now.getTime() - 30 * 86400000)
     }
-    
-    return matchesSearch && matchesStatus && matchesDate
+    return matchSearch && matchDate
   })
 
-  const totalRevenue = payments
-    .filter(p => p.status === 'completed')
-    .reduce((sum, p) => sum + p.amount, 0)
+  const totalRevenue = payments.filter(p => p.status?.toLowerCase() === 'completed').reduce((s, p) => s + p.amount, 0)
+  const pendingAmt = payments.filter(p => p.status?.toLowerCase() === 'pending').reduce((s, p) => s + p.amount, 0)
+  const completed = payments.filter(p => p.status?.toLowerCase() === 'completed').length
+  const failed = payments.filter(p => p.status?.toLowerCase() === 'failed').length
 
-  const pendingAmount = payments
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + p.amount, 0)
-
-  const completedPayments = payments.filter(p => p.status === 'completed').length
-  const failedPayments = payments.filter(p => p.status === 'failed').length
+  const PaymentRow = ({ p }: { p: Payment }) => (
+    <TableRow key={p.id}>
+      <TableCell>
+        <div className="font-mono text-xs text-gray-600">#{p.id.slice(0, 8).toUpperCase()}</div>
+        {p.transactionId && <div className="text-xs text-gray-400">{p.transactionId}</div>}
+        {p.bookingReference && <div className="text-xs text-gray-400">Booking: #{p.bookingReference.slice(0, 8).toUpperCase()}</div>}
+      </TableCell>
+      <TableCell className="text-sm">{p.customerName || 'Guest'}</TableCell>
+      <TableCell className="font-medium">₦{p.amount.toLocaleString()}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1 text-sm"><CreditCard className="h-3.5 w-3.5" />{p.paymentMethod}</div>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1.5">
+          <StatusIcon status={p.status} />
+          <Badge className={statusColor[p.status] || 'bg-gray-100 text-gray-600'}>{p.status}</Badge>
+        </div>
+      </TableCell>
+      <TableCell className="text-sm text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</TableCell>
+      <TableCell>
+        <Button variant="outline" size="sm" onClick={() => setSelectedPayment(p)}><Eye className="h-4 w-4" /></Button>
+      </TableCell>
+    </TableRow>
+  )
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Payments</h1>
-        <Button>
-          <Download className="h-4 w-4 mr-2" />
-          Export
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Payments</h1>
+        <Button variant="outline" size="sm" onClick={() => fetchPayments(true)} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />Refresh
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              From {completedPayments} completed payments
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Amount</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₦{pendingAmount.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {payments.filter(p => p.status === 'pending').length} pending payments
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {payments.length > 0 ? 
-                ((completedPayments / payments.length) * 100).toFixed(1) : 
-                '0'
-              }%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {failedPayments} failed payments
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{payments.length}</div>
-            <p className="text-xs text-muted-foreground">
-              All time transactions
-            </p>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Total Revenue', value: `₦${totalRevenue.toLocaleString()}`, sub: `${completed} completed`, icon: <TrendingUp className="h-4 w-4 text-muted-foreground" />, cls: 'text-green-600' },
+          { label: 'Pending Amount', value: `₦${pendingAmt.toLocaleString()}`, sub: `${payments.filter(p => p.status?.toLowerCase() === 'pending').length} pending`, icon: <Clock className="h-4 w-4 text-muted-foreground" />, cls: 'text-yellow-600' },
+          { label: 'Success Rate', value: `${payments.length > 0 ? ((completed / payments.length) * 100).toFixed(1) : 0}%`, sub: `${failed} failed`, icon: <CheckCircle className="h-4 w-4 text-muted-foreground" /> },
+          { label: 'Total Transactions', value: payments.length, sub: 'All time', icon: <CreditCard className="h-4 w-4 text-muted-foreground" /> },
+        ].map(s => (
+          <Card key={s.label}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{s.label}</CardTitle>{s.icon}
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${(s as any).cls || ''}`}>{s.value}</div>
+              <p className="text-xs text-muted-foreground">{s.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex gap-4 items-center">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search payments..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input placeholder="Search by transaction, booking, customer..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border rounded-md"
-        >
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="rounded border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
           <option value="all">All Status</option>
-          <option value="completed">Completed</option>
-          <option value="pending">Pending</option>
-          <option value="failed">Failed</option>
-          <option value="refunded">Refunded</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="PENDING">Pending</option>
+          <option value="FAILED">Failed</option>
+          <option value="REFUNDED">Refunded</option>
         </select>
-        <select
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="px-3 py-2 border rounded-md"
-        >
+        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="rounded border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
           <option value="all">All Time</option>
           <option value="today">Today</option>
           <option value="week">This Week</option>
@@ -259,20 +173,18 @@ export function StaffPaymentsClient() {
         </select>
       </div>
 
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All Payments</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="failed">Failed</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Transactions</CardTitle>
-            </CardHeader>
-            <CardContent>
+      {/* Table */}
+      <Card>
+        <CardHeader><CardTitle>Payment Transactions ({filtered.length})</CardTitle></CardHeader>
+        <CardContent>
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <CreditCard className="h-12 w-12 mb-3 text-gray-300" />
+              <p className="font-medium">No payments found</p>
+              <p className="text-sm mt-1">{searchTerm || statusFilter !== 'all' || dateFilter !== 'all' ? 'Try adjusting your filters' : 'No payment records yet'}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -286,301 +198,56 @@ export function StaffPaymentsClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {payment.transactionReference || payment.transactionId || payment.id.slice(0, 8)}
-                          </div>
-                          {payment.bookingReference && (
-                            <div className="text-sm text-gray-500">
-                              Booking: {payment.bookingReference}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {payment.customerName || 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">
-                          {payment.currency} {payment.amount.toLocaleString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          {payment.paymentMethod}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(payment.status)}
-                          <Badge className={getStatusColor(payment.status)}>
-                            {payment.status}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(payment.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedPayment(payment)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filtered.map(p => <PaymentRow key={p.id} p={p} />)}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        <TabsContent value="completed">
-          <Card>
-            <CardHeader>
-              <CardTitle>Completed Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPayments.filter(p => p.status === 'completed').map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {payment.transactionReference || payment.transactionId || payment.id.slice(0, 8)}
-                          </div>
-                          {payment.bookingReference && (
-                            <div className="text-sm text-gray-500">
-                              Booking: {payment.bookingReference}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{payment.customerName || 'N/A'}</TableCell>
-                      <TableCell>
-                        <div className="font-medium text-green-600">
-                          {payment.currency} {payment.amount.toLocaleString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>{payment.paymentMethod}</TableCell>
-                      <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedPayment(payment)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="pending">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPayments.filter(p => p.status === 'pending').map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {payment.transactionReference || payment.transactionId || payment.id.slice(0, 8)}
-                          </div>
-                          {payment.bookingReference && (
-                            <div className="text-sm text-gray-500">
-                              Booking: {payment.bookingReference}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{payment.customerName || 'N/A'}</TableCell>
-                      <TableCell>
-                        <div className="font-medium text-yellow-600">
-                          {payment.currency} {payment.amount.toLocaleString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>{payment.paymentMethod}</TableCell>
-                      <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedPayment(payment)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Verify
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="failed">
-          <Card>
-            <CardHeader>
-              <CardTitle>Failed Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPayments.filter(p => p.status === 'failed').map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {payment.transactionReference || payment.transactionId || payment.id.slice(0, 8)}
-                          </div>
-                          {payment.bookingReference && (
-                            <div className="text-sm text-gray-500">
-                              Booking: {payment.bookingReference}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{payment.customerName || 'N/A'}</TableCell>
-                      <TableCell>
-                        <div className="font-medium text-red-600">
-                          {payment.currency} {payment.amount.toLocaleString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>{payment.paymentMethod}</TableCell>
-                      <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedPayment(payment)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Retry
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Payment Detail Modal */}
+      {/* Detail modal */}
       {selectedPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <CardTitle>Payment Details</CardTitle>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setSelectedPayment(null)}
-                >
-                  Close
-                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedPayment(null)}><X className="h-4 w-4" /></Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <h3 className="font-medium mb-2">Transaction Information</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><span className="font-medium">ID:</span> {selectedPayment.id}</div>
-                    <div><span className="font-medium">Reference:</span> {selectedPayment.transactionReference || 'N/A'}</div>
-                    <div><span className="font-medium">Transaction ID:</span> {selectedPayment.transactionId || 'N/A'}</div>
-                    <div><span className="font-medium">Booking ID:</span> {selectedPayment.bookingId || 'N/A'}</div>
-                  </div>
+                  <h3 className="font-medium mb-2 text-sm text-gray-500 uppercase tracking-wide">Transaction</h3>
+                  <dl className="space-y-1.5 text-sm">
+                    <div><span className="font-medium">ID: </span><span className="font-mono text-xs">{selectedPayment.id}</span></div>
+                    <div><span className="font-medium">Ref: </span>{selectedPayment.transactionId || 'N/A'}</div>
+                    {selectedPayment.bookingReference && <div><span className="font-medium">Booking: </span><span className="font-mono text-xs">#{selectedPayment.bookingReference.slice(0, 8).toUpperCase()}</span></div>}
+                    <div><span className="font-medium">Customer: </span>{selectedPayment.customerName || 'Guest'}</div>
+                  </dl>
                 </div>
                 <div>
-                  <h3 className="font-medium mb-2">Payment Details</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><span className="font-medium">Amount:</span> {selectedPayment.currency} {selectedPayment.amount.toLocaleString()}</div>
-                    <div><span className="font-medium">Method:</span> {selectedPayment.paymentMethod}</div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Status:</span>
-                      {getStatusIcon(selectedPayment.status)}
-                      <Badge className={getStatusColor(selectedPayment.status)}>
-                        {selectedPayment.status}
-                      </Badge>
+                  <h3 className="font-medium mb-2 text-sm text-gray-500 uppercase tracking-wide">Payment</h3>
+                  <dl className="space-y-1.5 text-sm">
+                    <div><span className="font-medium">Amount: </span><span className="text-lg font-bold text-primary">₦{selectedPayment.amount.toLocaleString()}</span></div>
+                    <div><span className="font-medium">Method: </span>{selectedPayment.paymentMethod}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium">Status: </span>
+                      <StatusIcon status={selectedPayment.status} />
+                      <Badge className={statusColor[selectedPayment.status] || 'bg-gray-100 text-gray-600'}>{selectedPayment.status}</Badge>
                     </div>
-                  </div>
+                  </dl>
                 </div>
               </div>
-              
-              {selectedPayment.description && (
-                <div>
-                  <h3 className="font-medium mb-2">Description</h3>
-                  <p className="text-sm text-gray-600">{selectedPayment.description}</p>
-                </div>
-              )}
-
               <div>
-                <h3 className="font-medium mb-2">Timestamps</h3>
-                <div className="space-y-2 text-sm">
-                  <div><span className="font-medium">Created:</span> {new Date(selectedPayment.createdAt).toLocaleString()}</div>
-                  <div><span className="font-medium">Updated:</span> {new Date(selectedPayment.updatedAt).toLocaleString()}</div>
-                </div>
+                <h3 className="font-medium mb-2 text-sm text-gray-500 uppercase tracking-wide">Timestamps</h3>
+                <dl className="space-y-1 text-sm">
+                  <div><span className="font-medium">Created: </span>{new Date(selectedPayment.createdAt).toLocaleString()}</div>
+                  <div><span className="font-medium">Updated: </span>{new Date(selectedPayment.updatedAt).toLocaleString()}</div>
+                </dl>
               </div>
+              <Button className="w-full" onClick={() => setSelectedPayment(null)}>Close</Button>
             </CardContent>
           </Card>
         </div>
