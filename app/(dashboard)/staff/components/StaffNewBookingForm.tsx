@@ -615,7 +615,7 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
                           <SelectContent>
                             {customers.map((customer) => (
                               <SelectItem key={customer.id} value={customer.id}>
-                                {customer.displayName}
+                                {`${customer.firstName} ${customer.lastName || ''}`.trim()} — {customer.phone}
                               </SelectItem>
                             ))}
                           </SelectContent>

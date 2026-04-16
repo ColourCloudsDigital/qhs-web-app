@@ -122,7 +122,7 @@ export default function VendorBookingsHeader({ vendorId }: VendorBookingsHeaderP
           <form onSubmit={handleSearch} className="relative">
             <input
               type="text"
-              placeholder="Search by name, email or booking ID..."
+              placeholder="Search by name, email, phone or booking ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-20 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white"

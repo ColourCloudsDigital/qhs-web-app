@@ -1,68 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { 
-  Calendar, 
-  TrendingUp, 
-  CreditCard, 
-  AlertCircle,
-  Bed,
-  Plus,
-  Search,
-  Filter,
-  Eye,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Users,
-  Loader2
+import {
+  Calendar, TrendingUp, CreditCard, AlertCircle, Bed, Plus,
+  Search, Eye, CheckCircle, XCircle, Clock, Users, Loader2,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Booking {
   id: string;
-  hotel: {
-    id: string;
-    name: string;
-  };
-  room: {
-    id: string;
-    name: string;
-    type: string;
-  };
-  customer: {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-  };
+  hotel: { id: string; name: string };
+  room: { id: string; name: string; type: string };
+  customer: { id: string; name: string; email: string; phone: string };
   checkInDate: string;
   checkOutDate: string;
   numberOfGuests: number;
   totalAmount: number;
-  status: 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
-  paymentStatus: 'PENDING' | 'PARTIAL' | 'PAID' | 'REFUNDED';
+  status: string;
+  paymentStatus: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 interface BookingStats {
@@ -77,246 +40,170 @@ interface BookingStats {
 
 interface StaffBookingsClientProps {
   staffId: string;
-  page: number;
-  limit: number;
+  page?: number;
+  limit?: number;
   status?: string;
   search?: string;
   checkInDate?: Date;
   checkOutDate?: Date;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
-export default function StaffBookingsClient({
-  staffId,
-  page,
-  limit,
-  status,
-  search,
-  checkInDate,
-  checkOutDate,
-  sortBy,
-  sortOrder,
-}: StaffBookingsClientProps) {
-  const router = useRouter();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [stats, setStats] = useState<BookingStats>({
-    totalBookings: 0,
-    todayCheckIns: 0,
-    todayCheckOuts: 0,
-    pendingBookings: 0,
-    confirmedBookings: 0,
-    checkedInBookings: 0,
-    totalRevenue: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchQuery, setSearchQuery] = useState(search || '');
-  const [statusFilter, setStatusFilter] = useState(status || 'all');
+const STATUS_COLORS: Record<string, string> = {
+  PENDING: 'bg-yellow-100 text-yellow-800',
+  CONFIRMED: 'bg-blue-100 text-blue-800',
+  CHECKED_IN: 'bg-green-100 text-green-800',
+  CHECKED_OUT: 'bg-gray-100 text-gray-800',
+  CANCELLED: 'bg-red-100 text-red-800',
+  CANCELLATION_REQUESTED: 'bg-orange-100 text-orange-800',
+  NO_SHOW: 'bg-purple-100 text-purple-800',
+};
 
-  // Fetch bookings and stats
-  const fetchBookings = async () => {
+const PAYMENT_COLORS: Record<string, string> = {
+  PENDING: 'bg-yellow-100 text-yellow-800',
+  PARTIAL: 'bg-orange-100 text-orange-800',
+  PAID: 'bg-green-100 text-green-800',
+  REFUNDED: 'bg-blue-100 text-blue-800',
+};
+
+const PAGE_SIZES = [10, 20, 50];
+
+export default function StaffBookingsClient({ staffId }: StaffBookingsClientProps) {
+  // ── Data state ──────────────────────────────────────────────────────────────
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [stats, setStats] = useState<BookingStats>({ totalBookings: 0, todayCheckIns: 0, todayCheckOuts: 0, pendingBookings: 0, confirmedBookings: 0, checkedInBookings: 0, totalRevenue: 0 });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+
+  // ── Pagination ───────────────────────────────────────────────────────────────
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // ── Filters (input state vs submitted state) ─────────────────────────────────
+  const [searchInput, setSearchInput] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // ── Fetch ────────────────────────────────────────────────────────────────────
+  const fetchBookings = useCallback(async (silent = false) => {
+    silent ? setRefreshing(true) : setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        sortBy,
-        sortOrder,
+        page: String(page),
+        limit: String(pageSize),
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
-      
-      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
-      if (searchQuery) params.append('search', searchQuery);
-      if (checkInDate) params.append('checkInDate', checkInDate.toISOString());
-      if (checkOutDate) params.append('checkOutDate', checkOutDate.toISOString());
-      
-      const response = await fetch(`/api/staff/bookings?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch bookings');
-      }
-      
-      const data = await response.json();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (activeSearch) params.append('search', activeSearch);
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo)   params.append('dateTo', dateTo);
+
+      const res = await fetch(`/api/staff/bookings?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch bookings');
+      const data = await res.json();
       setBookings(data.bookings || []);
       setStats(data.stats || stats);
-      setTotalPages(Math.ceil((data.total || 0) / limit));
-      
+      setTotal(data.total || 0);
     } catch (err) {
-      console.error('Error fetching bookings:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch bookings');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [page, pageSize, statusFilter, activeSearch, dateFrom, dateTo]);
 
-  useEffect(() => {
-    fetchBookings();
-  }, [page, limit, statusFilter, searchQuery, checkInDate, checkOutDate, sortBy, sortOrder]);
+  useEffect(() => { fetchBookings(); }, [fetchBookings]);
+
+  useEffect(() => { setPage(1); }, [statusFilter, activeSearch, dateFrom, dateTo, pageSize]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams();
-    if (searchQuery) params.append('search', searchQuery);
-    if (statusFilter !== 'all') params.append('status', statusFilter);
-    router.push(`/staff/bookings?${params}`);
+    setActiveSearch(searchInput);
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      CONFIRMED: 'bg-blue-100 text-blue-800',
-      CHECKED_IN: 'bg-green-100 text-green-800',
-      CHECKED_OUT: 'bg-gray-100 text-gray-800',
-      CANCELLED: 'bg-red-100 text-red-800',
-    };
-    
-    return (
-      <Badge className={variants[status as keyof typeof variants] || 'bg-gray-100 text-gray-800'}>
-        {status.replace('_', ' ')}
-      </Badge>
-    );
+  const clearFilters = () => {
+    setSearchInput(''); setActiveSearch('');
+    setStatusFilter('all');
+    setDateFrom(''); setDateTo('');
+    setPage(1);
   };
 
-  const getPaymentStatusBadge = (paymentStatus: string) => {
-    const variants = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      PARTIAL: 'bg-orange-100 text-orange-800',
-      PAID: 'bg-green-100 text-green-800',
-      REFUNDED: 'bg-red-100 text-red-800',
-    };
-    
-    return (
-      <Badge className={variants[paymentStatus as keyof typeof variants] || 'bg-gray-100 text-gray-800'}>
-        {paymentStatus}
-      </Badge>
-    );
-  };
+  const hasActiveFilters = activeSearch || statusFilter !== 'all' || dateFrom || dateTo;
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="border-b border-gray-200 pb-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bookings</h1>
-          <p className="text-gray-600 dark:text-gray-400">Loading bookings...</p>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading bookings...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="border-b border-gray-200 pb-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bookings</h1>
-          <p className="text-gray-600 dark:text-gray-400">Error loading bookings</p>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Bookings</h3>
-            <p className="text-gray-500 mb-4">{error}</p>
-            <Button onClick={fetchBookings} variant="outline">
-              Try Again
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="border-b border-gray-200 pb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bookings</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Manage hotel bookings and reservations
-            </p>
-          </div>
-          <Link href="/staff/bookings/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Booking
-            </Button>
-          </Link>
+      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bookings</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage hotel bookings and reservations</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => fetchBookings(true)} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />Refresh
+          </Button>
+          <Link href="/staff/bookings/new"><Button size="sm"><Plus className="h-4 w-4 mr-1" />New Booking</Button></Link>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-            <Bed className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalBookings}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Check-ins Today</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.todayCheckIns}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Check-outs Today</CardTitle>
-            <XCircle className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.todayCheckOuts}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
-          </CardContent>
-        </Card>
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {[
+          { label: 'Total Bookings', value: stats.totalBookings, icon: <Bed className="h-4 w-4 text-muted-foreground" /> },
+          { label: 'Check-ins Today', value: stats.todayCheckIns, icon: <CheckCircle className="h-4 w-4 text-green-500" /> },
+          { label: 'Check-outs Today', value: stats.todayCheckOuts, icon: <XCircle className="h-4 w-4 text-blue-500" /> },
+          { label: 'Total Revenue', value: formatCurrency(stats.totalRevenue), sub: 'From completed payments', icon: <CreditCard className="h-4 w-4 text-muted-foreground" /> },
+        ].map(s => (
+          <Card key={s.label}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">{s.label}</CardTitle>{s.icon}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{s.value}</div>
+              {(s as any).sub && <p className="text-xs text-muted-foreground mt-1">{(s as any).sub}</p>}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Filters</CardTitle>
+            {hasActiveFilters && (
+              <button onClick={clearFilters} className="text-xs text-primary hover:underline">Clear all</button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSearch} className="flex gap-4 items-end">
-            <div className="flex-1">
-              <label className="block text-sm font-medium mb-2">Search</label>
-              <Input
-                type="text"
-                placeholder="Search by guest name, email, or booking ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <CardContent className="space-y-4">
+          {/* Search + Status row */}
+          <form onSubmit={handleSearch} className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs font-medium mb-1 text-gray-600">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Name, phone, email or booking ID..."
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
+            <div className="w-48">
+              <label className="block text-xs font-medium mb-1 text-gray-600">Status</label>
+              <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="PENDING">Pending</SelectItem>
@@ -324,83 +211,84 @@ export default function StaffBookingsClient({
                   <SelectItem value="CHECKED_IN">Checked In</SelectItem>
                   <SelectItem value="CHECKED_OUT">Checked Out</SelectItem>
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="CANCELLATION_REQUESTED">Cancellation Requested</SelectItem>
+                  <SelectItem value="NO_SHOW">No Show</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit">
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
+            <Button type="submit" size="sm"><Search className="h-4 w-4 mr-1" />Search</Button>
           </form>
+
+          {/* Date range filter */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium mb-1 text-gray-600">Date From</label>
+              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-gray-600">Date To</label>
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} min={dateFrom} />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Bookings List */}
+      {/* Bookings list */}
       <Card>
-        <CardHeader>
-          <CardTitle>Bookings ({bookings.length})</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base">
+            Bookings {!loading && <span className="text-sm font-normal text-gray-500">({total} total)</span>}
+          </CardTitle>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Rows:</span>
+            <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>{PAGE_SIZES.map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
-          {bookings.length === 0 ? (
-            <div className="text-center py-8">
-              <Bed className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
-              <p className="text-gray-500 mb-4">
-                {searchQuery || statusFilter !== 'all' 
-                  ? 'Try adjusting your search criteria' 
-                  : 'No bookings have been created yet'}
-              </p>
-              <Link href="/staff/bookings/new">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Booking
-                </Button>
-              </Link>
+          {loading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <AlertCircle className="h-10 w-10 text-red-500 mb-3" />
+              <p className="text-gray-500 mb-3">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => fetchBookings()}>Try Again</Button>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <Bed className="h-12 w-12 mb-3 text-gray-300" />
+              <p className="font-medium text-gray-500">No bookings found</p>
+              <p className="text-sm mt-1">{hasActiveFilters ? 'Try adjusting your filters' : 'No bookings yet'}</p>
+              {!hasActiveFilters && (
+                <Link href="/staff/bookings/new" className="mt-4">
+                  <Button size="sm"><Plus className="h-4 w-4 mr-1" />Create Booking</Button>
+                </Link>
+              )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {bookings.map((booking) => (
-                <div key={booking.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <h3 className="font-medium">{booking.customer?.name || 'Guest'}</h3>
-                        {getStatusBadge(booking.status)}
-                        {getPaymentStatusBadge(booking.paymentStatus)}
+            <div className="space-y-3">
+              {bookings.map(b => (
+                <div key={b.id} className="rounded-lg border border-gray-200 p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="font-medium text-gray-900 dark:text-white">{b.customer?.name || 'Guest'}</span>
+                        <Badge className={STATUS_COLORS[b.status] || 'bg-gray-100 text-gray-600'}>{b.status.replace(/_/g, ' ')}</Badge>
+                        <Badge className={PAYMENT_COLORS[b.paymentStatus] || 'bg-gray-100 text-gray-600'}>{b.paymentStatus}</Badge>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                        <div>
-                          <span className="font-medium">Hotel:</span> {booking.hotel?.name || 'Hotel'}
-                        </div>
-                        <div>
-                          <span className="font-medium">Room:</span> {booking.room?.name || 'Room'}
-                        </div>
-                        <div>
-                          <span className="font-medium">Check-in:</span> {formatDate(booking.checkInDate)}
-                        </div>
-                        <div>
-                          <span className="font-medium">Check-out:</span> {formatDate(booking.checkOutDate)}
-                        </div>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-600 dark:text-gray-400 sm:grid-cols-4">
+                        <div><span className="font-medium">Room:</span> {b.room?.name || '—'}</div>
+                        <div><span className="font-medium">Guests:</span> {b.numberOfGuests}</div>
+                        <div><span className="font-medium">Check-in:</span> {formatDate(b.checkInDate)}</div>
+                        <div><span className="font-medium">Check-out:</span> {formatDate(b.checkOutDate)}</div>
                       </div>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {booking.numberOfGuests} guest{booking.numberOfGuests > 1 ? 's' : ''}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <CreditCard className="h-4 w-4" />
-                          {formatCurrency(booking.totalAmount)}
-                        </div>
-                      </div>
+                      <div className="mt-1.5 text-sm font-medium text-primary">{formatCurrency(b.totalAmount)}</div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Link href={`/staff/bookings/${booking.id}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </Link>
-                    </div>
+                    <Link href={`/staff/bookings/${b.id}`} className="shrink-0">
+                      <Button variant="outline" size="sm"><Eye className="h-4 w-4 mr-1" />View</Button>
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -410,22 +298,14 @@ export default function StaffBookingsClient({
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Page {page} of {totalPages}
-          </div>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <Link href={`/staff/bookings?page=${page - 1}`}>
-                <Button variant="outline" size="sm">Previous</Button>
-              </Link>
-            )}
-            {page < totalPages && (
-              <Link href={`/staff/bookings?page=${page + 1}`}>
-                <Button variant="outline" size="sm">Next</Button>
-              </Link>
-            )}
+      {!loading && total > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+          <span>Page {page} of {totalPages} · {total} bookings</span>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={page <= 1}><ChevronsLeft className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1}><ChevronLeft className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}><ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(totalPages)} disabled={page >= totalPages}><ChevronsRight className="h-4 w-4" /></Button>
           </div>
         </div>
       )}

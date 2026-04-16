@@ -7,7 +7,10 @@ import {
   LogOut, 
   XCircle, 
   AlertTriangle,
-  Loader
+  Loader,
+  Clock,
+  CheckCircle,
+  Ban
 } from 'lucide-react';
 import { BookingStatus } from '@/lib/types/enums';
 
@@ -15,103 +18,151 @@ interface BookingStatusUpdateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateStatus: (status: BookingStatus) => Promise<void>;
+  onApproveCancellation?: (action: 'approve' | 'decline') => Promise<void>;
   currentStatus: BookingStatus;
   isLoading: boolean;
+  checkInDate?: string;
+  checkOutDate?: string;
 }
 
 export default function BookingStatusUpdateModal({
   isOpen,
   onClose,
   onUpdateStatus,
+  onApproveCancellation,
   currentStatus,
-  isLoading
+  isLoading,
+  checkInDate,
+  checkOutDate,
 }: BookingStatusUpdateModalProps) {
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus | null>(null);
   const [notes, setNotes] = useState('');
+
+  // Date-aware helpers
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const checkIn = checkInDate ? new Date(checkInDate) : null;
+  const checkOut = checkOutDate ? new Date(checkOutDate) : null;
+  if (checkIn) checkIn.setHours(0, 0, 0, 0);
+  if (checkOut) checkOut.setHours(0, 0, 0, 0);
+
+  // Check-in is available on or after the check-in date
+  const canCheckIn = !checkIn || today >= checkIn;
+  // No-show is available only after the check-out date has passed
+  const isNoShow = checkOut ? today > checkOut : false;
   
-  // Reset state when modal opens/closes or currentStatus changes
   useEffect(() => {
     if (isOpen) {
-      // Reset state when modal opens
       setSelectedStatus(null);
       setNotes('');
-      console.log('Modal opened - state reset');
     }
   }, [isOpen, currentStatus]);
-  
-  // Handle status selection
+
   const handleStatusSelection = (status: BookingStatus) => {
-    console.log('Status selected:', status);
-    console.log('Current status:', currentStatus);
-    console.log('Previous selected status:', selectedStatus);
     setSelectedStatus(status);
-    console.log('New selected status will be:', status);
   };
-  
-  // Handle form submission
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('=== Form Submission Debug ===');
-    console.log('Form submitted with selectedStatus:', selectedStatus);
-    
-    if (!selectedStatus) {
-      console.log('No status selected, aborting submission');
-      return;
-    }
-    
+    if (!selectedStatus) return;
     try {
-      console.log('Calling onUpdateStatus with:', selectedStatus);
       await onUpdateStatus(selectedStatus);
-      console.log('onUpdateStatus completed successfully');
       setSelectedStatus(null);
       setNotes('');
-      console.log('Form state reset after successful update');
     } catch (error) {
       console.error('Error updating booking status:', error);
     }
   };
   
-  // Determine available status options based on current status
-  const getAvailableStatuses = (): { status: BookingStatus; label: string; icon: JSX.Element }[] => {
-    console.log('Getting available statuses for current status:', currentStatus);
-    
+  const getAvailableStatuses = (): { status: BookingStatus; label: string; icon: JSX.Element; disabled?: boolean; hint?: string }[] => {
     switch (currentStatus) {
       case BookingStatus.PENDING:
         return [
           { status: BookingStatus.CONFIRMED, label: 'Confirm Booking', icon: <CheckSquare className="h-5 w-5" /> },
-          { status: BookingStatus.CANCELLED, label: 'Cancel Booking', icon: <XCircle className="h-5 w-5" /> }
+          { status: BookingStatus.CANCELLED, label: 'Cancel Booking', icon: <XCircle className="h-5 w-5" /> },
         ];
       case BookingStatus.CONFIRMED:
         return [
-          { status: BookingStatus.CHECKED_IN, label: 'Check In Guest', icon: <LogIn className="h-5 w-5" /> },
+          {
+            status: BookingStatus.CHECKED_IN,
+            label: 'Check In Guest',
+            icon: <LogIn className="h-5 w-5" />,
+            disabled: !canCheckIn,
+            hint: !canCheckIn ? `Available from ${checkIn?.toLocaleDateString()}` : undefined,
+          },
           { status: BookingStatus.CANCELLED, label: 'Cancel Booking', icon: <XCircle className="h-5 w-5" /> },
-          { status: BookingStatus.NO_SHOW, label: 'Mark as No-Show', icon: <AlertTriangle className="h-5 w-5" /> }
+          {
+            status: BookingStatus.NO_SHOW,
+            label: 'Mark as No-Show',
+            icon: <AlertTriangle className="h-5 w-5" />,
+            disabled: !isNoShow,
+            hint: !isNoShow ? 'Available after check-out date has passed' : undefined,
+          },
         ];
       case BookingStatus.CHECKED_IN:
         return [
-          { status: BookingStatus.CHECKED_OUT, label: 'Check Out Guest', icon: <LogOut className="h-5 w-5" /> }
+          { status: BookingStatus.CHECKED_OUT, label: 'Check Out Guest', icon: <LogOut className="h-5 w-5" /> },
         ];
+      case BookingStatus.CANCELLATION_REQUESTED:
+        return [];
       default:
-        console.log('No available status transitions for:', currentStatus);
         return [];
     }
   };
   
   const availableStatuses = getAvailableStatuses();
+
+  if (!isOpen) return null;
   
-  console.log('=== Modal State Debug ===');
-  console.log('isOpen:', isOpen);
-  console.log('currentStatus:', currentStatus);
-  console.log('Available statuses:', availableStatuses);
-  console.log('Selected status:', selectedStatus);
-  console.log('isLoading:', isLoading);
-  console.log('========================');
-  
-  if (!isOpen) {
-    return null;
+  // Cancellation request — show approve/decline UI
+  if (currentStatus === BookingStatus.CANCELLATION_REQUESTED) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+          <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+            Cancellation Request
+          </h2>
+          <p className="mb-5 text-sm text-gray-600 dark:text-gray-400">
+            A staff member has requested to cancel this booking. Do you want to approve or decline this request?
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => onApproveCancellation?.('approve')}
+              disabled={isLoading}
+              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoading ? (
+                <><Loader className="h-4 w-4 animate-spin" />Processing...</>
+              ) : (
+                <><CheckCircle className="h-4 w-4" />Approve Cancellation</>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => onApproveCancellation?.('decline')}
+              disabled={isLoading}
+              className="flex flex-1 items-center justify-center gap-2 rounded-md border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              {isLoading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <><Ban className="h-4 w-4" />Decline</>
+              )}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-3 w-full rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
   }
-  
+
   // Add validation to ensure we have valid statuses
   if (availableStatuses.length === 0) {
     return (
@@ -152,40 +203,37 @@ export default function BookingStatusUpdateModal({
             <div className="space-y-2">
               {availableStatuses.map((option) => {
                 const isSelected = selectedStatus === option.status;
-                console.log(`Rendering button for ${option.status}, isSelected: ${isSelected}`);
-                
                 return (
                   <button
                     key={option.status}
                     type="button"
-                    onClick={() => {
-                      console.log('=== Button Click Debug ===');
-                      console.log('Button clicked for status:', option.status);
-                      console.log('Current selectedStatus before click:', selectedStatus);
-                      handleStatusSelection(option.status);
-                      console.log('handleStatusSelection called');
-                      console.log('========================');
-                    }}
-                    className={`flex w-full items-center rounded-md border p-3 transition-all duration-200 ${
-                      isSelected
+                    onClick={() => !option.disabled && handleStatusSelection(option.status)}
+                    disabled={option.disabled}
+                    className={`flex w-full flex-col rounded-md border p-3 transition-all duration-200 ${
+                      option.disabled
+                        ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-50 dark:border-gray-700 dark:bg-gray-800'
+                        : isSelected
                         ? 'border-primary bg-primary-50 dark:border-primary dark:bg-primary/20'
                         : 'border-gray-300 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600'
                     }`}
                   >
-                    <div className={`rounded-full p-1 transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-primary text-white'
-                        : 'bg-gray-100 text-gray-500 dark:bg-gray-600 dark:text-gray-300'
-                    }`}>
-                      {option.icon}
+                    <div className="flex items-center">
+                      <div className={`rounded-full p-1 ${
+                        option.disabled ? 'bg-gray-100 text-gray-400' :
+                        isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-600 dark:text-gray-300'
+                      }`}>
+                        {option.icon}
+                      </div>
+                      <span className={`ml-3 font-medium ${
+                        option.disabled ? 'text-gray-400' :
+                        isSelected ? 'text-primary dark:text-primary-light' : 'text-gray-700 dark:text-gray-300'
+                      }`}>
+                        {option.label}
+                      </span>
                     </div>
-                    <span className={`ml-3 font-medium transition-all duration-200 ${
-                      isSelected
-                        ? 'text-primary dark:text-primary-light' 
-                        : 'text-gray-700 dark:text-gray-300'
-                    }`}>
-                      {option.label}
-                    </span>
+                    {option.hint && (
+                      <p className="mt-1 pl-9 text-xs text-gray-400">{option.hint}</p>
+                    )}
                   </button>
                 );
               })}

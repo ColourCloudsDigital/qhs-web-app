@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const checkInDate = searchParams.get('checkInDate');
     const checkOutDate = searchParams.get('checkOutDate');
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
@@ -54,20 +56,39 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      whereClause += ' AND (CONCAT(c.firstName, " ", c.lastName) LIKE ? OR b.id LIKE ?)';
+      whereClause += ' AND (CONCAT(c.firstName, " ", c.lastName) LIKE ? OR b.id LIKE ? OR c.phone LIKE ?)';
       const searchPattern = `%${search}%`;
       queryParams.push(searchPattern, searchPattern, searchPattern);
     }
 
+    // Legacy single-date params (kept for backward compat)
     if (checkInDate) {
       whereClause += ' AND b.checkInDate >= ?';
       queryParams.push(checkInDate);
     }
-
     if (checkOutDate) {
       whereClause += ' AND b.checkOutDate <= ?';
       queryParams.push(checkOutDate);
     }
+
+    // Date range: bookings that overlap with [dateFrom, dateTo]
+    // A booking overlaps if checkInDate <= dateTo AND checkOutDate >= dateFrom
+    if (dateFrom && dateTo) {
+      whereClause += ' AND b.checkInDate <= ? AND b.checkOutDate >= ?';
+      queryParams.push(dateTo, dateFrom);
+    } else if (dateFrom) {
+      whereClause += ' AND b.checkOutDate >= ?';
+      queryParams.push(dateFrom);
+    } else if (dateTo) {
+      whereClause += ' AND b.checkInDate <= ?';
+      queryParams.push(dateTo);
+    }
+
+    // Remove old individual checkOut params (now handled above)
+    const checkOutFrom = searchParams.get('checkOutFrom');
+    const checkOutTo = searchParams.get('checkOutTo');
+    if (checkOutFrom) { whereClause += ' AND b.checkOutDate >= ?'; queryParams.push(checkOutFrom); }
+    if (checkOutTo)   { whereClause += ' AND b.checkOutDate <= ?'; queryParams.push(checkOutTo); }
 
     // Build ORDER BY clause
     const validSortColumns = ['createdAt', 'checkInDate', 'checkOutDate', 'totalAmount', 'status'];
@@ -165,14 +186,23 @@ export async function GET(request: NextRequest) {
         SUM(CASE WHEN DATE(b.checkOutDate) = ? THEN 1 ELSE 0 END) as todayCheckOuts,
         SUM(CASE WHEN b.status = 'PENDING' THEN 1 ELSE 0 END) as pendingBookings,
         SUM(CASE WHEN b.status = 'CONFIRMED' THEN 1 ELSE 0 END) as confirmedBookings,
-        SUM(CASE WHEN b.status = 'CHECKED_IN' THEN 1 ELSE 0 END) as checkedInBookings,
-        SUM(b.totalAmount) as totalRevenue
+        SUM(CASE WHEN b.status = 'CHECKED_IN' THEN 1 ELSE 0 END) as checkedInBookings
       FROM bookings b
       WHERE b.hotelId = ?
     `;
 
     const [statsResults] = await pool.query(statsQuery, [today, today, hotelId]);
     const stats = (statsResults as any[])[0];
+
+    // Revenue: sum of completed payments for this hotel (matches vendor logic)
+    const [revenueResults] = await pool.query(
+      `SELECT COALESCE(SUM(p.amount), 0) as totalRevenue
+       FROM payments p
+       JOIN bookings b ON p.bookingId = b.id
+       WHERE b.hotelId = ? AND p.status = 'COMPLETED'`,
+      [hotelId]
+    );
+    const totalRevenue = parseFloat((revenueResults as any[])[0]?.totalRevenue) || 0;
 
     return NextResponse.json({
       bookings,
@@ -183,7 +213,7 @@ export async function GET(request: NextRequest) {
         pendingBookings: stats.pendingBookings || 0,
         confirmedBookings: stats.confirmedBookings || 0,
         checkedInBookings: stats.checkedInBookings || 0,
-        totalRevenue: stats.totalRevenue || 0,
+        totalRevenue,
       },
       total,
       page,

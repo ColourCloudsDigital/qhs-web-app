@@ -71,11 +71,14 @@ export async function GET(
       );
     }
     
-    // Get total room count (1 if filtering by specific unit/room)
+    // Get total room UNITS count (not room types) for accurate occupancy rate
     let totalRooms = 1;
     if (!roomId && !roomUnitId) {
       const [totalRoomsResult] = await pool.query(`
-        SELECT COUNT(*) as total FROM rooms WHERE hotelId = ?
+        SELECT COUNT(ru.id) as total
+        FROM room_units ru
+        JOIN rooms r ON ru.roomId = r.id
+        WHERE r.hotelId = ?
       `, [hotelId]);
       totalRooms = (totalRoomsResult as any[])[0]?.total || 1;
     }

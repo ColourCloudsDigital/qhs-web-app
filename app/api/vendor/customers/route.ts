@@ -119,7 +119,10 @@ export async function GET(request: NextRequest) {
     console.log(`[API] Found ${(customers as any[]).length} customers for search: "${search}"`);
     
     return NextResponse.json({
-      customers: customers,
+      customers: (customers as any[]).map(c => ({
+        ...c,
+        fullName: c.displayName || `${c.firstName || ''} ${c.lastName || ''}`.trim(),
+      })),
       pagination: {
         total,
         limit,

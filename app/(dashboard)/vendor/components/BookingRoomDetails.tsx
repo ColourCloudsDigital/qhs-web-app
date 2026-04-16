@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { 
   Bed, 
   Users, 
@@ -45,8 +44,14 @@ export default function BookingRoomDetails({
 
   // Handle room images or placeholder
   const roomImages = room?.images ? 
-    (typeof room.images === 'string' ? JSON.parse(room.images) : room.images) : 
+    (typeof room.images === 'string' ? (() => { try { return JSON.parse(room.images); } catch { return []; } })() : room.images) : 
     [];
+
+  const getImageUrl = (src: string) => {
+    if (!src) return '/assets/images/placeholder-room.jpg';
+    if (src.startsWith('http') || src.startsWith('/')) return src;
+    return `/${src}`;
+  };
   
   return (
     <motion.div
@@ -57,26 +62,35 @@ export default function BookingRoomDetails({
     >
       {/* Room Images */}
       {roomImages.length > 0 && (
-        <motion.div variants={itemVariants} className="relative h-60 w-full overflow-hidden rounded-lg">
-              <Image
-            src={roomImages[0]}
+        <motion.div variants={itemVariants} className="relative h-80 w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+          <img
+            src={getImageUrl(roomImages[0])}
             alt={room?.name || 'Room image'}
-                fill
-                className="object-cover"
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/assets/images/placeholder-room.jpg';
+            }}
           />
           {roomImages.length > 1 && (
             <div className="absolute bottom-2 right-2 flex space-x-1">
-              {roomImages.slice(0, 3).map((image: string, index: number) => (
-                <div
-                  key={index}
-                  className={`h-2 w-2 rounded-full ${index === 0 ? 'bg-white' : 'bg-white/50'}`}
-                />
+              {roomImages.slice(0, 3).map((_: string, index: number) => (
+                <div key={index} className={`h-2 w-2 rounded-full ${index === 0 ? 'bg-white' : 'bg-white/50'}`} />
               ))}
-              {roomImages.length > 3 && (
-                <div className="h-2 w-2 rounded-full bg-white/50" />
-              )}
+              {roomImages.length > 3 && <div className="h-2 w-2 rounded-full bg-white/50" />}
             </div>
           )}
+        </motion.div>
+      )}
+
+      {roomImages.length === 0 && (
+        <motion.div variants={itemVariants} className="relative h-80 w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <img
+            src="/assets/images/placeholder-room.jpg"
+            alt="Room placeholder"
+            className="h-full w-full object-cover opacity-60"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+          <span className="absolute text-sm text-gray-500 dark:text-gray-400">No image available</span>
         </motion.div>
       )}
         

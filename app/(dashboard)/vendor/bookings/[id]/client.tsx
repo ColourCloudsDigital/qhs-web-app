@@ -65,36 +65,19 @@ export default function BookingDetailClient({
   // Handle booking status update
   const handleStatusUpdate = async (newStatus: BookingStatus) => {
     setStatusUpdateLoading(true);
-    
     try {
       const response = await fetch(`/api/bookings/${bookingData.id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Failed to update booking status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Failed to update booking status: ${response.status}`);
       const updatedBooking = await response.json();
-      
-      const newBookingData = {
-        ...bookingData,
-        status: updatedBooking.status || newStatus,
-      };
-
+      const newBookingData = { ...bookingData, status: updatedBooking.status || newStatus };
       setBookingData(newBookingData);
       setIsStatusModalOpen(false);
-
-      if (onBookingUpdated) {
-        // Running inside a modal — update parent list state directly
-        onBookingUpdated(newBookingData);
-      } else {
-        // Standalone page — refresh server data
-        router.refresh();
-      }
+      if (onBookingUpdated) onBookingUpdated(newBookingData);
+      else router.refresh();
     } catch (error) {
       console.error('Error updating booking status:', error);
     } finally {
@@ -103,8 +86,29 @@ export default function BookingDetailClient({
   };
 
   // Handle printing
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = () => { window.print(); };
+
+  // Handle cancellation approval / decline (vendor only)
+  const handleApproveCancellation = async (action: 'approve' | 'decline') => {
+    setStatusUpdateLoading(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingData.id}/approve-cancellation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      const data = await res.json();
+      const newBookingData = { ...bookingData, status: data.status };
+      setBookingData(newBookingData);
+      setIsStatusModalOpen(false);
+      if (onBookingUpdated) onBookingUpdated(newBookingData);
+      else router.refresh();
+    } catch (error) {
+      console.error('Error processing cancellation:', error);
+    } finally {
+      setStatusUpdateLoading(false);
+    }
   };
 
   return (
@@ -308,8 +312,11 @@ export default function BookingDetailClient({
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
         onUpdateStatus={handleStatusUpdate}
+        onApproveCancellation={handleApproveCancellation}
         currentStatus={bookingData.status}
         isLoading={statusUpdateLoading}
+        checkInDate={bookingData.checkInDate}
+        checkOutDate={bookingData.checkOutDate}
       />
     </div>
   );

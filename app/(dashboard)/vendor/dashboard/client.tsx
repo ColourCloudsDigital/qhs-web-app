@@ -150,9 +150,9 @@ export default function VendorDashboardClient({ hotels, vendorId }: VendorDashbo
           { icon: <HotelIcon className="h-6 w-6" />, color: 'blue', value: `${stats.occupiedRooms}/${stats.totalRooms}`, label: 'Occupied Rooms' },
           { icon: <Calendar className="h-6 w-6" />, color: 'green', value: `${stats.todayCheckIns} / ${stats.todayCheckOuts}`, label: "Today's Activity" },
           { icon: <Users className="h-6 w-6" />, color: 'yellow', value: stats.totalBookings, label: 'Total Bookings' },
-          { icon: <CreditCard className="h-6 w-6" />, color: 'purple', value: formatCurrency(stats.totalRevenue), label: 'Total Revenue' },
+          { icon: <CreditCard className="h-6 w-6" />, color: 'purple', value: formatCurrency(stats.totalRevenue), label: 'Total Revenue', sub: 'From completed payments' },
           { icon: <Percent className="h-6 w-6" />, color: 'red', value: `${stats.occupancyRate}%`, label: 'Occupancy Rate' },
-        ].map(({ icon, color, value, label }) => (
+        ].map(({ icon, color, value, label, sub }: any) => (
           <Card key={label}>
             <CardContent className="flex flex-col items-center justify-center p-6">
               <div className={`mb-4 h-12 w-12 rounded-full bg-${color}-100 p-3 text-${color}-700 dark:bg-${color}-900/30 dark:text-${color}-400`}>
@@ -160,6 +160,7 @@ export default function VendorDashboardClient({ hotels, vendorId }: VendorDashbo
               </div>
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
               <p className="text-gray-500 dark:text-gray-400">{label}</p>
+              {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
             </CardContent>
           </Card>
         ))}

@@ -16,7 +16,8 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
-  Edit
+  Edit,
+  Ban
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -101,6 +102,9 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
   const [newStatus, setNewStatus] = useState<string>('');
   const [newPaymentStatus, setNewPaymentStatus] = useState<string>('');
   const [newSpecialRequests, setNewSpecialRequests] = useState<string>('');
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [requestingCancellation, setRequestingCancellation] = useState(false);
 
   // Fetch booking details
   const fetchBooking = async () => {
@@ -230,19 +234,43 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
+    const variants: Record<string, string> = {
       PENDING: 'bg-yellow-100 text-yellow-800',
       CONFIRMED: 'bg-blue-100 text-blue-800',
       CHECKED_IN: 'bg-green-100 text-green-800',
       CHECKED_OUT: 'bg-gray-100 text-gray-800',
       CANCELLED: 'bg-red-100 text-red-800',
+      CANCELLATION_REQUESTED: 'bg-orange-100 text-orange-800',
     };
-    
     return (
-      <Badge className={variants[status as keyof typeof variants] || 'bg-gray-100 text-gray-800'}>
-        {status.replace('_', ' ')}
+      <Badge className={variants[status] || 'bg-gray-100 text-gray-800'}>
+        {status.replace(/_/g, ' ')}
       </Badge>
     );
+  };
+
+  const handleRequestCancellation = async () => {
+    if (!cancelReason.trim()) return;
+    setRequestingCancellation(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/request-cancellation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: cancelReason }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to request cancellation');
+      }
+      setCancelModalOpen(false);
+      setCancelReason('');
+      setUpdateSuccess('Cancellation request submitted. Awaiting vendor approval.');
+      await fetchBooking();
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : 'Failed to request cancellation');
+    } finally {
+      setRequestingCancellation(false);
+    }
   };
 
   const getPaymentStatusBadge = (paymentStatus: string) => {
@@ -309,6 +337,7 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="border-b border-gray-200 pb-4">
@@ -491,47 +520,47 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {booking.status === 'CANCELLATION_REQUESTED' ? (
+                    <div className="rounded-md bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700">
+                      ⏳ Cancellation request is pending vendor approval. No actions available until resolved.
+                    </div>
+                  ) : (
                   <div className="flex flex-wrap gap-3">
-                    {booking.status === 'CONFIRMED' && (
-                      <Button 
-                        onClick={handleCheckIn} 
-                        disabled={checkingIn}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        {checkingIn ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Checking In...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Check In Guest
-                          </>
-                        )}
-                      </Button>
-                    )}
-                    
-                    {booking.status === 'CHECKED_IN' && (
-                      <Button 
-                        onClick={handleCheckOut} 
-                        disabled={checkingOut}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        {checkingOut ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Checking Out...
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Check Out Guest
-                          </>
-                        )}
-                      </Button>
-                    )}
+                    {(() => {
+                      const today = new Date(); today.setHours(0,0,0,0);
+                      const checkIn = new Date(booking.checkInDate); checkIn.setHours(0,0,0,0);
+                      const checkOut = new Date(booking.checkOutDate); checkOut.setHours(0,0,0,0);
+                      const canCheckIn = today >= checkIn;
+                      const isNoShow = today > checkOut;
+
+                      return (
+                        <>
+                          {booking.status === 'CONFIRMED' && canCheckIn && (
+                            <Button onClick={handleCheckIn} disabled={checkingIn} className="bg-green-600 hover:bg-green-700">
+                              {checkingIn ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking In...</> : <><CheckCircle className="h-4 w-4 mr-2" />Check In Guest</>}
+                            </Button>
+                          )}
+                          {booking.status === 'CONFIRMED' && !canCheckIn && (
+                            <p className="text-sm text-gray-500">Check-in available from {new Date(booking.checkInDate).toLocaleDateString()}</p>
+                          )}
+                          {booking.status === 'CHECKED_IN' && (
+                            <Button onClick={handleCheckOut} disabled={checkingOut} className="bg-blue-600 hover:bg-blue-700">
+                              {checkingOut ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking Out...</> : <><XCircle className="h-4 w-4 mr-2" />Check Out Guest</>}
+                            </Button>
+                          )}
+                          {booking.status === 'CONFIRMED' && isNoShow && (
+                            <Button variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50" onClick={async () => {
+                              await fetch(`/api/staff/bookings/${bookingId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: 'NO_SHOW' }) });
+                              await fetchBooking();
+                            }}>
+                              <AlertCircle className="h-4 w-4 mr-2" />Mark as No-Show
+                            </Button>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -543,6 +572,11 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {booking.status === 'CANCELLATION_REQUESTED' ? (
+                    <div className="rounded-md bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700">
+                      ⏳ Updates are locked while a cancellation request is pending vendor approval.
+                    </div>
+                  ) : (
                   <form onSubmit={handleUpdateBooking} className="space-y-4">
                     {updateError && (
                       <div className="rounded-md bg-red-50 p-4 text-red-700">
@@ -568,7 +602,6 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
                             <SelectItem value="CONFIRMED">Confirmed</SelectItem>
                             <SelectItem value="CHECKED_IN">Checked In</SelectItem>
                             <SelectItem value="CHECKED_OUT">Checked Out</SelectItem>
-                            <SelectItem value="CANCELLED">Cancelled</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -601,18 +634,32 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
 
                     <Button type="submit" disabled={updating}>
                       {updating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Updating...
-                        </>
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Updating...</>
                       ) : (
-                        <>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Update Booking
-                        </>
+                        <><Edit className="h-4 w-4 mr-2" />Update Booking</>
                       )}
                     </Button>
+
+                    {/* Request Cancellation — only for cancellable statuses */}
+                    {booking && ['PENDING', 'CONFIRMED'].includes(booking.status) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50"
+                        onClick={() => setCancelModalOpen(true)}
+                      >
+                        <Ban className="h-4 w-4 mr-2" />
+                        Request Cancellation
+                      </Button>
+                    )}
+
+                    {booking?.status === 'CANCELLATION_REQUESTED' && (
+                      <div className="rounded-md bg-orange-50 border border-orange-200 px-3 py-2 text-sm text-orange-700">
+                        ⏳ Cancellation request pending vendor approval
+                      </div>
+                    )}
                   </form>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -665,5 +712,48 @@ export default function StaffBookingDetailClient({ bookingId, staffId }: StaffBo
         </div>
       </div>
     </div>
+
+    {/* Cancellation Request Modal */}
+    {cancelModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+          <h3 className="mb-2 text-base font-semibold text-gray-900 dark:text-white">Request Cancellation</h3>
+          <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+            This will send a cancellation request to the vendor for approval. The booking will remain active until approved.
+          </p>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Reason for cancellation *
+          </label>
+          <Textarea
+            value={cancelReason}
+            onChange={e => setCancelReason(e.target.value)}
+            placeholder="Explain why this booking should be cancelled..."
+            rows={3}
+            className="mb-4"
+          />
+          {updateError && (
+            <p className="mb-3 text-sm text-red-600">{updateError}</p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleRequestCancellation}
+              disabled={!cancelReason.trim() || requestingCancellation}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            >
+              {requestingCancellation ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</> : 'Submit Request'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setCancelModalOpen(false); setCancelReason(''); }}
+              disabled={requestingCancellation}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 }

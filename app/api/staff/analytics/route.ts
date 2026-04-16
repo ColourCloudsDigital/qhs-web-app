@@ -53,15 +53,15 @@ export async function GET(request: NextRequest) {
         startDate.setDate(endDate.getDate() - 7)
     }
 
-    // Get revenue data
+    // Get revenue data — completed payments for this hotel only (matches vendor logic)
     const [paymentRows] = await pool.query(
-      `SELECT p.*, b.hotelId 
-       FROM payments p 
-       LEFT JOIN bookings b ON p.bookingId = b.id 
-       WHERE (p.vendorId = ? OR b.hotelId = ?) 
-       AND p.status = 'completed' 
+      `SELECT p.amount, p.createdAt
+       FROM payments p
+       JOIN bookings b ON p.bookingId = b.id
+       WHERE b.hotelId = ?
+       AND p.status = 'COMPLETED'
        AND p.createdAt >= ? AND p.createdAt <= ?`,
-      [staff.hotelId, staff.hotelId, startDate, endDate]
+      [staff.hotelId, startDate, endDate]
     );
 
     // Get booking data
@@ -117,12 +117,17 @@ export async function GET(request: NextRequest) {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // Mock occupancy data (in a real app, you'd calculate this from actual bookings and room availability)
-    const occupancyData = dateArray.map(item => ({
-      date: item.date,
-      occupancy: Math.floor(Math.random() * 40) + 60, // Mock data between 60-100%
-      available: Math.floor(Math.random() * 40) + 10,
-      occupied: Math.floor(Math.random() * 80) + 20
+    // Real occupancy data from bookings
+    const occupancyData = await Promise.all(dateArray.map(async (item) => {
+      const [occRows] = await pool.query(
+        `SELECT COUNT(*) as occupied FROM bookings
+         WHERE hotelId = ? AND status IN ('CONFIRMED','CHECKED_IN')
+         AND checkInDate <= ? AND checkOutDate > ?`,
+        [staff.hotelId, item.date, item.date]
+      );
+      const occupied = (occRows as any[])[0]?.occupied || 0;
+      const occupancyPct = totalRoomUnits > 0 ? Math.round((occupied / totalRoomUnits) * 100) : 0;
+      return { date: item.date, occupancy: occupancyPct, available: totalRoomUnits - occupied, occupied };
     }));
 
     return NextResponse.json({

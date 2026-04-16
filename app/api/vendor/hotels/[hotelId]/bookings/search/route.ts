@@ -36,55 +36,46 @@ export async function GET(
     // Get search parameters
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query') || '';
-    const status = searchParams.get('status') || 'CONFIRMED';
+    const status = searchParams.get('status') || '';
     const limit = parseInt(searchParams.get('limit') || '10');
     
     if (!query.trim()) {
-      return NextResponse.json({
-        bookings: []
-      });
+      return NextResponse.json({ bookings: [] });
     }
     
-    // Search bookings by booking ID, customer name, or phone
     const searchTerm = `%${query}%`;
-    
+
+    // Build status filter — if no status provided, search all non-cancelled
+    const statusFilter = status
+      ? 'AND b.status = ?'
+      : "AND b.status NOT IN ('CANCELLED')";
+    const statusParams = status ? [status] : [];
+
     const [bookings] = await pool.query(
       `SELECT 
-        b.id,
-        b.checkInDate,
-        b.checkOutDate,
-        b.numberOfGuests,
-        b.totalAmount,
-        b.status,
-        b.paymentStatus,
-        b.specialRequests,
-        b.createdAt,
-        c.firstName,
-        c.lastName,
-        c.phone,
-        u.email,
-        ru.roomNumber,
-        r.name as roomName,
-        r.type as roomType,
+        b.id, b.checkInDate, b.checkOutDate, b.numberOfGuests,
+        b.totalAmount, b.status, b.paymentStatus, b.specialRequests, b.createdAt,
+        c.firstName, c.lastName, c.phone, u.email,
+        ru.roomNumber, r.name as roomName, r.type as roomType,
         CONCAT(c.firstName, ' ', COALESCE(c.lastName, '')) as customerName
       FROM bookings b
       JOIN customers c ON b.customerId = c.id
       LEFT JOIN users u ON c.userId = u.id
       JOIN room_units ru ON b.roomUnitId = ru.id
       JOIN rooms r ON ru.roomId = r.id
-      WHERE b.hotelId = ? 
-        AND b.status = ?
+      WHERE b.hotelId = ?
+        ${statusFilter}
         AND (
-          b.id LIKE ? 
-          OR c.firstName LIKE ? 
-          OR c.lastName LIKE ? 
+          b.id LIKE ?
+          OR c.firstName LIKE ?
+          OR c.lastName LIKE ?
           OR CONCAT(c.firstName, ' ', COALESCE(c.lastName, '')) LIKE ?
           OR c.phone LIKE ?
           OR u.email LIKE ?
         )
       ORDER BY b.checkInDate ASC, b.createdAt DESC
       LIMIT ?`,
-      [params.hotelId, status, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, limit]
+      [params.hotelId, ...statusParams, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, limit]
     );
     
     console.log(`[API] Found ${(bookings as any[]).length} bookings for search: "${query}"`);

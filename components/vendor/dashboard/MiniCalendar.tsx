@@ -174,10 +174,11 @@ export default function MiniCalendar({ hotelId, onDateSelect, roomUnitId }: Mini
         bgColor = 'bg-blue-100 dark:bg-blue-900/40';
         textColor = 'text-blue-800 dark:text-blue-200 font-medium';
       } else {
-        if (occupancyRate >= 90) bgColor = 'bg-red-100 dark:bg-red-900/30';
-        else if (occupancyRate >= 70) bgColor = 'bg-orange-100 dark:bg-orange-900/30';
+        // Color based on occupancy: red = low/empty, yellow = moderate, orange = busy, green = near full
+        if (occupancyRate >= 90)      bgColor = 'bg-green-100 dark:bg-green-900/30';
+        else if (occupancyRate >= 70) bgColor = 'bg-lime-100 dark:bg-lime-900/30';
         else if (occupancyRate >= 40) bgColor = 'bg-yellow-100 dark:bg-yellow-900/30';
-        else bgColor = 'bg-green-100 dark:bg-green-900/30';
+        else                          bgColor = 'bg-red-100 dark:bg-red-900/30';
       }
     }
     
@@ -256,23 +257,23 @@ export default function MiniCalendar({ hotelId, onDateSelect, roomUnitId }: Mini
         ) : (
           <>
             <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-green-400"></div>
-              <span>0-40%</span>
+              <div className="h-2 w-2 rounded-full bg-red-400"></div>
+              <span className="text-gray-500 dark:text-gray-400">Low &lt;40%</span>
             </div>
-            <div className="mx-2">|</div>
+            <div className="mx-1 text-gray-300">|</div>
             <div className="flex items-center space-x-1">
               <div className="h-2 w-2 rounded-full bg-yellow-400"></div>
-              <span>40-70%</span>
+              <span className="text-gray-500 dark:text-gray-400">40–70%</span>
             </div>
-            <div className="mx-2">|</div>
+            <div className="mx-1 text-gray-300">|</div>
             <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-orange-400"></div>
-              <span>70-90%</span>
+              <div className="h-2 w-2 rounded-full bg-lime-400"></div>
+              <span className="text-gray-500 dark:text-gray-400">70–90%</span>
             </div>
-            <div className="mx-2">|</div>
+            <div className="mx-1 text-gray-300">|</div>
             <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-red-400"></div>
-              <span>90%+</span>
+              <div className="h-2 w-2 rounded-full bg-green-400"></div>
+              <span className="text-gray-500 dark:text-gray-400">Full ≥90%</span>
             </div>
           </>
         )}

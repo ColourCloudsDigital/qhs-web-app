@@ -543,7 +543,7 @@ export default function WalkInBookingForm({ hotels, vendorId, isOpen, onClose }:
                     <Label htmlFor="customerSearch">Search Customers</Label>
                     <Input
                       type="text"
-                      placeholder="Search by name, phone, or email..."
+                      placeholder="Search by name or phone number..."
                       value={customerSearch}
                       onChange={(e) => setCustomerSearch(e.target.value)}
                     />
