@@ -136,7 +136,7 @@ export default function StaffPOSPage() {
                 <option value="">All Methods</option><option value="Cash">Cash</option><option value="Card">Card</option><option value="Transfer">Transfer</option>
               </select>
               <select className="rounded border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white" value={filterPaymentStatus} onChange={e => { setOrdersPage(1); setFilterPaymentStatus(e.target.value); }}>
-                <option value="">All Statuses</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Not Paid">Not Paid</option>
+                <option value="">All Statuses</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Bill">Bill</option>
               </select>
               <button className="flex items-center gap-1.5 rounded border px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800" onClick={() => { setTempFromDate(filterFromDate); setTempToDate(filterToDate); setDateFilterModalOpen(true); }}>📅 Date Filter</button>
               {filterFromDate && filterToDate && (
@@ -171,8 +171,9 @@ export default function StaffPOSPage() {
             orderId={activeOrder?.id || ''} table={activeOrder?.table || ''} people={1}
             orderedItems={activeOrder?.items.filter(i => i.quantity > 0) || []}
             paymentMethod={activeOrder?.paymentMethod || 'Cash'}
-            paymentStatus={activeOrder?.paymentStatus || 'Not Paid'}
+            paymentStatus={activeOrder?.paymentStatus || 'Pending'}
             vat={activeOrder?.vat || 0}
+            hotelId={currentHotel?.id}
             getOrderTotal={getOrderTotal} setPaymentMethod={setPaymentMethod}
             setPaymentStatus={setPaymentStatus} removeItemFromActiveOrder={removeItemFromActiveOrder}
             onPlaceOrder={handlePlaceOrder}

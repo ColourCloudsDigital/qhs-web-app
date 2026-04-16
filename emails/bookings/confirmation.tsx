@@ -36,7 +36,7 @@ export default function BookingConfirmation({
         </Text>
         
         <Text className="text-base text-gray-700">
-          Thank you for booking with Qaras Hotels. Your reservation has been confirmed!
+          Thank you for booking with Qaras Hospitality Solutions. Your reservation has been confirmed!
         </Text>
         
         <Section className="my-6 rounded-lg border border-gray-200 bg-gray-50 p-6">
@@ -125,7 +125,7 @@ export default function BookingConfirmation({
         
         <Text className="mt-8 text-base text-gray-700">
           Best regards,<br />
-          The Qaras Hotels Team
+          The Qaras Hospitality Solutions Team
         </Text>
       </Section>
     </EmailLayout>

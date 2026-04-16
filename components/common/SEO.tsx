@@ -62,11 +62,11 @@ export default function SEO({
   if (isLoading) return null;
   
   // Use provided props or fall back to settings from API
-  const pageTitle = title || settings?.metaTitle || 'Qaras Hotels';
-  const pageDescription = description || settings?.metaDescription || 'Book hotels online with Qaras Hotels';
+  const pageTitle = title || settings?.metaTitle || 'Qaras Hospitality Solutions';
+  const pageDescription = description || settings?.metaDescription || 'Book hotels online with Qaras Hospitality Solutions';
   const pageKeywords = keywords || settings?.metaKeywords || 'hotels, booking, accommodation';
-  const pageOgTitle = title || settings?.ogTitle || settings?.metaTitle || 'Qaras Hotels';
-  const pageOgDescription = description || settings?.ogDescription || settings?.metaDescription || 'Book hotels online with Qaras Hotels';
+  const pageOgTitle = title || settings?.ogTitle || settings?.metaTitle || 'Qaras Hospitality Solutions';
+  const pageOgDescription = description || settings?.ogDescription || settings?.metaDescription || 'Book hotels online with Qaras Hospitality Solutions';
   const pageOgImage = ogImage || settings?.ogImage || '/images/og-image.jpg';
   
   // Construct canonical URL if provided in settings

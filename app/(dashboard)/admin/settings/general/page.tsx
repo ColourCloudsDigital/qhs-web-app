@@ -47,7 +47,7 @@ export default function GeneralSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<SiteSettings>({
-    siteName: 'Qaras Hotels',
+    siteName: 'Qaras Hospitality Solutions',
     siteDescription: '',
     defaultLanguage: 'en',
     timezone: 'UTC',
@@ -160,7 +160,7 @@ export default function GeneralSettingsPage() {
                   name="siteName"
                   value={formData.siteName}
                   onChange={handleInputChange}
-                  placeholder="Qaras Hotels"
+                  placeholder="Qaras Hospitality Solutions"
                   required
                 />
               </FormField>

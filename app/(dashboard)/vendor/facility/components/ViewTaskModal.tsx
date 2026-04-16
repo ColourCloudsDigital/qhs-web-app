@@ -61,7 +61,6 @@ interface Task {
     id: string;
     name: string;
   } | null;
-  maintenanceType: string;
   estimatedHours?: number;
   costEstimate?: number;
   isRecurring: boolean;
@@ -258,15 +257,11 @@ export default function ViewTaskModal({
                 </p>
               </div>
 
-              {/* Category and Maintenance Type */}
+              {/* Category */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-semibold text-gray-600">Category</label>
                   <p className="mt-2 text-sm text-gray-700">{task.category}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-600">Maintenance Type</label>
-                  <p className="mt-2 text-sm text-gray-700">{task.maintenanceType}</p>
                 </div>
               </div>
 

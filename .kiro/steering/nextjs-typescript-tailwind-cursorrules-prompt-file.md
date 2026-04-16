@@ -3,7 +3,7 @@ inclusion: manual
 ---
 # Project Overview
 
-This project, named Qaras Hotels, is built using SQL, Next.js and TypeScript.
+This project, named Qaras Hospitality Solutions, is built using SQL, Next.js and TypeScript.
 
 # Key URLs
 

@@ -84,7 +84,7 @@ export default function InstallPrompt({ onClose }: InstallPromptProps) {
       </div>
       
       <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-        Install Qaras Hotels as a desktop app for quicker access and offline functionality.
+        Install Qaras Hospitality Solutions as a desktop app for quicker access and offline functionality.
       </p>
       
       <div className="mt-4 flex justify-end space-x-2">

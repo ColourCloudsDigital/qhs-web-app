@@ -827,7 +827,6 @@ export default function NewBookingForm({ hotels, vendorId }: NewBookingFormProps
                   <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="PARTIAL">Partial</SelectItem>
                   <SelectItem value="FAILED">Failed</SelectItem>
-                  <SelectItem value="REFUNDED">Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -66,12 +66,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!hotel) {
     return {
-      title: 'Hotel Not Found | Qaras Hotels',
+      title: 'Hotel Not Found | Qaras Hospitality Solutions',
       description: 'The requested hotel could not be found.'
     };
   }
   return {
-    title: `${hotel.name} | Qaras Hotels`,
+    title: `${hotel.name} | Qaras Hospitality Solutions`,
     description: hotel.description ? hotel.description.substring(0, 160) + (hotel.description.length > 160 ? '...' : '') : 'Hotel accommodation'
   };
 }

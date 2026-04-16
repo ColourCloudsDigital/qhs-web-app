@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
     if (action === 'setup') {
       // Generate new secret and QR code
       const secret = generateSecret();
-      const serviceName = 'Qaras Hotels';
+      const serviceName = 'Qaras Hospitality Solutions';
       const accountName = session.user.email || session.user.name || 'User';
       const otpAuthUrl = `otpauth://totp/${encodeURIComponent(serviceName)}:${encodeURIComponent(accountName)}?secret=${secret}&issuer=${encodeURIComponent(serviceName)}`;
       

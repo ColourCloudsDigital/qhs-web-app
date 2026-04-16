@@ -6,7 +6,7 @@ set -e
 
 IMAGE_NAME="qaras-hotels"
 
-echo "🚀 Starting Qaras Hotels container..."
+echo "🚀 Starting Qaras Hospitality Solutions container..."
 
 # Check if .env file exists
 if [ ! -f .env ]; then

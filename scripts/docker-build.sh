@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Docker build script for Qaras Hotels
+# Docker build script for Qaras Hospitality Solutions
 
 set -e
 
-echo "🐳 Building Docker image for Qaras Hotels..."
+echo "🐳 Building Docker image for Qaras Hospitality Solutions..."
 
 # Get version from package.json
 VERSION=$(node -p "require('./package.json').version")

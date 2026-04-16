@@ -4,7 +4,7 @@ import '@/styles/tailwind.css';
 import { ThemeConfigProvider } from '@/contexts/ThemeConfigContext';
 
 export const metadata: Metadata = {
-  title: 'Qaras Hotels - Authentication',
+  title: 'Qaras Hospitality Solutions - Authentication',
   description: 'Hotel booking and management platform',
 };
 

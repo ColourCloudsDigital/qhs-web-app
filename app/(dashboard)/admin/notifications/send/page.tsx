@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import SendNotificationForm from '@/components/admin/notifications/SendNotificationForm';
 
 export const metadata: Metadata = {
-  title: 'Send Notifications | Qaras Hotels Admin',
+  title: 'Send Notifications | Qaras Hospitality Solutions Admin',
   description: 'Send notifications to users of the platform',
 };
 

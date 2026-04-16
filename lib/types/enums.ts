@@ -61,6 +61,7 @@ export enum TaskCategory {
   PLUMBING = "PLUMBING",
   ELECTRICAL = "ELECTRICAL",
   HVAC = "HVAC",
+  MAINTENANCE = "MAINTENANCE",
   GENERAL= "GENERAL"
 }
 

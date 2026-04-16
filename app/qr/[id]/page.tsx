@@ -238,7 +238,7 @@ export default function QRMenuPage({ params }: { params: { id: string } }) {
       {/* Footer */}
       <footer className="mt-12 border-t border-gray-200 py-6 text-center dark:border-gray-700">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Powered by Qaras Hotels
+          Powered by Qaras Hospitality Solutions
         </p>
       </footer>
     </div>

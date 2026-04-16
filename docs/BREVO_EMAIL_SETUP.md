@@ -51,7 +51,7 @@ CREATE INDEX IF NOT EXISTS idx_reset_token ON users(resetToken);
 1. Login to Brevo dashboard
 2. Go to **Settings** → **SMTP & API** → **API Keys**
 3. Click **Generate a new API key**
-4. Name it: `Qaras Hotels Production`
+4. Name it: `Qaras Hospitality Solutions Production`
 5. Copy the API key (you won't see it again!)
 
 ### Step 3: Verify Sender Email/Domain
@@ -237,7 +237,7 @@ Add these variables to your `.env` file:
 # Brevo Email Service Configuration
 BREVO_API_KEY=your-brevo-api-key-here
 BREVO_SENDER_EMAIL=noreply@yourdomain.com
-BREVO_SENDER_NAME=Qaras Hotels
+BREVO_SENDER_NAME=Qaras Hospitality Solutions
 
 # Brevo Template IDs (from Brevo dashboard)
 BREVO_TEMPLATE_EMAIL_VERIFICATION=1
@@ -258,7 +258,7 @@ Add to `.env.docker`:
 ```env
 BREVO_API_KEY=your-brevo-api-key-here
 BREVO_SENDER_EMAIL=noreply@yourdomain.com
-BREVO_SENDER_NAME=Qaras Hotels
+BREVO_SENDER_NAME=Qaras Hospitality Solutions
 BREVO_TEMPLATE_EMAIL_VERIFICATION=1
 BREVO_TEMPLATE_PASSWORD_RESET=2
 BREVO_TEMPLATE_WELCOME_EMAIL=3
@@ -395,4 +395,4 @@ For issues:
 
 ---
 
-© 2026 Qaras Hotels. All rights reserved.
+© 2026 Qaras Hospitality Solutions. All rights reserved.

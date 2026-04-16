@@ -9,7 +9,7 @@ import { moduleAccessService } from '@/lib/services/module-access.service';
 import { getUserVendorId } from '@/lib/utils/vendor';
 
 export const metadata: Metadata = {
-  title: 'Menu Management - Qaras Hotels',
+  title: 'Menu Management - Qaras Hospitality Solutions',
   description: 'Manage your hotel menus and QR codes',
 };
 

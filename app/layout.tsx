@@ -28,17 +28,17 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Qaras Hotels',
-    default: 'Qaras Hotels - Hotel Management System',
+    template: '%s | Qaras Hospitality Solutions',
+    default: 'Qaras Hospitality Solutions - Hotel Management System',
   },
-  description: 'Hotel management system for Qaras Hotels',
+  description: 'Hotel management system for Qaras Hospitality Solutions',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Qaras Hotels',
+    title: 'Qaras Hospitality Solutions',
   },
-  applicationName: 'Qaras Hotels',
+  applicationName: 'Qaras Hospitality Solutions',
   formatDetection: {
     telephone: true,
   },

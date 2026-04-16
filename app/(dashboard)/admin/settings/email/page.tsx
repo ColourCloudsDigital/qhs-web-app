@@ -285,7 +285,7 @@ export default function EmailSettingsPage() {
                   name="fromName"
                   value={formData.fromName || ''}
                   onChange={handleInputChange}
-                  placeholder="e.g. Qaras Hotels"
+                  placeholder="e.g. Qaras Hospitality Solutions"
                 />
               </FormField>
             </FormGroup>

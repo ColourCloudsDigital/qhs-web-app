@@ -12,7 +12,7 @@ interface PageProps {
 }
 
 export const metadata: Metadata = {
-  title: 'Complete Payment | Qaras Hotels',
+  title: 'Complete Payment | Qaras Hospitality Solutions',
   description: 'Complete your payment for your hotel booking.',
 };
 

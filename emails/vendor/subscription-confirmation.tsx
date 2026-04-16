@@ -34,7 +34,7 @@ export default function SubscriptionConfirmation({
         </Text>
         
         <Text className="text-base text-gray-700">
-          Thank you for subscribing to the {planName} plan on Qaras Hotels. Your subscription has been activated successfully!
+          Thank you for subscribing to the {planName} plan on Qaras Hospitality Solutions. Your subscription has been activated successfully!
         </Text>
         
         <Section className="my-6 rounded-lg border border-gray-200 bg-gray-50 p-6">
@@ -107,7 +107,7 @@ export default function SubscriptionConfirmation({
         
         <Text className="mt-8 text-base text-gray-700">
           Best regards,<br />
-          The Qaras Hotels Team
+          The Qaras Hospitality Solutions Team
         </Text>
       </Section>
     </EmailLayout>

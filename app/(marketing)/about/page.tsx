@@ -2,8 +2,8 @@ import Image from 'next/image';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'About Us | Qaras Hotels',
-  description: 'Learn more about Qaras Hotels - the premier hotel booking and management platform in Africa.',
+  title: 'About Us | Qaras Hospitality Solutions',
+  description: 'Learn more about Qaras Hospitality Solutions - the premier hotel booking and management platform in Africa.',
 };
 
 export default function AboutPage() {
@@ -11,7 +11,7 @@ export default function AboutPage() {
     <div className="container mx-auto max-w-6xl px-4 py-12">
       {/* Hero Section */}
       <div className="mb-16 text-center">
-        <h1 className="mb-4 text-4xl font-bold text-gray-900 dark:text-white">About Qaras Hotels</h1>
+        <h1 className="mb-4 text-4xl font-bold text-gray-900 dark:text-white">About Qaras Hospitality Solutions</h1>
         <p className="mx-auto max-w-3xl text-lg text-gray-700 dark:text-gray-300">
           We&apos;re transforming the way hotels operate and how travelers experience them
         </p>
@@ -22,10 +22,10 @@ export default function AboutPage() {
         <div>
           <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">Our Story</h2>
           <p className="mb-4 text-gray-700 dark:text-gray-300">
-            Qaras Hotels began with a simple observation: the hotel industry in Africa needed better tools to manage properties efficiently and connect with travelers. Our founders, who had worked in hospitality for years, saw a gap in the market for a comprehensive, all-in-one solution.
+            Qaras Hospitality Solutions began with a simple observation: the hotel industry in Africa needed better tools to manage properties efficiently and connect with travelers. Our founders, who had worked in hospitality for years, saw a gap in the market for a comprehensive, all-in-one solution.
           </p>
           <p className="mb-4 text-gray-700 dark:text-gray-300">
-            Founded in 2022, Qaras Hotels has quickly grown from a startup with a vision to a trusted platform serving thousands of hotels and travelers. We&apos;re focused on empowering hotel owners with technology that would otherwise be out of reach, while giving travelers seamless booking experiences.
+            Founded in 2022, Qaras Hospitality Solutions has quickly grown from a startup with a vision to a trusted platform serving thousands of hotels and travelers. We&apos;re focused on empowering hotel owners with technology that would otherwise be out of reach, while giving travelers seamless booking experiences.
           </p>
           <p className="text-gray-700 dark:text-gray-300">
             Today, we&apos;re proud to be a leading hotel management system in the region, constantly innovating and expanding our offerings to meet the evolving needs of the hospitality industry.
@@ -34,7 +34,7 @@ export default function AboutPage() {
         <div className="relative h-[400px] overflow-hidden rounded-lg shadow-lg">
           <Image
             src="/assets/images/about-img.png"
-            alt="Qaras Hotels story"
+            alt="Qaras Hospitality Solutions story"
             fill
             className="object-cover"
           />

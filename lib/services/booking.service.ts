@@ -910,22 +910,11 @@ export const bookingService = {
         [BookingStatus.CANCELLED, updatedSpecialRequests, id]
       );
 
-      // Handle payment if there's any completed payment
-      if (booking.payments && booking.payments.length > 0 && booking.paymentStatus === PaymentStatus.COMPLETED) {
-        // If refund is eligible, update payment status
-        if (isRefundEligible) {
-          await connection.query(
-            'UPDATE payments SET status = ? WHERE bookingId = ?',
-            [PaymentStatus.REFUNDED, id]
-          );
-
-          // Update booking payment status
-          await connection.query(
-            'UPDATE bookings SET paymentStatus = ? WHERE id = ?',
-            [PaymentStatus.REFUNDED, id]
-          );
-        }
-      }
+      // Handle payment status on cancellation — always mark as FAILED
+      await connection.query(
+        'UPDATE bookings SET paymentStatus = ? WHERE id = ?',
+        [PaymentStatus.FAILED, id]
+      );
 
       // Release room units back to available status
       // Clear currentBookingId and set status back to 'available'

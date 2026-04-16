@@ -77,7 +77,7 @@ export default function HeroSection() {
       <div className="container relative z-20 mx-auto max-w-6xl">
         <div className="mb-12 text-center">
           <h1 className="mb-4 text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
-            Qaras Hotels
+            Qaras Hospitality Solutions
           </h1>
           <p className="mx-auto mb-2 max-w-2xl text-2xl font-semibold text-white/90">
             Hotel Booking & Management SaaS

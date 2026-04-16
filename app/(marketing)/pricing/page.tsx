@@ -409,7 +409,7 @@ export default function PricingPage() {
         <div className="rounded-lg bg-primary p-8 text-center text-white">
           <h2 className="mb-4 text-3xl font-bold">Ready to get started?</h2>
           <p className="mx-auto mb-6 max-w-2xl text-lg">
-            Join thousands of hotels worldwide using Qaras Hotels to manage their operations and delight their guests.
+            Join thousands of hotels worldwide using Qaras Hospitality Solutions to manage their operations and delight their guests.
           </p>
           <Link
             href="/register"

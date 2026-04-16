@@ -6,7 +6,7 @@ import { UserRole } from '@/lib/types/enums';
 import StaffDashboardClient from '../components/StaffDashboardClient';
 
 export const metadata: Metadata = {
-  title: 'Staff Dashboard | Qaras Hotels',
+  title: 'Staff Dashboard | Qaras Hospitality Solutions',
   description: 'Staff dashboard for managing tasks and bookings.',
 };
 

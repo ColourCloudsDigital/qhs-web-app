@@ -22,13 +22,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   if (!hotel) {
     return {
-      title: 'Hotel Not Found | Qaras Hotels',
+      title: 'Hotel Not Found | Qaras Hospitality Solutions',
       description: 'The requested hotel could not be found.'
     };
   }
   
   return {
-    title: `Book ${hotel.name} | Qaras Hotels`,
+    title: `Book ${hotel.name} | Qaras Hospitality Solutions`,
     description: `Book your stay at ${hotel.name}. ${hotel.description.substring(0, 100)}...`
   };
 }

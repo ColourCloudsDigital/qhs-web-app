@@ -20,19 +20,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     
     if (!room) {
       return {
-        title: 'Room Not Found | Qaras Hotels',
+        title: 'Room Not Found | Qaras Hospitality Solutions',
         description: 'The requested room could not be found.'
       };
     }
     
     return {
-      title: `${room.name} - ${room.hotel.name} | Qaras Hotels`,
+      title: `${room.name} - ${room.hotel.name} | Qaras Hospitality Solutions`,
       description: room.description.substring(0, 160) + (room.description.length > 160 ? '...' : '')
     };
   } catch (error) {
     console.error('Error generating metadata:', error);
     return {
-      title: 'Error | Qaras Hotels',
+      title: 'Error | Qaras Hospitality Solutions',
       description: 'An error occurred while loading the room details.'
     };
   }

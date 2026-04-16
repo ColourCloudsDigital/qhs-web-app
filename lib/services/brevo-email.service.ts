@@ -24,7 +24,7 @@ class BrevoEmailService {
     this.config = {
       apiKey: process.env.BREVO_API_KEY || '',
       senderEmail: process.env.BREVO_SENDER_EMAIL || 'noreply@qarashotels.com',
-      senderName: process.env.BREVO_SENDER_NAME || 'Qaras Hotels',
+      senderName: process.env.BREVO_SENDER_NAME || 'Qaras Hospitality Solutions',
     };
   }
 
@@ -112,7 +112,7 @@ class BrevoEmailService {
         VERIFICATION_URL: verificationUrl,
         VERIFICATION_TOKEN: token,
         EXPIRY_HOURS: '3',
-        APP_NAME: 'Qaras Hotels',
+        APP_NAME: 'Qaras Hospitality Solutions',
         APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
       },
     });
@@ -141,7 +141,7 @@ class BrevoEmailService {
         RESET_URL: resetUrl,
         RESET_TOKEN: token,
         EXPIRY_HOURS: '24',
-        APP_NAME: 'Qaras Hotels',
+        APP_NAME: 'Qaras Hospitality Solutions',
         APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
       },
     });
@@ -160,7 +160,7 @@ class BrevoEmailService {
       params: {
         USER_NAME: name,
         LOGIN_URL: loginUrl,
-        APP_NAME: 'Qaras Hotels',
+        APP_NAME: 'Qaras Hospitality Solutions',
         APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
       },
     });
@@ -199,7 +199,7 @@ class BrevoEmailService {
         HOTEL_ADDRESS: hotelDetails.address,
         HOTEL_PHONE: hotelDetails.phone,
         HOTEL_EMAIL: hotelDetails.email,
-        APP_NAME: 'Qaras Hotels',
+        APP_NAME: 'Qaras Hospitality Solutions',
       },
     });
   }
@@ -216,10 +216,10 @@ class BrevoEmailService {
         VERIFICATION_URL: `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=test`,
         VERIFICATION_TOKEN: 'test-token',
         EXPIRY_HOURS: '24',
-        APP_NAME: 'Qaras Hotels',
+        APP_NAME: 'Qaras Hospitality Solutions',
         APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
       },
-      subject: 'Test Email from Qaras Hotels',
+      subject: 'Test Email from Qaras Hospitality Solutions',
     });
   }
 }

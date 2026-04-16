@@ -1,4 +1,4 @@
-// Service Worker for Qaras Hotels
+// Service Worker for Qaras Hospitality Solutions
 const CACHE_NAME = 'qaras-hotels-v1';
 const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [

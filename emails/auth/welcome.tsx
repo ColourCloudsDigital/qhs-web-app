@@ -10,8 +10,8 @@ interface WelcomeEmailProps {
 export default function WelcomeEmail({ name, verificationUrl }: WelcomeEmailProps) {
   return (
     <EmailLayout
-      preview={`Welcome to Qaras Hotels, ${name}!`}
-      heading="Welcome to Qaras Hotels!"
+      preview={`Welcome to Qaras Hospitality Solutions, ${name}!`}
+      heading="Welcome to Qaras Hospitality Solutions!"
     >
       <Section>
         <Text className="text-base text-gray-700">
@@ -19,7 +19,7 @@ export default function WelcomeEmail({ name, verificationUrl }: WelcomeEmailProp
         </Text>
         
         <Text className="text-base text-gray-700">
-          Thank you for registering with Qaras Hotels. We're excited to have you onboard!
+          Thank you for registering with Qaras Hospitality Solutions. We're excited to have you onboard!
         </Text>
         
         <Text className="text-base text-gray-700">
@@ -41,7 +41,7 @@ export default function WelcomeEmail({ name, verificationUrl }: WelcomeEmailProp
         
         <Text className="mt-8 text-base text-gray-700">
           Best regards,<br />
-          The Qaras Hotels Team
+          The Qaras Hospitality Solutions Team
         </Text>
       </Section>
     </EmailLayout>

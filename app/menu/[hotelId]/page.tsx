@@ -175,7 +175,7 @@ export default function MenuPage() {
 
         <footer className="bg-gray-900 text-gray-100 py-6 px-4 mt-auto">
           <div className="container mx-auto max-w-4xl flex justify-center">
-            <p className="text-sm">Powered by Qaras Hotels</p>
+            <p className="text-sm">Powered by Qaras Hospitality Solutions</p>
           </div>
         </footer>
       </div>
@@ -203,7 +203,7 @@ export default function MenuPage() {
         <footer className="bg-gray-900 text-gray-100 py-6 px-4 mt-auto">
           <div className="container mx-auto max-w-4xl">
             <div className="flex justify-center">
-              <p className="text-sm">Powered by Qaras Hotels</p>
+              <p className="text-sm">Powered by Qaras Hospitality Solutions</p>
             </div>
           </div>
         </footer>
@@ -524,7 +524,7 @@ export default function MenuPage() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-300 text-sm">
-                Powered by Qaras Hotels
+                Powered by Qaras Hospitality Solutions
               </p>
             </div>
             <div className="text-gray-300 text-sm">

@@ -548,6 +548,36 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
             {/* Customer Search Section */}
             <div className="md:col-span-2">
               <div className="space-y-4">
+                {/* Individual / Corporate toggle */}
+                <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
+                  {(['individual', 'corporate'] as const).map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => {
+                        setIsNewCustomer(true);
+                        setCustomerSearch('');
+                        setCustomers([]);
+                        setSelectedCustomer('');
+                        setGuestFirstName('');
+                        setGuestLastName('');
+                        setGuestPhone('');
+                        setGuestEmail('');
+                        setGuestNationality('');
+                        setGuestIdType('');
+                        setGuestIdNumber('');
+                      }}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${
+                        t === 'individual'
+                          ? 'bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-white'
+                          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                      }`}
+                    >
+                      {t === 'individual' ? '👤 Individual' : '🏢 Corporation'}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="flex items-center space-x-4">
                   <label className="flex items-center space-x-2">
                     <input
@@ -616,6 +646,7 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
                             {customers.map((customer) => (
                               <SelectItem key={customer.id} value={customer.id}>
                                 {`${customer.firstName} ${customer.lastName || ''}`.trim()} — {customer.phone}
+                                {(customer as any).corporationName && ` · 🏢 ${(customer as any).corporationName}`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -777,8 +808,8 @@ export default function StaffNewBookingForm({ staffId }: StaffNewBookingFormProp
                 <SelectContent>
                   <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="PARTIAL">Partial</SelectItem>
-                  <SelectItem value="PAID">Paid</SelectItem>
                   <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="FAILED">Failed</SelectItem>
                 </SelectContent>
               </Select>
               <p className="mt-1 text-sm text-gray-500">

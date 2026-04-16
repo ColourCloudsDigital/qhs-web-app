@@ -5,7 +5,7 @@ import { getHotels, getAmenities } from '@/services/hotel.service';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Find Hotels | Qaras Hotels',
+  title: 'Find Hotels | Qaras Hospitality Solutions',
   description: 'Browse and book hotels for your next trip.',
 };
 

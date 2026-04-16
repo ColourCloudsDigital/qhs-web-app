@@ -164,7 +164,7 @@ export default function TaskActionsMenu({
           
           <DropdownMenuItem onClick={() => openModal('assign')}>
             <User className="mr-2 h-4 w-4" />
-            Assign Task
+            Reassign Task
           </DropdownMenuItem>
           
           <DropdownMenuSeparator />

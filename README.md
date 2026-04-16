@@ -1,4 +1,4 @@
-# Qaras Hotels Management System
+# Qaras Hospitality Solutions Management System
 
 A comprehensive hotel management system built with Next.js, featuring booking management, QR menus, staff management, and more.
 
@@ -185,7 +185,7 @@ npm run dev
 
 ## 📄 License
 
-© 2026 Qaras Hotels. All rights reserved.
+© 2026 Qaras Hospitality Solutions. All rights reserved.
 
 ## 🆘 Support
 

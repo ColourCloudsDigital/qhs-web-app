@@ -78,7 +78,7 @@ export default function Navbar() {
         <Link href="/" className="flex items-center">
           <Image
             src={logoUrl}
-            alt="Qaras Hotels"
+            alt="Qaras Hospitality Solutions"
             width={100}
             height={20}
             className="h-10 w-auto"

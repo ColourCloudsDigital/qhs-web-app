@@ -147,9 +147,9 @@ export default function AssignTaskDialog({
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Assign Task</DialogTitle>
+          <DialogTitle>Reassign Task</DialogTitle>
           <DialogDescription>
-            Assign this task to a staff member or leave unassigned.
+            Reassign this task to a staff member or leave unassigned.
           </DialogDescription>
         </DialogHeader>
         
@@ -198,7 +198,7 @@ export default function AssignTaskDialog({
             ) : (
               <>
                 <User className="mr-2 h-4 w-4" />
-                {selectedStaffId !== 'unassigned' ? 'Assign Task' : 'Unassign Task'}
+                {selectedStaffId !== 'unassigned' ? 'Reassign Task' : 'Unassign Task'}
               </>
             )}
           </Button>

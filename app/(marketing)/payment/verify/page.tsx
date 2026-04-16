@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import PaymentVerifyClient from './client';
 
 export const metadata: Metadata = {
-  title: 'Verifying Payment | Qaras Hotels',
+  title: 'Verifying Payment | Qaras Hospitality Solutions',
   description: 'Verifying your payment...',
 };
 

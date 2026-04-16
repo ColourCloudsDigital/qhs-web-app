@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="container mx-auto max-w-6xl px-4">
         <div className="grid gap-8 md:grid-cols-4">
           <div>
-            <h3 className="mb-4 text-lg font-semibold">Qaras Hotels</h3>
+            <h3 className="mb-4 text-lg font-semibold">Qaras Hospitality Solutions</h3>
             <p className="mb-4 text-gray-400">
               The premier hotel booking and management platform for travelers and hotel owners.
             </p>
@@ -41,7 +41,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t border-gray-800 pt-8 text-center text-gray-400">
-          <p>© {new Date().getFullYear()} Qaras Hotels. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Qaras Hospitality Solutions. All rights reserved.</p>
         </div>
       </div>
     </footer>

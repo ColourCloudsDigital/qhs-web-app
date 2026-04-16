@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import NotificationList from '@/components/dashboard/NotificationList';
 
 export const metadata: Metadata = {
-  title: 'Your Notifications | Qaras Hotels',
+  title: 'Your Notifications | Qaras Hospitality Solutions',
   description: 'Manage and view your notifications',
 };
 

@@ -230,7 +230,14 @@ export async function POST(request: NextRequest) {
       address,
       nationality,
       idType,
-      idNumber
+      idNumber,
+      customerType,
+      corporationId,
+      companyName,
+      contactPerson,
+      taxId,
+      billType,
+      billActive,
     } = body;
 
     // Validate required fields
@@ -294,8 +301,8 @@ export async function POST(request: NextRequest) {
 
     // Create customer record
     await pool.query(`
-      INSERT INTO customers (id, firstName, lastName, userId, hotelId, phone, address, nationality, idType, idNumber, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      INSERT INTO customers (id, firstName, lastName, userId, hotelId, phone, address, nationality, idType, idNumber, customerType, corporationId, companyName, contactPerson, taxId, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `, [
       customerId,
       firstName,
@@ -306,8 +313,24 @@ export async function POST(request: NextRequest) {
       address || null,
       nationality || null,
       idType || null,
-      idNumber || null
+      idNumber || null,
+      customerType || 'individual',
+      corporationId || null,
+      companyName || null,
+      contactPerson || null,
+      taxId || null,
     ]);
+
+    // Auto-create bill if requested
+    if (billType && billType !== 'none') {
+      const { randomUUID } = require('crypto');
+      const billId = randomUUID();
+      await pool.query(
+        `INSERT INTO customer_bills (id, customerId, hotelId, billType, isActive, createdAt)
+         VALUES (?, ?, ?, ?, ?, NOW())`,
+        [billId, customerId, hotelId, billType, billActive !== false ? 1 : 0]
+      );
+    }
 
     // Send notification about new customer
     try {

@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     
     if (!res.ok) {
       return {
-        title: 'Menu - Qaras Hotels',
+        title: 'Menu - Qaras Hospitality Solutions',
         description: 'View hotel menu'
       };
     }
@@ -27,12 +27,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const hotelName = data.hotel?.name || 'Restaurant';
     
     return {
-      title: `Menu for ${hotelName} - Qaras Hotels`,
+      title: `Menu for ${hotelName} - Qaras Hospitality Solutions`,
       description: `View the menu for ${hotelName}`,
     };
   } catch (error) {
     return {
-      title: 'Menu - Qaras Hotels',
+      title: 'Menu - Qaras Hospitality Solutions',
       description: 'View hotel menu'
     };
   }

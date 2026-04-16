@@ -12,8 +12,8 @@ interface OrderLineProps {
 export default function OrderLine({ selectedTab, setSelectedTab, placedOrdersCount, processedOrdersCount }: OrderLineProps) {
   const tabs: { key: PosTab; label: string; count?: number }[] = [
     { key: 'current', label: 'Current Order' },
-    { key: 'placed', label: 'Placed Orders', count: placedOrdersCount },
-    { key: 'processed', label: 'Processed Orders', count: processedOrdersCount },
+    { key: 'placed', label: 'Pending Orders', count: placedOrdersCount },
+    { key: 'processed', label: 'Complete Orders', count: processedOrdersCount },
   ];
 
   return (

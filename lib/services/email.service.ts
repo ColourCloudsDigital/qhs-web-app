@@ -485,12 +485,12 @@ class EmailService {
       await transporter.sendMail({
         from,
         to,
-        subject: 'Test Email from Qaras Hotels',
-        text: 'This is a test email from Qaras Hotels system. If you received this email, your SMTP configuration is working correctly.',
+        subject: 'Test Email from Qaras Hospitality Solutions',
+        text: 'This is a test email from Qaras Hospitality Solutions system. If you received this email, your SMTP configuration is working correctly.',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-            <h2 style="color: #1e3a8a;">Qaras Hotels - SMTP Test</h2>
-            <p>This is a test email from the Qaras Hotels system.</p>
+            <h2 style="color: #1e3a8a;">Qaras Hospitality Solutions - SMTP Test</h2>
+            <p>This is a test email from the Qaras Hospitality Solutions system.</p>
             <p>If you're seeing this email, your SMTP configuration is working correctly!</p>
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
               <p>This is an automated message, please do not reply to this email.</p>

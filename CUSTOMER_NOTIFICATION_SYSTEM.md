@@ -2,7 +2,7 @@
 
 ## Overview
 
-I have successfully enhanced the existing customer notification system in the Qaras Hotels application to provide comprehensive notifications for all major customer events including bookings, payments, subscriptions, messages, and announcements.
+I have successfully enhanced the existing customer notification system in the Qaras Hospitality Solutions application to provide comprehensive notifications for all major customer events including bookings, payments, subscriptions, messages, and announcements.
 
 ## What Was Found
 
@@ -361,7 +361,7 @@ Set up a cron job to call `/api/cron/reminders` daily:
 
 ## Conclusion
 
-The enhanced customer notification system provides comprehensive coverage of all customer events in the Qaras Hotels application. It builds upon the existing robust foundation while adding missing triggers and creating a unified approach to customer communications.
+The enhanced customer notification system provides comprehensive coverage of all customer events in the Qaras Hospitality Solutions application. It builds upon the existing robust foundation while adding missing triggers and creating a unified approach to customer communications.
 
 The system is designed to be:
 - **Scalable**: Handle high volumes of notifications

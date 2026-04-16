@@ -10,7 +10,7 @@ interface VerifyEmailProps {
 export default function VerifyEmail({ name, verificationUrl }: VerifyEmailProps) {
   return (
     <EmailLayout
-      preview="Verify your email address for Qaras Hotels"
+      preview="Verify your email address for Qaras Hospitality Solutions"
       heading="Verify Your Email Address"
     >
       <Section>
@@ -19,7 +19,7 @@ export default function VerifyEmail({ name, verificationUrl }: VerifyEmailProps)
         </Text>
         
         <Text className="text-base text-gray-700">
-          Thank you for registering with Qaras Hotels. Please verify your email address by clicking the button below:
+          Thank you for registering with Qaras Hospitality Solutions. Please verify your email address by clicking the button below:
         </Text>
         
         <Section className="my-8 text-center">
@@ -44,7 +44,7 @@ export default function VerifyEmail({ name, verificationUrl }: VerifyEmailProps)
         
         <Text className="mt-8 text-base text-gray-700">
           Best regards,<br />
-          The Qaras Hotels Team
+          The Qaras Hospitality Solutions Team
         </Text>
       </Section>
     </EmailLayout>

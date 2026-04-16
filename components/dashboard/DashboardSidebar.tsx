@@ -192,7 +192,7 @@ const DashboardSidebar = ({
             <Link href={dashboardPath} className="flex items-center">
               <Image
                 src={logoPath}
-                alt="Qaras Hotels"
+                alt="Qaras Hospitality Solutions"
                 width={collapsed ? 40 : 120}
                 height={40}
                 className="h-10"

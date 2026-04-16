@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import NotificationPWASetup from '@/components/client/NotificationPWASetup';
 
 export const metadata: Metadata = {
-  title: 'Push Notification Setup | Qaras Hotels',
+  title: 'Push Notification Setup | Qaras Hospitality Solutions',
   description: 'Set up push notifications for your account',
 };
 

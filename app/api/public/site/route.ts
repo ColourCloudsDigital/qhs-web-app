@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     // Return site settings or default values if not found
     if (siteSettings.length === 0) {
       return NextResponse.json({
-        siteName: 'Qaras Hotels',
-        siteDescription: 'Book your stay with Qaras Hotels',
+        siteName: 'Qaras Hospitality Solutions',
+        siteDescription: 'Book your stay with Qaras Hospitality Solutions',
         defaultLanguage: 'en',
         timezone: 'UTC',
         defaultCurrency: 'NGN'
@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching site settings:', error);
     // Return default values in case of error
     return NextResponse.json({
-      siteName: 'Qaras Hotels',
-      siteDescription: 'Book your stay with Qaras Hotels',
+      siteName: 'Qaras Hospitality Solutions',
+      siteDescription: 'Book your stay with Qaras Hospitality Solutions',
       defaultLanguage: 'en',
       timezone: 'UTC',
       defaultCurrency: 'NGN'

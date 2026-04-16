@@ -127,7 +127,7 @@ export default function BookingNotification({
         
         <Text className="mt-8 text-base text-gray-700">
           Best regards,<br />
-          The Qaras Hotels Team
+          The Qaras Hospitality Solutions Team
         </Text>
       </Section>
     </EmailLayout>

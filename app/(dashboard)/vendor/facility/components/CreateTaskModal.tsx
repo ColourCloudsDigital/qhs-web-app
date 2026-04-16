@@ -30,7 +30,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2, Plus } from 'lucide-react';
-import { MaintenanceType } from '@/lib/types/enums';
 
 /** Format a Date as MySQL DATETIME in local time (no UTC shift) */
 function formatLocalDatetime(d: Date): string {
@@ -91,7 +90,6 @@ export default function CreateTaskModal({
     return tomorrow;
   });
   const [estimatedHours, setEstimatedHours] = useState<number | undefined>(undefined);
-  const [maintenanceType, setMaintenanceType] = useState<string>('CORRECTIVE');
   const [isRecurring, setIsRecurring] = useState(false);
   const [costEstimate, setCostEstimate] = useState<number | undefined>(undefined);
   
@@ -174,7 +172,6 @@ export default function CreateTaskModal({
       return tomorrow;
     });
     setEstimatedHours(undefined);
-    setMaintenanceType('CORRECTIVE');
     setIsRecurring(false);
     setCostEstimate(undefined);
   };
@@ -216,7 +213,6 @@ export default function CreateTaskModal({
           dueDate: formatLocalDatetime(dueDate), // local datetime, no UTC shift
           status: 'PENDING',
           estimatedHours: estimatedHours || null,
-          maintenanceType,
           isRecurring,
           costEstimate: costEstimate || null,
         }),
@@ -304,6 +300,7 @@ export default function CreateTaskModal({
                   <SelectItem value="PLUMBING">Plumbing</SelectItem>
                   <SelectItem value="ELECTRICAL">Electrical</SelectItem>
                   <SelectItem value="HVAC">HVAC</SelectItem>
+                  <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
                   <SelectItem value="GENERAL">General</SelectItem>
                 </SelectContent>
               </Select>
@@ -401,44 +398,22 @@ export default function CreateTaskModal({
             </div>
           </div>
           
-          {/* Maintenance Type and Hours */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <label htmlFor="maintenanceType" className="text-sm font-medium">
-                Maintenance Type
-              </label>
-              <Select 
-                value={maintenanceType} 
-                onValueChange={(v) => setMaintenanceType(v as MaintenanceType)}
-              >
-                <SelectTrigger id="maintenanceType">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CORRECTIVE">Corrective</SelectItem>
-                  <SelectItem value="PREVENTIVE">Preventive</SelectItem>
-                  <SelectItem value="PREDICTIVE">Predictive</SelectItem>
-                  <SelectItem value="EMERGENCY">Emergency</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid gap-2">
-              <label htmlFor="estimatedHours" className="text-sm font-medium">
-                Estimated Hours
-              </label>
-              <Input
-                id="estimatedHours"
-                type="number"
-                value={estimatedHours === undefined ? '' : estimatedHours}
-                onChange={(e) => setEstimatedHours(
-                  e.target.value ? parseFloat(e.target.value) : undefined
-                )}
-                placeholder="Enter estimated hours"
-                min="0.5"
-                step="0.5"
-              />
-            </div>
+          {/* Estimated Hours */}
+          <div className="grid gap-2">
+            <label htmlFor="estimatedHours" className="text-sm font-medium">
+              Estimated Hours
+            </label>
+            <Input
+              id="estimatedHours"
+              type="number"
+              value={estimatedHours === undefined ? '' : estimatedHours}
+              onChange={(e) => setEstimatedHours(
+                e.target.value ? parseFloat(e.target.value) : undefined
+              )}
+              placeholder="Enter estimated hours"
+              min="0.5"
+              step="0.5"
+            />
           </div>
           
           {/* Cost Estimate */}

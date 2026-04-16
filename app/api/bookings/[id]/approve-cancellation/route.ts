@@ -65,10 +65,14 @@ export async function POST(
         [newStatus, bookingId]
       );
 
-      // If approved, free the room unit
+      // If approved, free the room unit and mark payment as failed
       if (action === 'approve') {
         await client.query(
           `UPDATE room_units SET status = 'available', currentBookingId = NULL WHERE currentBookingId = ?`,
+          [bookingId]
+        );
+        await client.query(
+          `UPDATE bookings SET paymentStatus = 'FAILED' WHERE id = ?`,
           [bookingId]
         );
       }

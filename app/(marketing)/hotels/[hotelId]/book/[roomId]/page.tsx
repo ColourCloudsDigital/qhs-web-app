@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!hotel) {
     return {
-      title: 'Hotel Not Found | Qaras Hotels',
+      title: 'Hotel Not Found | Qaras Hospitality Solutions',
       description: 'The requested hotel could not be found.'
     };
   }
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const room = hotel.rooms?.find((r: any) => r.id === params.roomId);
 
   return {
-    title: `Book ${room?.name || 'Room'} at ${hotel.name} | Qaras Hotels`,
+    title: `Book ${room?.name || 'Room'} at ${hotel.name} | Qaras Hospitality Solutions`,
     description: `Book your stay at ${hotel.name}. ${room?.description || hotel.description?.substring(0, 100) || ''}...`
   };
 }

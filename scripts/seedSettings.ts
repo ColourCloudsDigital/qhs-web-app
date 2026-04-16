@@ -137,7 +137,7 @@ async function main() {
       updatedAt = NOW()
     `, [
       'default',
-      'Qaras Hotels',
+      'Qaras Hospitality Solutions',
       'Your ultimate hotel booking platform',
       'en',
       'UTC',
@@ -157,8 +157,8 @@ async function main() {
       updatedAt = NOW()
     `, [
       'default',
-      'Qaras Hotels - Hotel Booking Platform',
-      'Find and book hotels across Nigeria with Qaras Hotels, the leading hotel booking platform.',
+      'Qaras Hospitality Solutions - Hotel Booking Platform',
+      'Find and book hotels across Nigeria with Qaras Hospitality Solutions, the leading hotel booking platform.',
       'summary_large_image',
       true
     ]);

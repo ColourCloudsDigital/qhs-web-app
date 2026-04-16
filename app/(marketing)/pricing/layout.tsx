@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Pricing Plans | Qaras Hotels',
+  title: 'Pricing Plans | Qaras Hospitality Solutions',
   description: 'Choose the perfect subscription plan for your hotel management needs',
 };
 

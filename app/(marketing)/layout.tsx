@@ -14,7 +14,7 @@ const nunito = Nunito({
 });
 
 export const metadata = {
-  title: 'Qaras Hotels - Hotel Booking & Management Platform',
+  title: 'Qaras Hospitality Solutions - Hotel Booking & Management Platform',
   description: 'Find and book the best hotels for your next trip. Hotel owners can manage their properties efficiently.',
 };
 

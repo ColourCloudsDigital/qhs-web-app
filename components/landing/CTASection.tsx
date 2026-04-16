@@ -19,7 +19,7 @@ export default function CTASection() {
       <section className="bg-white py-16 dark:bg-gray-900">
         <div className="container mx-auto max-w-6xl px-4">
           <div className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-500 p-8 text-center text-white shadow-lg">
-            <h2 className="mb-4 text-3xl font-bold">Welcome Back to Qaras Hotels!</h2>
+            <h2 className="mb-4 text-3xl font-bold">Welcome Back to Qaras Hospitality Solutions!</h2>
             <p className="mx-auto mb-6 max-w-2xl text-lg">
               Continue managing your hotel properties and access all your tools from your dashboard. Need help or want to explore more features?
             </p>
@@ -50,7 +50,7 @@ export default function CTASection() {
         <div className="rounded-lg bg-gradient-to-r from-slate-600 to-gray-400 p-8 text-center text-white shadow-lg">
           <h2 className="mb-4 text-3xl font-bold">Ready to Transform Your Hotel Business?</h2>
           <p className="mx-auto mb-6 max-w-2xl text-lg">
-            Join Qaras Hotels today and access our comprehensive suite of hotel management tools designed specifically for hotel owners and managers.
+            Join Qaras Hospitality Solutions today and access our comprehensive suite of hotel management tools designed specifically for hotel owners and managers.
           </p>
           <div className="flex flex-col justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
             <Link

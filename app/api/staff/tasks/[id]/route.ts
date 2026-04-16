@@ -54,6 +54,7 @@ export async function GET(
         ft.cost_estimate as costEstimate,
         ft.cost_estimate as actualCost,
         ft.roomUnitId as roomId,
+        ru.roomNumber as roomNumber,
         ft.hotelId,
         ft.staffId as assignedTo,
         h.name as hotelName,
@@ -61,6 +62,7 @@ export async function GET(
         creator.email as createdByEmail
       FROM facility_tasks ft
       LEFT JOIN hotels h ON ft.hotelId = h.id
+      LEFT JOIN room_units ru ON ft.roomUnitId = ru.id
       LEFT JOIN staff creator_staff ON ft.staffId = creator_staff.id
       LEFT JOIN users creator ON creator_staff.userId = creator.id
       WHERE ft.taskId = ?`,
@@ -112,7 +114,7 @@ export async function GET(
       actualCost: task.actualCost,
       room: task.roomId ? {
         id: task.roomId,
-        name: `Room Unit ${task.roomId}`
+        name: task.roomNumber ? `Room ${task.roomNumber}` : `Room ${task.roomId}`
       } : null,
       hotel: task.hotelId ? {
         id: task.hotelId,

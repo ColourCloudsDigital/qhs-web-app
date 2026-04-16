@@ -324,7 +324,7 @@ export default function StaffTaskDetailClient({
                   </span>
                 )}
                 {task.room && (
-                  <span>Room: {task.room.name}</span>
+                  <span>Room Number: {task.room.name}</span>
                 )}
               </CardDescription>
             </div>

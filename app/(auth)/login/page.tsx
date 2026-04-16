@@ -147,7 +147,7 @@ export default function LoginPage() {
   };
 
   const primaryColor = themeSettings?.colorPalette?.primary || '#000000';
-  const appName = themeSettings?.general?.appName || 'Qaras Hotels';
+  const appName = themeSettings?.general?.appName || 'Qaras Hospitality Solutions';
   const quote = "Effortless Stays";
 
   return (
@@ -294,7 +294,7 @@ export default function LoginPage() {
           
           <div className="mt-8 pt-8 border-t border-gray-200 text-center">
             <p className="text-xs text-gray-500">
-              © {new Date().getFullYear()} Qaras Hotels. All rights reserved.
+              © {new Date().getFullYear()} Qaras Hospitality Solutions. All rights reserved.
             </p>
           </div>
         </div>

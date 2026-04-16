@@ -52,7 +52,7 @@ export default function UserTypesSection() {
           Designed for Everyone in the Hotel Management Team
         </h2>
         <p className="mb-12 text-center text-lg text-gray-600 dark:text-gray-400">
-          Qaras Hotels serves the needs of hotel owners, managers, and staff
+          Qaras Hospitality Solutions serves the needs of hotel owners, managers, and staff
         </p>
         <div className="grid gap-8 md:grid-cols-3">
           {userTypes.map((userType) => (

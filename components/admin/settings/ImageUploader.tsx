@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Upload, X, ImagePlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,11 @@ export function ImageUploader({
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(imageUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync preview when imageUrl prop changes (e.g. modal reopens with different item)
+  useEffect(() => {
+    setPreviewUrl(imageUrl || null);
+  }, [imageUrl]);
 
   const sizeClasses = {
     small: "h-20 w-20",

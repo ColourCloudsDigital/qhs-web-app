@@ -92,7 +92,7 @@ Guests: ${bookingDetails.numberOfGuests}
 Nights: ${bookingDetails.nights}
 Total Amount: ${formatCurrency(bookingDetails.totalAmount)}
 
-Thank you for choosing Qaras Hotels!
+Thank you for choosing Qaras Hospitality Solutions!
       `;
       
       const blob = new Blob([confirmationText], { type: 'text/plain' });

@@ -488,6 +488,11 @@ export function getMenuItems(role?: UserRole, modules: string[] = [], permission
             iconName: 'Cog6ToothIcon'
           },
           {
+            title: 'Payment',
+            path: '/vendor/settings/payments',
+            iconName: 'CreditCardIcon'
+          },
+          {
             title: 'Security',
             path: '/vendor/settings/security',
             iconName: 'ShieldCheckIcon'

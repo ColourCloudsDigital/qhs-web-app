@@ -173,7 +173,7 @@ export default function VendorPOSPage() {
                 <option value="">All Statuses</option>
                 <option value="Paid">Paid</option>
                 <option value="Pending">Pending</option>
-                <option value="Not Paid">Not Paid</option>
+                <option value="Bill">Bill</option>
               </select>
               <button className="flex items-center gap-1.5 rounded border px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800" onClick={() => { setTempFromDate(filterFromDate); setTempToDate(filterToDate); setDateFilterModalOpen(true); }}>📅 Date Filter</button>
               {filterFromDate && filterToDate && (
@@ -210,8 +210,9 @@ export default function VendorPOSPage() {
             people={1}
             orderedItems={activeOrder?.items.filter(i => i.quantity > 0) || []}
             paymentMethod={activeOrder?.paymentMethod || 'Cash'}
-            paymentStatus={activeOrder?.paymentStatus || 'Not Paid'}
+            paymentStatus={activeOrder?.paymentStatus || 'Pending'}
             vat={activeOrder?.vat || 0}
+            hotelId={currentHotel?.id}
             getOrderTotal={getOrderTotal}
             setPaymentMethod={setPaymentMethod}
             setPaymentStatus={setPaymentStatus}

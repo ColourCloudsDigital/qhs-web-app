@@ -15,7 +15,7 @@ export default function PWASetupPage() {
           <h2 className="mb-4 text-lg font-medium text-gray-900 dark:text-white">Offline Mode</h2>
           
           <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">
-            Qaras Hotels is designed to work offline. When your device is offline:
+            Qaras Hospitality Solutions is designed to work offline. When your device is offline:
           </p>
           
           <ul className="mb-4 list-inside list-disc space-y-2 text-sm text-gray-600 dark:text-gray-300">
@@ -27,7 +27,7 @@ export default function PWASetupPage() {
           
           <div className="rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              For the best offline experience, install Qaras Hotels as a PWA (Progressive Web App) using the install prompt or your browser&apos;s menu.
+              For the best offline experience, install Qaras Hospitality Solutions as a PWA (Progressive Web App) using the install prompt or your browser&apos;s menu.
             </p>
           </div>
         </div>

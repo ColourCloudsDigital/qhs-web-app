@@ -12,7 +12,7 @@ export default function EmailLayout({
   preview,
   heading,
   children,
-  footerText = '© Qaras Hotels. All rights reserved.',
+  footerText = '© Qaras Hospitality Solutions. All rights reserved.',
 }: EmailLayoutProps) {
   return (
     <Html>

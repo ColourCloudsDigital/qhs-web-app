@@ -122,7 +122,6 @@ export default function EditTaskModal({
   const [status, setStatus] = useState('');
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [estimatedHours, setEstimatedHours] = useState<number | undefined>();
-  const [maintenanceType, setMaintenanceType] = useState('');
   const [isRecurring, setIsRecurring] = useState<boolean>(false);
   const [costEstimate, setCostEstimate] = useState<number | undefined>();
   const [assignedToId, setAssignedToId] = useState<string>('');
@@ -133,7 +132,7 @@ export default function EditTaskModal({
   const [rooms, setRooms] = useState<Room[]>([]);
 
   const handleClose = () => {
-    if (!isSubmitting && !isLoading) {
+    if (!isSubmitting) {
       cleanupModalOverlays();
       onClose();
       setTimeout(cleanupModalOverlays, 100);
@@ -141,7 +140,7 @@ export default function EditTaskModal({
   };
 
   const handleOpenChange = (open: boolean) => {
-    if (!open && !isSubmitting && !isLoading) {
+    if (!open && !isSubmitting) {
       handleClose();
     }
   };
@@ -149,6 +148,8 @@ export default function EditTaskModal({
   // Reset form state when modal closes
   useEffect(() => {
     if (!isOpen) {
+      // Reset ref immediately so re-opening the same task always re-fetches
+      fetchedTaskIdRef.current = null;
       const timer = setTimeout(() => {
         setTitle('');
         setDescription('');
@@ -157,7 +158,6 @@ export default function EditTaskModal({
         setStatus('');
         setDueDate(undefined);
         setEstimatedHours(undefined);
-        setMaintenanceType('');
         setIsRecurring(false);
         setCostEstimate(undefined);
         setAssignedToId('unassigned');
@@ -165,7 +165,6 @@ export default function EditTaskModal({
         setStaff([]);
         setRooms([]);
         setIsLoading(false);
-        fetchedTaskIdRef.current = null;
       }, 150);
       
       return () => clearTimeout(timer);
@@ -203,7 +202,6 @@ export default function EditTaskModal({
           setStatus(task.status);
           setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
           setEstimatedHours(task.estimatedHours);
-          setMaintenanceType(task.maintenanceType);
           setIsRecurring(task.isRecurring);
           setCostEstimate(task.costEstimate);
           setAssignedToId(task.assignedToId || 'unassigned');
@@ -267,7 +265,6 @@ export default function EditTaskModal({
           status,
           dueDate: dueDate ? formatLocalDatetime(dueDate) : undefined,
           estimatedHours: isNaN(Number(estimatedHours)) ?  null : Number(estimatedHours),
-          maintenanceType,
           isRecurring: isBoolean(isRecurring) ? isRecurring : false,
           costEstimate: isNaN(Number(costEstimate)) ? null : Number(costEstimate),
           assignedToId: assignedToId === 'unassigned' ? null : assignedToId,
@@ -384,6 +381,7 @@ export default function EditTaskModal({
                   <SelectItem value="PLUMBING">Plumbing</SelectItem>
                   <SelectItem value="ELECTRICAL">Electrical</SelectItem>
                   <SelectItem value="HVAC">HVAC</SelectItem>
+                  <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
                   <SelectItem value="GENERAL">General</SelectItem>
                 </SelectContent>
               </Select>
@@ -503,23 +501,6 @@ export default function EditTaskModal({
           {/* Maintenance Type and Hours */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <label htmlFor="maintenanceType" className="text-sm font-medium">
-                Maintenance Type
-              </label>
-              <Select value={maintenanceType} onValueChange={setMaintenanceType}>
-                <SelectTrigger id="maintenanceType">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CORRECTIVE">Corrective</SelectItem>
-                  <SelectItem value="PREVENTIVE">Preventive</SelectItem>
-                  <SelectItem value="PREDICTIVE">Predictive</SelectItem>
-                  <SelectItem value="EMERGENCY">Emergency</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
               <label htmlFor="estimatedHours" className="text-sm font-medium">
                 Estimated Hours
               </label>
@@ -573,7 +554,7 @@ export default function EditTaskModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting || isLoading}>
+          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || isLoading}>

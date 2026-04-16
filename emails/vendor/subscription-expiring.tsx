@@ -30,7 +30,7 @@ export default function SubscriptionExpiring({
         </Text>
         
         <Text className="text-base text-gray-700">
-          This is a friendly reminder that your {planName} subscription on Qaras Hotels will expire in {daysLeft} days on {expiryDate}.
+          This is a friendly reminder that your {planName} subscription on Qaras Hospitality Solutions will expire in {daysLeft} days on {expiryDate}.
         </Text>
         
         <Section className="my-6 rounded-lg border border-gray-200 bg-gray-50 p-6">
@@ -69,7 +69,7 @@ export default function SubscriptionExpiring({
         </Text>
         
         <Text className="text-base text-gray-700">
-          If you've enjoyed your experience with Qaras Hotels, you might also consider upgrading to a higher tier plan for additional benefits and features.
+          If you've enjoyed your experience with Qaras Hospitality Solutions, you might also consider upgrading to a higher tier plan for additional benefits and features.
         </Text>
         
         <Section className="my-8 text-center">
@@ -97,7 +97,7 @@ export default function SubscriptionExpiring({
         
         <Text className="mt-8 text-base text-gray-700">
           Best regards,<br />
-          The Qaras Hotels Team
+          The Qaras Hospitality Solutions Team
         </Text>
       </Section>
     </EmailLayout>

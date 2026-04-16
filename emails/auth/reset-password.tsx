@@ -10,7 +10,7 @@ interface ResetPasswordProps {
 export default function ResetPassword({ name, resetUrl }: ResetPasswordProps) {
   return (
     <EmailLayout
-      preview="Reset your Qaras Hotels password"
+      preview="Reset your Qaras Hospitality Solutions password"
       heading="Reset Your Password"
     >
       <Section>
@@ -19,7 +19,7 @@ export default function ResetPassword({ name, resetUrl }: ResetPasswordProps) {
         </Text>
         
         <Text className="text-base text-gray-700">
-          We received a request to reset your password for your Qaras Hotels account. 
+          We received a request to reset your password for your Qaras Hospitality Solutions account. 
           If you didn't make this request, you can safely ignore this email.
         </Text>
         
@@ -49,7 +49,7 @@ export default function ResetPassword({ name, resetUrl }: ResetPasswordProps) {
         
         <Text className="mt-8 text-base text-gray-700">
           Best regards,<br />
-          The Qaras Hotels Team
+          The Qaras Hospitality Solutions Team
         </Text>
       </Section>
     </EmailLayout>

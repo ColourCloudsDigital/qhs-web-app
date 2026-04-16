@@ -47,7 +47,7 @@ Update your `.env` file:
 # Brevo Configuration
 BREVO_API_KEY=your-api-key-here
 BREVO_SENDER_EMAIL=noreply@yourdomain.com
-BREVO_SENDER_NAME=Qaras Hotels
+BREVO_SENDER_NAME=Qaras Hospitality Solutions
 
 # Template IDs from Brevo
 BREVO_TEMPLATE_EMAIL_VERIFICATION=1

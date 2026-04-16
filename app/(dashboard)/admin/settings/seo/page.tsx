@@ -27,8 +27,8 @@ export default function SEOSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('meta');
   const [formData, setFormData] = useState<SEOSettings>({
-    metaTitle: 'Qaras Hotels - Hotel Booking Platform',
-    metaDescription: 'Find and book hotels across Nigeria with Qaras Hotels, the leading hotel booking platform.',
+    metaTitle: 'Qaras Hospitality Solutions - Hotel Booking Platform',
+    metaDescription: 'Find and book hotels across Nigeria with Qaras Hospitality Solutions, the leading hotel booking platform.',
     twitterCardType: 'summary_large_image',
     sitemapEnabled: true,
   });
@@ -146,7 +146,7 @@ export default function SEOSettingsPage() {
                     name="metaTitle"
                     value={formData.metaTitle}
                     onChange={handleInputChange}
-                    placeholder="Qaras Hotels - Hotel Booking Platform"
+                    placeholder="Qaras Hospitality Solutions - Hotel Booking Platform"
                     required
                   />
                 </FormField>
@@ -160,7 +160,7 @@ export default function SEOSettingsPage() {
                     name="metaDescription"
                     value={formData.metaDescription}
                     onChange={handleInputChange}
-                    placeholder="Find and book hotels across Nigeria with Qaras Hotels..."
+                    placeholder="Find and book hotels across Nigeria with Qaras Hospitality Solutions..."
                     className="w-full p-2 border border-gray-300 rounded-md resize-none h-24"
                     required
                   />
@@ -268,7 +268,7 @@ export default function SEOSettingsPage() {
                     name="structuredData"
                     value={formData.structuredData || ''}
                     onChange={handleInputChange}
-                    placeholder='{"@context": "https://schema.org", "@type": "Organization", "name": "Qaras Hotels"}'
+                    placeholder='{"@context": "https://schema.org", "@type": "Organization", "name": "Qaras Hospitality Solutions"}'
                     className="w-full p-2 border border-gray-300 rounded-md resize-none h-40 font-mono"
                   />
                 </FormField>

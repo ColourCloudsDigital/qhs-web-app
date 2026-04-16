@@ -78,7 +78,7 @@ export default function Footer() {
             <Link href="/" className="mb-4 inline-block">
               <Image 
                 src={logoUrl} 
-                alt={siteSettings?.siteName || "Qaras Hotels"} 
+                alt={siteSettings?.siteName || "Qaras Hospitality Solutions"} 
                 width={100} 
                 height={20} 
                 className="h-10 w-auto"
@@ -146,7 +146,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t border-gray-800 pt-8 text-center text-gray-400">
-          <p>© {new Date().getFullYear()} {siteSettings?.siteName || "Qaras Hotels"}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {siteSettings?.siteName || "Qaras Hospitality Solutions"}. All rights reserved.</p>
         </div>
       </div>
     </footer>

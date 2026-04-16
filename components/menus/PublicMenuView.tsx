@@ -52,7 +52,7 @@ export default function PublicMenuView({ menuData, hotelId }: PublicMenuViewProp
             </div>
             <div className="text-right">
               <Scan className="h-6 w-6 ml-auto" />
-              <p className="text-xs opacity-80 mt-1">Powered by Qaras Hotels</p>
+              <p className="text-xs opacity-80 mt-1">Powered by Qaras Hospitality Solutions</p>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function PublicMenuView({ menuData, hotelId }: PublicMenuViewProp
 
       {/* Footer */}
       <footer className="text-center py-6 text-sm text-gray-500">
-        <p>&copy; {new Date().getFullYear()} Qaras Hotels</p>
+        <p>&copy; {new Date().getFullYear()} Qaras Hospitality Solutions</p>
       </footer>
     </main>
   );

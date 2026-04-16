@@ -29,7 +29,7 @@ export async function GET() {
         INSERT INTO site_settings (
           id, siteName, siteDescription, defaultLanguage, timezone, defaultCurrency, maintenanceMode
         ) VALUES (
-          UUID(), 'Qaras Hotels', 'Your ultimate hotel booking platform', 'en', 'UTC', 'NGN', FALSE
+          UUID(), 'Qaras Hospitality Solutions', 'Your ultimate hotel booking platform', 'en', 'UTC', 'NGN', FALSE
         )
       `);
       

@@ -6,7 +6,7 @@ import { UserRole } from '@/lib/types/enums';
 import StaffProfileClient from '../components/StaffProfileClient';
 
 export const metadata: Metadata = {
-  title: 'My Profile | Qaras Hotels Staff',
+  title: 'My Profile | Qaras Hospitality Solutions Staff',
   description: 'View and manage your staff profile information and permissions.',
 };
 

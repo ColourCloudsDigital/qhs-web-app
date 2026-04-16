@@ -159,7 +159,7 @@ export default function SMTPConfigForm({
             value={formData.fromName || ''}
             onChange={handleChange}
             className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-            placeholder="e.g. Qaras Hotels"
+            placeholder="e.g. Qaras Hospitality Solutions"
           />
         </div>
       </div>

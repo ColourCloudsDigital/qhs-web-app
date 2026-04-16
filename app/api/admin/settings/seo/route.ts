@@ -30,10 +30,10 @@ export async function GET() {
           id, metaTitle, metaDescription, ogTitle, ogDescription
         ) VALUES (
           UUID(), 
-          'Qaras Hotels - Hotel Booking Platform',
-          'Find and book hotels across Nigeria with Qaras Hotels, the leading hotel booking platform.',
-          'Qaras Hotels',
-          'Find and book hotels across Nigeria with Qaras Hotels, the leading hotel booking platform.'
+          'Qaras Hospitality Solutions - Hotel Booking Platform',
+          'Find and book hotels across Nigeria with Qaras Hospitality Solutions, the leading hotel booking platform.',
+          'Qaras Hospitality Solutions',
+          'Find and book hotels across Nigeria with Qaras Hospitality Solutions, the leading hotel booking platform.'
         )
       `);
       

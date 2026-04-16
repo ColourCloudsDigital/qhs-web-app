@@ -407,7 +407,7 @@ export const settingsService = {
     if (!settings) {
       settings = {
         id: '',
-        siteName: 'Qaras Hotels',
+        siteName: 'Qaras Hospitality Solutions',
         siteDescription: 'Your ultimate hotel booking platform',
         favicon: null,
         logo: null,
@@ -457,7 +457,7 @@ export const settingsService = {
         `INSERT INTO site_settings (id, siteName, siteDescription, favicon, logo, defaultLanguage, timezone, defaultCurrency, maintenanceMode, maintenanceMsg, createdAt, updatedAt) 
          VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [
-          data.siteName || 'Qaras Hotels',
+          data.siteName || 'Qaras Hospitality Solutions',
           data.siteDescription || 'Your ultimate hotel booking platform',
           data.favicon || null,
           data.logo || null,
@@ -555,8 +555,8 @@ export const settingsService = {
     if (!settings) {
       settings = {
         id: '',
-        metaTitle: 'Qaras Hotels - Hotel Booking Platform',
-        metaDescription: 'Find and book hotels across Nigeria with Qaras Hotels, the leading hotel booking platform.',
+        metaTitle: 'Qaras Hospitality Solutions - Hotel Booking Platform',
+        metaDescription: 'Find and book hotels across Nigeria with Qaras Hospitality Solutions, the leading hotel booking platform.',
         ogImageUrl: null,
         twitterCardType: 'summary_large_image',
         googleAnalyticsId: null,
