@@ -99,6 +99,15 @@ export function getStaffMenuItems(permissions: string[] = []): MenuItem[] {
     });
   }
 
+  // POS permission — above Customers
+  if (permissions.includes('pos') || permissions.includes('POS')) {
+    menuItems.push({
+      title: 'Point of Sale',
+      path: '/staff/pos',
+      iconName: 'CreditCardIcon',
+    });
+  }
+
   // Customers permission
   if (permissions.includes('customers')) {
     menuItems.push({
@@ -114,48 +123,10 @@ export function getStaffMenuItems(permissions: string[] = []): MenuItem[] {
       title: 'Payments',
       path: '/staff/payments',
       iconName: 'CreditCardIcon',
-      expandable: true,
-      children: [
-        {
-          title: 'All Payments',
-          path: '/staff/payments',
-          iconName: 'CreditCardIcon'
-        },
-        {
-          title: 'Process Payment',
-          path: '/staff/payments/new',
-          iconName: 'PlusCircleIcon'
-        }
-      ]
     });
   }
 
-  // Reports permission
-  if (permissions.includes('reports')) {
-    menuItems.push({
-      title: 'Reports',
-      path: '/staff/reports',
-      iconName: 'ChartBarIcon',
-      expandable: true,
-      children: [
-        {
-          title: 'Booking Reports',
-          path: '/staff/reports/bookings',
-          iconName: 'CalendarIcon'
-        },
-        {
-          title: 'Revenue Reports',
-          path: '/staff/reports/revenue',
-          iconName: 'CreditCardIcon'
-        },
-        {
-          title: 'Occupancy Reports',
-          path: '/staff/reports/occupancy',
-          iconName: 'BuildingOfficeIcon'
-        }
-      ]
-    });
-  }
+  // Reports permission — removed
 
   // Staff permission (for managing other staff)
   if (permissions.includes('staff')) {
@@ -172,15 +143,6 @@ export function getStaffMenuItems(permissions: string[] = []): MenuItem[] {
     path: '/staff/notifications',
     iconName: 'BellIcon'
   });
-
-  // POS permission
-  if (permissions.includes('pos') || permissions.includes('POS')) {
-    menuItems.push({
-      title: 'Point of Sale',
-      path: '/staff/pos',
-      iconName: 'CreditCardIcon',
-    });
-  }
 
   // Settings permission
   if (permissions.includes('settings')) {
@@ -491,16 +453,6 @@ export function getMenuItems(role?: UserRole, modules: string[] = [], permission
             title: 'Payment',
             path: '/vendor/settings/payments',
             iconName: 'CreditCardIcon'
-          },
-          {
-            title: 'Security',
-            path: '/vendor/settings/security',
-            iconName: 'ShieldCheckIcon'
-          },
-          {
-            title: 'Notifications',
-            path: '/vendor/settings/notifications',
-            iconName: 'BellIcon'
           },
           {
             title: 'PWA & Offline',

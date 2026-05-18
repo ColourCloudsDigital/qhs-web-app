@@ -60,7 +60,6 @@ function EditStaffModal({ open, onClose, staff, onSave, loading, vendorId }: any
     { id: 'rooms', label: 'Manage Rooms' },
     { id: 'customers', label: 'Manage Customers' },
     { id: 'payments', label: 'Process Payments' },
-    { id: 'reports', label: 'View Reports' },
     { id: 'settings', label: 'Modify Settings' },
     { id: 'staff', label: 'Manage Staff' },
     { id: 'tasks', label: 'Manage Tasks' },

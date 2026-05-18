@@ -178,13 +178,6 @@ export default function VendorPaymentSettingsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Webhook URL info */}
-              <div className="rounded-lg bg-gray-100 dark:bg-gray-800 p-3 space-y-1">
-                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">Webhook URL for {p.name}</p>
-                <code className="text-xs text-primary break-all">{appUrl}/api/webhooks/{p.key}</code>
-                <p className="text-xs text-gray-500">{p.webhookNote}</p>
-              </div>
-
               {/* Form fields */}
               <div className="grid gap-3">
                 {p.fields.filter(f => typeof EMPTY_FORM[f] === 'string').map(field => (

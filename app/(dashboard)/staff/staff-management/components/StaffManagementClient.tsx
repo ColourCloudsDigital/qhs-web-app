@@ -160,7 +160,7 @@ export function StaffManagementClient() {
   })
 
   const availablePermissions = [
-    'bookings', 'rooms', 'customers', 'payments', 'reports', 'staff', 'tasks', 'settings'
+    'bookings', 'rooms', 'customers', 'payments', 'staff', 'tasks', 'settings'
   ]
 
   const positions = [

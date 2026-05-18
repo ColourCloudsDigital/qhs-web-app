@@ -8,15 +8,12 @@ import Pagination, { PaginationInfo } from '@/components/ui/pagination';
 const mockPermissions = [
   { id: '1', name: 'Manage Bookings', key: 'bookings', description: 'Can manage bookings', module: 'Bookings' },
   { id: '2', name: 'Manage Rooms', key: 'rooms', description: 'Can manage rooms', module: 'Rooms' },
-  { id: '3', name: 'View Reports', key: 'reports', description: 'Can view reports', module: 'Reports' },
-  { id: '4', name: 'Modify Settings', key: 'settings', description: 'Can modify settings', module: 'Settings' },
-  { id: '5', name: 'Manage Staff', key: 'staff', description: 'Can manage staff', module: 'Staff' },
-  { id: '6', name: 'View Logs', key: 'logs', description: 'Can view system logs', module: 'Reports' },
-  { id: '7', name: 'Export Data', key: 'export', description: 'Can export data', module: 'Reports' },
-  { id: '8', name: 'Manage Orders (POS)', key: 'pos', description: 'Can create and manage POS orders', module: 'POS' },
+  { id: '3', name: 'Modify Settings', key: 'settings', description: 'Can modify settings', module: 'Settings' },
+  { id: '4', name: 'Manage Staff', key: 'staff', description: 'Can manage staff', module: 'Staff' },
+  { id: '5', name: 'Manage Orders (POS)', key: 'pos', description: 'Can create and manage POS orders', module: 'POS' },
 ];
 
-const modules = ['All', 'Bookings', 'Rooms', 'Reports', 'Settings', 'Staff', 'POS'];
+const modules = ['All', 'Bookings', 'Rooms', 'Settings', 'Staff', 'POS'];
 
 export default function PermissionsTab() {
   const [searchTerm, setSearchTerm] = useState('');

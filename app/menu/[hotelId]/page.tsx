@@ -216,42 +216,80 @@ export default function MenuPage() {
   const menuTitle = menuData.hotelName ? `${menuData.hotelName} Menu` : 'Our Menu';
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Header section */}
-      <header 
-        className="bg-primary text-white py-8 px-4 text-center relative"
-        style={{ backgroundColor: settings.primaryColor || '#1e3a8a' }}
+    <div className="h-screen flex flex-col overflow-hidden bg-gray-300">
+      {/* ── HEADER — fixed, never scrolls ── */}
+      <header
+        className="relative text-white overflow-hidden flex-shrink-0"
+        style={{ backgroundColor: settings.primaryColor || '#1e3a8a', minHeight: '200px' }}
       >
+        {/* Food graffiti image — left side, fades right toward center */}
+        <div
+          className="absolute left-0 top-0 h-full pointer-events-none select-none"
+          style={{ width: 'calc(50% - 80px)' }}
+        >
+          <img
+            src="/assets/images/food-graffiti-style-png.jpg"
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-right opacity-90"
+            style={{
+              maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 55%, rgba(0,0,0,0) 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 55%, rgba(0,0,0,0) 100%)',
+            }}
+          />
+        </div>
+
+        {/* Food graffiti image — right side, fades left toward center */}
+        <div
+          className="absolute right-0 top-0 h-full pointer-events-none select-none"
+          style={{ width: 'calc(50% - 80px)' }}
+        >
+          <img
+            src="/assets/images/food-graffiti-style-png.jpg"
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-left opacity-90"
+            style={{
+              maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 55%, rgba(0,0,0,0) 100%)',
+              WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 55%, rgba(0,0,0,0) 100%)',
+            }}
+          />
+        </div>
+
+        {/* Optional banner overlay */}
         {settings.bannerUrl && (
-          <div className="absolute inset-0 bg-cover bg-center opacity-20 z-0" style={{ 
-            backgroundImage: `url(${settings.bannerUrl})`,
-          }} />
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-10 z-0"
+            style={{ backgroundImage: `url(${settings.bannerUrl})` }}
+          />
         )}
-        
-        <div className="relative z-10 max-w-4xl mx-auto">
+
+        {/* Center content */}
+        <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 py-12" style={{ minHeight: '200px' }}>
           {settings.logoUrl && (
-            <div className="flex justify-center mb-4">
+            <div className="mb-4">
               <Image
                 src={settings.logoUrl}
                 alt="Restaurant Logo"
-                width={100}
-                height={100}
-                className="object-contain h-20 w-auto rounded-full shadow-lg"
+                width={90}
+                height={90}
+                className="object-contain rounded-full shadow-lg border-2 border-white/30"
               />
             </div>
           )}
-          
-          <h1 className="text-3xl font-bold mb-2" style={{ 
-            fontFamily: settings.fontFamily || 'inherit'
-          }}>
+          <h1
+            className="text-3xl md:text-4xl font-extrabold tracking-tight drop-shadow-md"
+            style={{ fontFamily: settings.fontFamily || 'inherit' }}
+          >
             {menuTitle}
           </h1>
+          <p className="mt-2 text-white/70 text-sm tracking-wide uppercase">Our Menu</p>
         </div>
       </header>
 
-      {/* Search bar */}
-      <div className="sticky top-0 bg-white shadow-md z-20 p-4 border-b backdrop-blur-md bg-white/90">
-        <div className="max-w-4xl mx-auto relative">
+      {/* Search bar — fixed below header, never scrolls */}
+      <div className="flex-shrink-0 bg-white shadow-md z-20 p-4 border-b">
+        <div className="max-w-3xl mx-auto relative">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
@@ -273,8 +311,9 @@ export default function MenuPage() {
         </div>
       </div>
 
-      {/* Main content */}
-      <main className="container mx-auto px-4 py-8 max-w-4xl flex-grow">
+      {/* Scrollable content area — gray side margins, white rounded center column */}
+      <main className="flex-1 overflow-y-auto bg-gray-300">
+        <div className="mx-auto mt-6 mb-8 max-w-3xl bg-white rounded-2xl shadow-sm px-6 py-6">
         {/* Search results */}
         {searchQuery.trim() && (
           <div className="mb-8">
@@ -516,23 +555,14 @@ export default function MenuPage() {
             ))}
           </Tabs>
         )}
-      </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-6 px-4 mt-auto">
-        <div className="container mx-auto max-w-4xl">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-gray-300 text-sm">
-                Powered by Qaras Hospitality Solutions
-              </p>
-            </div>
-            <div className="text-gray-300 text-sm">
-              <p>&copy; {new Date().getFullYear()} All rights reserved</p>
-            </div>
+          {/* Footer inside the white rounded card */}
+          <div className="mt-8 pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
+            <p>Powered by Qaras Hospitality Solutions</p>
+            <p>&copy; {new Date().getFullYear()} All rights reserved</p>
           </div>
         </div>
-      </footer>
+      </main>
     </div>
   );
 } 

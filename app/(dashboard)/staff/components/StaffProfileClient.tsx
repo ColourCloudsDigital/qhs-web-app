@@ -534,7 +534,7 @@ export default function StaffProfileClient({ userId, staffId, userName, userEmai
             </div>
             <div className="px-6 py-4">
               <div className="space-y-3">
-                {['bookings', 'rooms', 'customers', 'payments', 'reports', 'settings', 'staff', 'tasks'].map((permission) => (
+                {['bookings', 'rooms', 'customers', 'payments', 'settings', 'staff', 'tasks'].map((permission) => (
                   <div
                     key={permission}
                     className={`flex items-center justify-between p-3 rounded-lg border ${

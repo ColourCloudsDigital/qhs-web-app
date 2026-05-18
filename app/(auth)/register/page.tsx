@@ -218,9 +218,9 @@ export default function RegisterPage() {
   const renderStep2 = () => (
     <div className="space-y-6">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Hotel Information</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Business Information</h2>
         <p className="mt-2 text-gray-600">
-          Tell us about your hotel business
+          Tell us about your hospitality business
         </p>
       </div>
       
